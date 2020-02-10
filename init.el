@@ -2139,6 +2139,28 @@ If region is active, apply to active region instead."
   :defer 1
   :diminish " 𝍎"
   :commands (company-mode company-indent-or-complete-common)
+  :custom
+  (company-tooltip-align-annotations t)
+  (company-tooltip-flip-when-above t)
+  (company-tooltip-limit 10)
+  (company-require-match nil)
+  (company-dabbrev-code-other-buffers t)
+  (company-dabbrev-downcase t)
+  (company-dabbrev-minimum-length 2)
+  (company-dabbrev-ignore-case t)
+  (company-minimum-prefix-length 1)
+  (company-idle-delay 0.1)
+  (company-show-numbers nil)
+  (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
+                       company-echo-metadata-frontend
+                       company-preview-frontend))
+  (company-occurrence-weight-function
+   #'company-occurrence-prefer-any-closest)
+  (company-continue-commands
+   (append company-continue-commands
+           '(comint-previous-matching-input-from-input
+             comint-next-matching-input-from-input)))
+
   :init
   (dolist (hook '(prog-mode
                   emacs-lisp-mode-hook
@@ -2207,27 +2229,8 @@ If region is active, apply to active region instead."
        (setq company-backends
              (mapcar #'company-mode/backend-with-yas company-backends))))
 
-  (setq company-tooltip-align-annotations t
-        company-tooltip-flip-when-above t
-        company-tooltip-limit 10
-        company-require-match nil
-        company-dabbrev-code-other-buffers t
-        company-dabbrev-downcase t
-        company-dabbrev-minimum-length 2
-        company-dabbrev-ignore-case t
-        company-minimum-prefix-length 1
-        company-idle-delay 0.1
-        company-show-numbers t
-        company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
-                            company-echo-metadata-frontend
-                            company-preview-frontend)
-        company-occurrence-weight-function
-        #'company-occurrence-prefer-any-closest
-        company-continue-commands
-        (append company-continue-commands
-                '(comint-previous-matching-input-from-input
-                  comint-next-matching-input-from-input)))
   (global-company-mode +1))
+
 
 (use-package company-dict
   :after company
@@ -2492,11 +2495,11 @@ If region is active, apply to active region instead."
   (use-package dired-details+
     ;; TBD no package  but is on emacsmirror github
     :disabled t)
-    
+  
 
   (use-package dired-hacks-utils)
-    ;; BULK-ENSURE :ensure t
-    
+  ;; BULK-ENSURE :ensure t
+  
 
   (use-package dired-narrow
     :defer t
@@ -2635,6 +2638,9 @@ If region is active, apply to active region instead."
                 "\\|")
                "\\)")))
         (funcall dired-omit-regexp-orig)))))
+
+(use-package dired-git
+  :hook (dired-mode-hook . #'dired-git-mode))
 
 ;;;_ , disable-mouse-mode
 
