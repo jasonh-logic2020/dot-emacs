@@ -7848,7 +7848,8 @@ end tell"))))
           (whitespace-cleanup))))
 
     (add-hook 'find-file-hooks 'maybe-turn-on-whitespace t))
-  :bind ("C-x w" . fixup-whitespace)
+  :bind (("C-x w" . fixup-whitespace)
+         ("C-c w" . whitespace-cleanup))
   :config
   (progn
     (setq whitespace-style '(face trailing space-before-tab empty))
