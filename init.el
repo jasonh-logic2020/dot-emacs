@@ -67,6 +67,21 @@
   (defconst common-elpa-directory user-emacs-directory)
   (defconst common-emacs-directory user-emacs-directory)
 
+  (defvar saved-window-configuration nil)
+
+  (defun push-window-configuration ()
+    (interactive)
+    (push (current-window-configuration) saved-window-configuration))
+
+  (defun pop-window-configuration ()
+    (interactive)
+    (let ((config (pop saved-window-configuration)))
+      (if config
+          (set-window-configuration config)
+        (if (> (length (window-list)) 1)
+            (delete-window)
+          (bury-buffer)))))
+
   (setq package-user-dir (expand-file-name "elpa" common-elpa-directory)
         custom-file (expand-file-name "settings.el" common-emacs-directory))
 
@@ -1915,7 +1930,7 @@ If region is active, apply to active region instead."
   :defer t
   ;; BULK-ENSURE :ensure t
   :bind ("C-c g g" . browse-at-remote))
-  
+
 
 ;;;_ , browse-kill-ring+
 
@@ -2157,9 +2172,9 @@ If region is active, apply to active region instead."
   (company-occurrence-weight-function
    #'company-occurrence-prefer-any-closest)
   (company-continue-commands
-   (append company-continue-commands
-           '(comint-previous-matching-input-from-input
-             comint-next-matching-input-from-input)))
+   '(append company-continue-commands
+            '(comint-previous-matching-input-from-input
+              comint-next-matching-input-from-input)))
 
   :init
   (dolist (hook '(prog-mode
@@ -2269,12 +2284,12 @@ If region is active, apply to active region instead."
 (use-package company-go
   :after company)
   ;; BULK-ENSURE :ensure t
-  
+
 
 (use-package company-jedi
   :after company)
   ;; BULK-ENSURE :ensure t
-  
+
 
 (use-package company-math
   :after company
@@ -2301,7 +2316,7 @@ If region is active, apply to active region instead."
     (run-with-idle-timer 7200 t
              (lambda (
                            (company-ngram-command "save_cache"))))))
-                           
+
 
 (use-package company-php
   :after company
@@ -2418,7 +2433,7 @@ If region is active, apply to active region instead."
 
 (use-package css-eldoc)
   ;; BULK-ENSURE :ensure t
-  
+
 
 ;;;_ , dedicated
 
@@ -2495,11 +2510,11 @@ If region is active, apply to active region instead."
   (use-package dired-details+
     ;; TBD no package  but is on emacsmirror github
     :disabled t)
-  
+
 
   (use-package dired-hacks-utils)
   ;; BULK-ENSURE :ensure t
-  
+
 
   (use-package dired-narrow
     :defer t
@@ -2692,8 +2707,8 @@ If region is active, apply to active region instead."
 ;;;_ , docker-tramp
 
 (use-package docker-tramp)
-  ;; BULK-ENSURE :ensure t
-  
+;; BULK-ENSURE :ensure t
+
 
 ;;;_ , doom-themes
 
@@ -2726,11 +2741,11 @@ If region is active, apply to active region instead."
            ((string-match "*Slack - \\|slack" te)
             (setq pr (concat pr (all-the-icons-faicon "slack")))
             (setq te (replace-match "" nil nil te)))
-           
+
            ((string-match "clojurians - \\|clojure" te)
             (setq pr (concat pr (all-the-icons-alltheicon "clojure-line")))
             (setq te (replace-match "" nil nil te)))
-           
+
            (t
             (setq pr (concat pr te))
             (setq ss (concat ss te))
@@ -2762,7 +2777,7 @@ If region is active, apply to active region instead."
 
   (defun lui-propertized (s)
     "Given string, return smallest string and propertized forms.")
-  
+
 
   :hook (after-init . doom-modeline-init)
   :config
@@ -2789,7 +2804,7 @@ If region is active, apply to active region instead."
                                        ((string-match "#" name)
                                         (substring name 2))
                                        (t name))))
-                                  
+
                                   erc-modified-channels-alist)))))
         (mapcar (lambda (b)
                   (propertize
@@ -2801,7 +2816,7 @@ If region is active, apply to active region instead."
                         " "
                         (all-the-icons-faicon "mercury" :v-adjust 0.1)
                         the-count))
-                      
+
 
                       ((string-match "#bitbucket" name)
                        (concat
@@ -2844,7 +2859,7 @@ If region is active, apply to active region instead."
                                        ((string-match "#" name)
                                         (substring name 2))
                                        (t name))))
-                                  
+
                                   erc-modified-channels-alist)))))
         (mapcar (lambda (b)
                   (propertize
@@ -2856,7 +2871,7 @@ If region is active, apply to active region instead."
                         " "
                         (all-the-icons-faicon "mercury" :v-adjust 0.1)
                         the-count))
-                      
+
 
                       ((string-match "#bitbucket" name)
                        (concat
@@ -2940,7 +2955,7 @@ If region is active, apply to active region instead."
   (add-to-list 'easy-kill-alist '(?F string-up-to-char-forward ""))
   (add-to-list 'easy-kill-alist '(?t string-to-char-backward ""))
   (add-to-list 'easy-kill-alist '(?T string-up-to-char-backward "")))
-  
+
 
 ;;;_ , eclim
 
@@ -2963,7 +2978,7 @@ If region is active, apply to active region instead."
            "/home/emacs/.eclipse"
            "/org.eclipse.platform_793567567_linux_gtk_x86_64/"
            "eclimd"))
-    
+
   (use-package company-emacs-eclim
     :config
     (company-emacs-eclim-setup)))
@@ -5534,7 +5549,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (org-imenu-depth 8)
   (imenu-auto-rescan t)
   (org-plantuml-jar-path (expand-file-name "/usr/share/java/plantuml.jar"))
-  
+
   :config
   (defface org-dont-underline-indents '((t :underline nil))
     "Avoid underlining of indentation.")
@@ -7401,7 +7416,6 @@ prepended to the element after the #+HEADER: tag."
 
 (use-package symbol-overlay
   :diminish
-  :functions (turn-off-symbol-overlay turn-on-symbol-overlay)
   :custom-face (symbol-overlay-default-face ((t (:inherit (region bold)))))
   :bind (("M-i" . symbol-overlay-put)
          ("M-n" . symbol-overlay-jump-next)
