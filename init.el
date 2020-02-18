@@ -4613,6 +4613,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (all-the-icons-ivy-setup))
 
+(use-package all-the-icons-ivy-rich
+  :after ivy-rich
+  :init (all-the-icons-ivy-rich-mode 1))
+
 (use-package swiper
   ;; BULK-ENSURE :ensure t
   :after ivy
