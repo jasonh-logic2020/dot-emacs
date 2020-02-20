@@ -7333,6 +7333,9 @@ prepended to the element after the #+HEADER: tag."
 (use-package sr-speedbar
   :unless noninteractive)
 
+(use-package string-inflection
+  :bind ("C-c `" . string-inflection-all-cycle))
+
 ;;;_ , stopwatch
 
 (use-package stopwatch
