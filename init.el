@@ -6725,6 +6725,16 @@ prepended to the element after the #+HEADER: tag."
 
   (add-hook 'dired-mode-hook 'recentf-add-dired-directory))
 
+(use-package repl-toggle
+  :custom
+  (rtog/mode-repl-alist
+   '((emacs-lisp-mode . ielm)
+     (ruby-mode . inf-ruby)
+     (js-mode . nodejs-repl)
+     (typescript-mode . run-ts)))
+  :config
+  (repl-toggle-mode))
+
 ;;;_ , redshank
 
 (use-package redshank
