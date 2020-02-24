@@ -2196,10 +2196,10 @@ If region is active, apply to active region instead."
 
   ;; See http://oremacs.com/2017/12/27/company-numbers/
   (defun ora-company-number ()
-    "Forward to `company-complete-number'. Unless the number is
-                                     potentially part of the
-                                     candidate. In that case,
-                                     insert the number."
+    "Forward to `company-complete-number'.
+
+  Unless the number is potentially part of the candidate.
+  In that case, insert the number."
     (interactive)
     (let* ((k (this-command-keys))
            (re (concat "^" company-prefix k)))
@@ -6124,6 +6124,7 @@ prepended to the element after the #+HEADER: tag."
           inferior-emacs-lisp-mode
           emacs-lisp-mode
           lisp-interaction-mode
+          python-mode
           json-mode) . #'paredit-mode))
 
 (use-package paredit-everywhere
@@ -6801,7 +6802,7 @@ prepended to the element after the #+HEADER: tag."
   :config
   (progn
     (add-hook 'ruby-mode-hook 'rspec-mode)
-    (setq rspec-use-rake-flag nil)
+    (setq rspec-use-rake-when-possible nil)
     (defadvice rspec-compile (around rspec-compile-around activate)
       "Use BASH shell for running the specs because of ZSH issues."
       (let ((shell-file-name "/bin/bash"))
@@ -8007,6 +8008,10 @@ end tell"))))
   (yas-load-directory
    (ensure-directory (expand-file-name "snippets/" user-emacs-directory)))
   (yas-global-mode +1))
+
+(use-package yasnippet-snippets
+  :after yasnippet
+  )
 
 ;;;_ , yasnippet-backsolve
 
