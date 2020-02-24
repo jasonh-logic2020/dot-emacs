@@ -4615,7 +4615,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package all-the-icons-ivy-rich
   :after ivy-rich
-  :init (all-the-icons-ivy-rich-mode 1))
+  :config (all-the-icons-ivy-rich-mode +1))
 
 (use-package swiper
   ;; BULK-ENSURE :ensure t
