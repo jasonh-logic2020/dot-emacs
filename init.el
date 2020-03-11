@@ -3398,10 +3398,23 @@ FORM => (eval FORM)."
 
 ;;;_ , ess
 
+(use-package ess
+  :config
+  (setq ess-default-style 'RRR+))
+
 (use-package ess-site
-  :disabled t
-  :load-path "site-lisp/ess/lisp/"
   :commands R)
+
+(use-package ess-smart-equals
+  :init
+  (setq ess-smart-equals-extra-ops '(brace paren percent))
+  :after (:any ess-r-mode inferior-ess-r-mode ess-r-transcript-mode)
+  :config
+  (ess-smart-equals-activate))
+
+(use-package ess-smart-underscore
+  :init
+  :after (:any ess-r-mode inferior-ess-r-mode ess-r-transcript-mode))
 
 ;;;_ , eval-expr
 
@@ -4669,6 +4682,65 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
       (diminish 'hs-minor-mode))
     (add-hook 'js2-mode-hook 'my-js-mode-hook)))
 
+(use-package julia-mode
+  :defer t
+  :commands julia-mode
+  :mode ("\\.jl$" . julia-mode)
+  :init
+  (progn
+    (autoload 'julia-mode "julia-mode" nil t)
+    (setq inferior-julia-program-name "/usr/bin/julia")
+    )
+  :config
+  (progn
+    (add-to-list 'julia-mode-hook 'cg/modify-current-syntax-table)
+    (setq inferior-julia-program-name "/usr/bin/julia")
+    (add-to-list 'julia-mode-hook 'cg/command-line-keybindings)
+    ;; (add-to-list 'inferior-ess-mode-hook 'cg/command-line-keybindings)
+    )
+  )
+
+(use-package ess-julia.el
+  :defer t
+  :commands julia
+  :init                                ; run before actual loading
+  (progn
+    (autoload 'julia "ess-julia.el" nil t)
+    (setq inferior-julia-program-name "/usr/bin/julia")
+    )
+  :config
+  (progn
+    (require 'ess-site)
+    (setq inferior-julia-program-name "/usr/bin/julia")
+    (setq ess-tracebug-prefix "\M-c")   ; define debug-mode starting key
+    (setq ess-use-tracebug t)           ; tracebug is called for R
+                                        ; AND JULIA!!
+    (setq ess-tracebug-inject-source-p t)
+    (add-to-list 'julia-mode-hook 'cg/command-line-keybindings)
+    ;; (add-to-list 'inferior-ess-mode-hook 'cg/command-line-keybindings)
+    )
+  )
+
+(use-package julia-snail
+  :after julia-mode
+  :hook (julia-mode . julia-snail-mode)
+  :config
+  (progn
+    ;; order matters, unfortunately:
+    (add-to-list 'display-buffer-alist
+                 ;; match buffers named "*julia" in general
+                 '("\\*julia"
+                   ;; actions:
+                   (display-buffer-reuse-window display-buffer-same-window)))
+    (add-to-list 'display-buffer-alist
+                 ;; when displaying buffers named "*julia" in REPL mode
+                 '((lambda (bufname _action)
+                     (and (string-match-p "\\*julia" bufname)
+                          (with-current-buffer bufname
+                            (bound-and-true-p julia-snail-repl-mode))))
+                   ;; actions:
+                   (display-buffer-reuse-window display-buffer-pop-up-window)))))
+
 ;;;_ , key-chord
 
 (use-package key-chord
@@ -5519,6 +5591,20 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
            "\\* Articles"))))
 
 ;;;_ , org-mode
+
+(use-package dot-org
+  :disabled t
+  :commands my-org-startup
+  :bind* (("M-C"   . jump-to-org-agenda)
+          ("M-m"   . org-smart-capture)
+          ("M-M"   . org-inline-note)
+          ("C-c a" . org-agenda)
+          ("C-c S" . org-store-link)
+          ("C-c l" . org-insert-link))
+  :config
+  (unless alternate-emacs
+    (run-with-idle-timer 300 t 'jump-to-org-agenda)
+    (my-org-startup)))
 
 (use-package org
   :bind (("M-C"   . jump-to-org-agenda)
