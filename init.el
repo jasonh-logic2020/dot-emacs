@@ -3752,17 +3752,23 @@ FORM => (eval FORM)."
   :commands (goto-address-prog-mode
              goto-address-mode))
 
-;;;_ , goto-chg
-
-;; (use-package goto-chg
-;;   :bind ("M-g M-p" . goto-last-change)
-;;   :bind ("M-g M-n" . goto-last-change-reverse))
+(use-package goto-addr
+  :hook ((compilation-mode . goto-address-mode)
+         (prog-mode . goto-address-prog-mode)
+         (elfeed-show-mode . goto-address-mode)
+         (eshell-mode . goto-address-mode)
+         (shell-mode . goto-address-mode))
+  :bind (:map goto-address-highlight-keymap
+              ("M-g u" . goto-address-at-point))
+  :commands (goto-address-prog-mode
+             goto-address-mode))
 
 ;;;_ , goto-last-change
 
 (use-package goto-last-change
   :unless noninteractive
-  :bind ("C-'" . goto-last-change))
+  :bind (("C-'" . goto-last-change)
+         ("M-g m" . goto-last-change)))
 
 ;;;_ , grab-x-link
 
@@ -4760,6 +4766,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 ;;;_ , kubernetes
 
+(use-package kubel
+  :defer t
+  :commands (kubel))
+
 (use-package kubernetes
   :defer t
   :commands (kubernetes-overview))
@@ -5041,6 +5051,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package minimap
   :defer t
   :bind ("M-o m" . minimap-mode))
+
+(use-package modus-operandi-theme)
+
+(use-package modus-vivendi-theme)
 
 ;; ;;;_ , mu4e
 
@@ -6530,6 +6544,11 @@ prepended to the element after the #+HEADER: tag."
 
 ;; (use-package predictive)
 
+(use-package prism
+  :disabled t
+  :hook ((lisp-mode clojure-mode json-mode) . prism-mode)
+  :hook ((lisp-mode python-mode) . prism-whitespace-mode))
+
 ;;;_ , projectile
 
 (use-package projectile
@@ -7522,12 +7541,12 @@ prepended to the element after the #+HEADER: tag."
 (use-package symbol-overlay
   :diminish
   :custom-face (symbol-overlay-default-face ((t (:inherit (region bold)))))
-  :bind (("M-i" . symbol-overlay-put)
-         ("M-n" . symbol-overlay-jump-next)
-         ("M-p" . symbol-overlay-jump-prev)
-         ("M-N" . symbol-overlay-switch-forward)
-         ("M-P" . symbol-overlay-switch-backward)
-         ("M-C" . symbol-overlay-remove-all)
+  :bind (("M-g i" . symbol-overlay-put)
+         ("M-g s n" . symbol-overlay-jump-next)
+         ("M-g s p" . symbol-overlay-jump-prev)
+         ("M-g s N" . symbol-overlay-switch-forward)
+         ("M-g s P" . symbol-overlay-switch-backward)
+         ("M-g s C" . symbol-overlay-remove-all)
          ([M-f3] . symbol-overlay-remove-all))
   :hook ((prog-mode . symbol-overlay-mode)
          (iedit-mode . turn-off-symbol-overlay)
@@ -7555,7 +7574,7 @@ prepended to the element after the #+HEADER: tag."
     "Turn on symbol highlighting."
     (interactive)
     (when (derived-mode-p 'prog-mode)
-      (symbol-overlay-mode 1)))
+      (symbol-overlay-mode +1)))
   (advice-add #'deactivate-mark :after #'turn-on-symbol-overlay))
 
 
