@@ -223,10 +223,13 @@
 (require 'dired-x)
 (require 'epa)
 (require 'time)
+(require 'epa-file)
+
+(epa-file-enable)
 
 (setq-default
- line-spacing                   1  ; prevent :box redraws
- indent-tabs-mode             nil  ; Use spaces for indentation
+ line-spacing                   1       ; prevent :box redraws
+ indent-tabs-mode             nil       ; Use spaces for indentation
  major-mode             'org-mode) ; Org-mode as default mode
 
 (setq
@@ -2287,6 +2290,7 @@ If region is active, apply to active region instead."
 
 
 (use-package company-jedi
+  :disabled t
   :after company)
   ;; BULK-ENSURE :ensure t
 
@@ -3150,6 +3154,46 @@ If region is active, apply to active region instead."
 ;;              :password (lookup-password server nick 6697)))
 ;; )
 
+(use-package engine-mode ;; Bound to C-x / <key>
+  :defer 3
+  :config
+  (defengine amazon
+    "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias=aps&field-keywords=%s"
+    :keybinding "a")
+
+  (defengine duckduckgo
+    "https://duckduckgo.com/?q=%s"
+    :keybinding "d")
+
+  (defengine github
+    "https://github.com/search?ref=simplesearch&q=%s"
+    :keybinding "g")
+
+  (defengine google-images
+    "http://www.google.com/images?hl=en&source=hp&biw=1440&bih=795&gbv=2&aq=f&aqi=&aql=&oq=&q=%s"
+    :keybinding "i")
+
+  (defengine google-maps
+    "http://maps.google.com/maps?q=%s"
+    :keybinding "m"
+    :docstring "Mappin' it up.")
+
+  (defengine stack-overflow
+    "https://stackoverflow.com/search?q=%s"
+    :keybinding "s")
+
+  (defengine youtube
+    "http://www.youtube.com/results?aq=f&oq=&search_query=%s"
+    :keybinding "y")
+
+  (defengine wikipedia
+    "http://www.wikipedia.org/search-redirect.php?language=en&go=Go&search=%s"
+    :keybinding "w"
+    :docstring "Searchin' the wikis.")
+  (engine-mode t))
+
+
+
 (use-package erc
   :preface
   (require 'erc)
@@ -3448,6 +3492,10 @@ FORM => (eval FORM)."
 (use-package expand-region
   ;; BULK-ENSURE :ensure t
   :bind ("C-=" . er/expand-region))
+
+(use-package feather
+  :config
+  (feather-mode +1))
 
 ;;;_ , festival
 
@@ -4392,7 +4440,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
    ("C-c f" . counsel-find-library)
    ("C-c g" . counsel-grep)
    ("C-c h" . counsel-command-history)
-   ("C-c i" . counsel-git)
    ("C-c j" . counsel-git-grep)
    ("C-c l" . counsel-locate)
    ("C-c r" . counsel-rg)
@@ -4461,6 +4508,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package counsel-etags
   :bind ("C-c C-t" . counsel-etags-find-tag-at-point))
+
+(use-package ivy-emoji
+  :bind ("C-c i e" . ivy-emoji) ;; mnemonics i e = insert emoji
+  )
 
 (use-package ivy-rich
   :after ivy
@@ -4982,6 +5033,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   ;; BULK-ENSURE :ensure t
   :defer t
   :bind ("C-x g" . magit-status)
+  :custom
+  (magit-process-find-password-functions '(magit-process-password-auth-source))
   :config
   (progn
     (setq magit-diff-refine-hunk 'all)
@@ -4999,14 +5052,13 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
       (start-process "git-monitor" (current-buffer) "~/bin/git-monitor"))))
 
 (use-package magit-todos
-  :after magit
-  ;; BULK-ENSURE :ensure t
-  :defer t)
+  :unless noninteractive
+  :after magit)
 
-(use-package magit-topgit
-  :after magit
-  ;; BULK-ENSURE :ensure t
-  :defer t)
+ (use-package magit-topgit
+   :after magit
+   ;; BULK-ENSURE :ensure t
+   :defer t)
 
 (use-package magit-filenotify
   :after magit)
@@ -5052,9 +5104,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :defer t
   :bind ("M-o m" . minimap-mode))
 
-(use-package modus-operandi-theme)
+(use-package modus-operandi-theme
+  :disabled t)
 
-(use-package modus-vivendi-theme)
+(use-package modus-vivendi-theme
+  :disabled t)
 
 ;; ;;;_ , mu4e
 
@@ -5545,6 +5599,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 ;; (use-package nf-procmail-mode
 ;;   :commands nf-procmail-mode)
+
+(use-package native-complete
+  :after shell
+  :config
+  (native-complete-setup-bash))
 
 ;;;_ , nroff-mode
 
@@ -6269,7 +6328,58 @@ prepended to the element after the #+HEADER: tag."
 
 ;;;_ , pass
 
-(use-package pass)
+(use-package pass
+  :commands (pass pass-view-mode)
+  :mode ("\\.passwords/.*\\.gpg\\'" . pass-view-mode)
+  :hook (pass-view-mode . #'pass-view--prepare-otp))
+
+(use-package password-store
+  :defer 5
+  :commands (password-store-insert
+             password-store-copy
+             password-store-get)
+  :config
+  (defun password-store--run-edit (entry)
+    (require 'pass)
+    (find-file (concat (expand-file-name entry (password-store-dir)) ".gpg")))
+
+  (defun password-store-insert (entry login password)
+    "Insert a new ENTRY containing PASSWORD."
+    (interactive (list (read-string "Password entry: ")
+                       (read-string "Login: ")
+                       (read-passwd "Password: " t)))
+    (message "%s" (shell-command-to-string
+                   (if (string= "" login)
+                       (format "echo %s | %s insert -m -f %s"
+                               (shell-quote-argument password)
+                               password-store-executable
+                               (shell-quote-argument entry))
+                     (format "echo -e '%s\nlogin: %s' | %s insert -m -f %s"
+                             password login password-store-executable
+                             (shell-quote-argument entry)))))))
+
+(use-package password-store-otp
+  :defer t
+  :config
+  (defun password-store-otp-append-from-image (entry)
+    "Check clipboard for an image and scan it to get an OTP URI,
+append it to ENTRY."
+    (interactive (list (read-string "Password entry: ")))
+    (let ((qr-image-filename (password-store-otp--get-qr-image-filename entry)))
+      (when (not (zerop (call-process "screencapture" nil nil nil
+                                      "-T5" qr-image-filename)))
+        (error "Couldn't get image from clipboard"))
+      (with-temp-buffer
+        (condition-case nil
+            (call-process "zbarimg" nil t nil "-q" "--raw"
+                          qr-image-filename)
+          (error
+           (error "It seems you don't have `zbar-tools' installed")))
+        (password-store-otp-append
+         entry
+         (buffer-substring (point-min) (point-max))))
+      (when (not password-store-otp-screenshots-path)
+        (delete-file qr-image-filename)))))
 
 ;;;_ , persistent-scratch
 
@@ -7216,6 +7326,12 @@ prepended to the element after the #+HEADER: tag."
 
   (setq slack-message-custom-notifier #'my-slack-message-notifier
         slack-message-custom-delete-notifier #'my-slack-message-notifier))
+
+(use-package spell-fu
+  :disabled t
+  :unless noninteractive
+  :config
+  (global-spell-fu-mode +1))
 
 (let ((spotify-credentials
        (expand-file-name "credentials.el"
