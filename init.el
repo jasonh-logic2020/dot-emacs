@@ -36,9 +36,12 @@
       gc-cons-percentage           0.6
       auto-window-vscroll          nil
       load-prefer-newer            t
-      large-file-warning-threshold 10000000
-      gnutls-algorithm-priority    "NORMAL:-VERS-TLS1.3"
-      )
+      large-file-warning-threshold 10000000)
+
+(setq gnutls-algorithm-priority
+      (concat "SECURE128:+SECURE192:-VERS-ALL:+VERS-TLS1.2"
+              (if (ignore-errors (> libgnutls-version 30608))
+                  ":+VERS-TLS1.3")))
 
 (add-hook 'after-init-hook
           `(lambda ()
