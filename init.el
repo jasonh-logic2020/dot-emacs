@@ -59,7 +59,7 @@
 (defvar package-check-signature nil)
 
 (eval-and-compile
-  (defvar install-run nil)
+  (defvar install-run t)
   (when install-run
     (package-initialize))
   ;; best guess single-user setup
@@ -449,6 +449,7 @@ Remove from `kill-buffer-hook', and also remove this function
   (dolist (mode-hook modes) (add-hook mode-hook func)))
 
 (use-package set-scroll-margin
+  :disabled install-run
   :unless noninteractive
   :preface
   (defun set-scroll-margin ()
@@ -462,6 +463,7 @@ Remove from `kill-buffer-hook', and also remove this function
           tabulated-list-mode) . #'set-scroll-margin))
 
 (use-package start-per-user-server
+  :disabled install-run
   :unless noninteractive
   :preface
 
@@ -1139,6 +1141,7 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
 (bind-key "C-c =" 'count-matches)
 
 (use-package init-windows
+  :disabled install-run  
   :when (and (window-system)
              (not noninteractive))
   :preface
@@ -1152,6 +1155,7 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
   :hook (after-init . #'init-windows))
 
 (use-package comment-line-or-region
+  :disabled install-run  
   :preface
   (defun endless/comment-line-or-region (n)
     "Comment or uncomment current line and leave point after it.
@@ -1459,6 +1463,7 @@ If region is active, apply to active region instead."
 
 (use-package abbrev
   ;; internal
+  :disabled install-run
   :defer 5
   :commands abbrev-mode
   :diminish abbrev-mode
@@ -1618,6 +1623,7 @@ If region is active, apply to active region instead."
 ;;;_ , ascii
 
 (use-package ascii
+  :disabled install-run  
   :commands (ascii-on ascii-toggle)
   :init
   (progn
@@ -2197,6 +2203,14 @@ If region is active, apply to active region instead."
     (when (company-explicit-action-p)
       ad-do-it))
 
+  (push (apply-partially #'cl-remove-if
+                         (lambda (c)
+                           (or (string-match-p "[^\x00-\x7F]+" c)
+                               (string-match-p "[0-9]+" c)
+                               (if (equal major-mode "org")
+                                   (>= (length c) 15)))))
+        company-transformers)
+
   ;; See http://oremacs.com/2017/12/27/company-numbers/
   (defun ora-company-number ()
     "Forward to `company-complete-number'.
@@ -2263,6 +2277,7 @@ If region is active, apply to active region instead."
   (add-to-list 'company-backends 'company-ebdb))
 
 (use-package company-elisp
+  :disabled install-run
   :after company
   :config
   (add-to-list 'company-backends 'company-elisp))
@@ -2422,12 +2437,13 @@ If region is active, apply to active region instead."
 ;;;_ , crosshairs
 
 (use-package crosshairs
-  ;; BULK-ENSURE :ensure t
+  :disabled install-run
   :bind ("M-o c" . crosshairs-mode))
 
 ;;;_ , cus-edit
 
 (use-package cus-edit
+  :disabled install-run
   :defer 1
   :config
   (use-package initsplit
@@ -2436,7 +2452,6 @@ If region is active, apply to active region instead."
 ;;;_ , css-eldoc
 
 (use-package css-eldoc)
-  ;; BULK-ENSURE :ensure t
 
 
 ;;;_ , dedicated
@@ -2470,6 +2485,7 @@ If region is active, apply to active region instead."
 ;;;_ , dired
 
 (use-package dired
+  :disabled install-run
   :bind ("C-c J" . dired-double-jump)
   :preface
   (defvar mark-files-cache (make-hash-table :test #'equal))
@@ -3045,10 +3061,11 @@ If region is active, apply to active region instead."
   (elfeed-db-directory
    (ensure-directory (expand-file-name "elfeed/db" user-emacs-directory)))
   (elfeed-search-filter "@6-months-ago")
-  :hook (elfeed-search-mode . #'set-scroll-margin)
+ ;;;;  :hook (elfeed-search-mode . #'set-scroll-margin)
   :config
   (progn
-    (set-scroll-margin)
+    (if (fboundp 'set-scroll-margin)
+        (set-scroll-margin))
     ;; this package does not use customize
     ;; elfeed-search-date-face
     ;; elfeed-search-title-face
@@ -3447,6 +3464,7 @@ FORM => (eval FORM)."
   (setq ess-default-style 'RRR+))
 
 (use-package ess-site
+  :disabled install-run
   :commands R)
 
 (use-package ess-smart-equals
