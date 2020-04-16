@@ -3761,7 +3761,9 @@ FORM => (eval FORM)."
 ;;;_ ; git-timemachine
 
 (use-package git-timemachine
-  :unless noninteractive)
+  :disabled install-run
+  :unless noninteractive
+  :defer t)
 
 (use-package gitignore-mode
   :unless noninteractive)
