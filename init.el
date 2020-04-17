@@ -66,9 +66,15 @@
   (when install-run
     (package-initialize))
   ;; best guess single-user setup
-  (defconst user-emacs-directory "~/.emacs.d/")
-  (defconst common-elpa-directory user-emacs-directory)
-  (defconst common-emacs-directory user-emacs-directory)
+  (cond ((eq system-type 'windows-nt)
+         (messsage "windows detected: using default locations"))
+        ((eq system-type 'gnu/linux)
+         (progn
+           (messsage "linux detected: using custom locations")
+           (defconst user-emacs-directory "~/.emacs.d/")
+           (defconst common-elpa-directory user-emacs-directory)
+           (defconst common-emacs-directory user-emacs-directory)
+           )))
 
   (defvar saved-window-configuration nil)
 
@@ -6117,7 +6123,6 @@ prepended to the element after the #+HEADER: tag."
 (use-package org-sticky-header
   :unless noninteractive
   :after org
-  ;; BULK-ENSURE :ensure t
   :hook (org-mode . (lambda () (org-sticky-header-mode +1))))
 
 (use-package org-gcal
