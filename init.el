@@ -62,7 +62,7 @@
 (defvar package-check-signature nil)
 
 (eval-and-compile
-  (defvar install-run t)
+  (defvar install-run nil)
   (when install-run
     (package-initialize))
   ;; best guess single-user setup
