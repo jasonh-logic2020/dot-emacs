@@ -72,9 +72,9 @@
          (progn
            (message "linux detected: using custom locations")
            (defconst user-emacs-directory "~/.emacs.d/")
-           (defconst common-elpa-directory user-emacs-directory)
-           (defconst common-emacs-directory user-emacs-directory)
            )))
+  (defconst common-elpa-directory user-emacs-directory)
+  (defconst common-emacs-directory user-emacs-directory)
 
   (defvar saved-window-configuration nil)
 
