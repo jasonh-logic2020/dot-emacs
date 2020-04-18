@@ -67,10 +67,10 @@
     (package-initialize))
   ;; best guess single-user setup
   (cond ((eq system-type 'windows-nt)
-         (messsage "windows detected: using default locations"))
+         (message "windows detected: using default locations"))
         ((eq system-type 'gnu/linux)
          (progn
-           (messsage "linux detected: using custom locations")
+           (message "linux detected: using custom locations")
            (defconst user-emacs-directory "~/.emacs.d/")
            (defconst common-elpa-directory user-emacs-directory)
            (defconst common-emacs-directory user-emacs-directory)
@@ -3767,9 +3767,9 @@ FORM => (eval FORM)."
 ;;;_ ; git-timemachine
 
 (use-package git-timemachine
-  :disabled install-run
+  ;; :disabled install-run
   :unless noninteractive
-  :defer t)
+  :commands git-timemachine)
 
 (use-package gitignore-mode
   :unless noninteractive)
@@ -4957,10 +4957,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :unless noninteractive
   :custom
   (lispy-compat '(edebug cider))
-  (define-advice git-timemachine-mode (:after (&optional arg))
-    (if (bound-and-true-p git-timemachine-mode)
-        (lispy-mode -1)
-      (lispy-mode +1)))
   :hook ((emacs-lisp-mode
           clojure-mode
           lisp-mode
