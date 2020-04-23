@@ -29,6 +29,8 @@
 
 (defconst emacs-start-time (current-time))
 
+(defvar file-name-handler-alist-old file-name-handler-alist)
+
 (setq package-enable-at-startup    nil
       file-name-handler-alist      nil
       message-log-max              16384
@@ -45,9 +47,10 @@
 
 (add-hook 'after-init-hook
           `(lambda ()
-             (setq gc-cons-threshold 800000
+             (setq file-name-handler-alist file-name-handler-alist-old
+                   gc-cons-threshold 800000
                    gc-cons-percentage 0.1)
-             (garbage-collect)) t)
+             (garbage-collect) t))
 
 (defconst package-archives
   '(("melpa-stable" . "https://stable.melpa.org/packages/")
@@ -62,17 +65,12 @@
 (defvar package-check-signature nil)
 
 (eval-and-compile
+  (require 'cl-lib)
   (defvar install-run nil)
   (when install-run
     (package-initialize))
   ;; best guess single-user setup
-  (cond ((eq system-type 'windows-nt)
-         (message "windows detected: using default locations"))
-        ((eq system-type 'gnu/linux)
-         (progn
-           (message "linux detected: using custom locations")
-           (defconst user-emacs-directory "~/.emacs.d/")
-           )))
+  (defconst user-emacs-directory "~/.emacs.d/")
   (defconst common-elpa-directory user-emacs-directory)
   (defconst common-emacs-directory user-emacs-directory)
 
@@ -91,18 +89,15 @@
             (delete-window)
           (bury-buffer)))))
 
-  (setq package-user-dir (expand-file-name "elpa" common-elpa-directory)
-        custom-file (expand-file-name "settings.el" common-emacs-directory))
-
   (defun ensure-directory (maybe-dir)
     "Make MAYBE-DIR and its parents if it doesn't exist."
     (unless (file-exists-p maybe-dir)
       (make-directory maybe-dir :parents))
-    (file-name-as-directory maybe-dir))
+    (convert-standard-filename (file-name-as-directory maybe-dir)))
 
   (defsubst ensure-user-dir (dir)
     "Ensure user-emacs-directory/DIR exists."
-    (ensure-directory (expand-file-name dir user-emacs-directory)))
+    (ensure-directory (locate-user-emacs-file dir)))
 
   (defsubst user-file-path (dir file)
     "Return user-emacs-directory/DIR/FILE, ensuring DIR exists."
@@ -110,9 +105,7 @@
 
   (defun maybe-load-user-file (filename)
     "Load FILENAME relative to ㅌuser-emacs-directoryㅌ."
-    (let ((user-file (expand-file-name
-                      filename
-                      user-emacs-directory)))
+    (let ((user-file (locate-user-emacs-file filename)))
       (if (file-exists-p user-file)
           (progn
             (load-file user-file)
@@ -128,15 +121,29 @@
           (setq result (cons arg result))))
       (nreverse result)))
 
+  (setq package-user-dir (ensure-user-dir "elpa")
+        custom-file (convert-standard-filename
+                     (expand-file-name "settings.el" user-emacs-directory)))
+
+  (defun catdir (root &rest dirs)
+    (apply 'concat (mapcar
+                    (lambda (name) (file-name-as-directory name))
+                    (push root dirs))))
   (setq load-path
         (append
-         ;; (list common-emacs-directory)
-         (file-expand-wildcards
-          (concat package-user-dir "/*"))
-         (list (ensure-directory
-                (expand-file-name "lisp" common-emacs-directory)))
-         ;; (list user-emacs-directory)
-         (delete-dups load-path)))
+         (let ((package-list '()))
+           (dolist (lib (cl-remove-if
+                         (lambda (x) (or (equal x ".")
+                                    (equal x "..")))
+                         (directory-files package-user-dir)))
+             (push
+              (convert-standard-filename
+               (catdir package-user-dir lib))
+              package-list))
+           package-list)
+         (delete-dups load-path)
+
+         (list (ensure-user-dir "lisp"))))
 
   (defun lookup-password (host user port)
     (require 'auth-source)
@@ -157,8 +164,6 @@
 
   (require 'use-package)
 
-  (when install-run
-    (setq use-package-always-ensure t))
   ;; (unless (require 'use-package nil t)
   ;;   (progn
   ;;     (message "No use-package found, auto-installing")
@@ -193,6 +198,9 @@
     (setq use-package-verbose nil
           use-package-expand-minimally t)))
 
+(when install-run
+  (setq use-package-always-ensure t))
+
 (unless noninteractive
   (message "Loading %s..." load-file-name))
 
@@ -223,9 +231,9 @@
 (use-package no-littering
   :config
   (setq no-littering-etc-directory
-        (expand-file-name "config/" user-emacs-directory))
+        (ensure-user-dir "config/"))
   (setq no-littering-var-directory
-        (expand-file-name "data/" user-emacs-directory))
+        (ensure-user-dir "data/"))
   (require 'no-littering))
 
 ;;;_ , system-wide modifications
@@ -2277,7 +2285,7 @@ If region is active, apply to active region instead."
   :after company
   ;; BULK-ENSURE :ensure t
   :config
-  (setq company-dict-dir (concat user-emacs-directory "dict/"))
+  (setq company-dict-dir (ensure-user-dir "dict/"))
   (add-to-list 'company-backends 'company-dict))
 
 (use-package company-ebdb
@@ -2332,7 +2340,7 @@ If region is active, apply to active region instead."
   :config
   (progn
     (setq company-ngram-data-dir)
-    (expand-file-name "data/ngram" user-emacs-directory)
+    (locate-user-emacs-file "data/ngram")
     ;; company-ngram supports python 3 or newer
     company-ngram-python "python3"
     (company-ngram-init)
@@ -2342,8 +2350,8 @@ If region is active, apply to active region instead."
 
     ;; save the cache of candidates
     (run-with-idle-timer 7200 t
-             (lambda (
-                           (company-ngram-command "save_cache"))))))
+                         (lambda (
+                             (company-ngram-command "save_cache"))))))
 
 
 (use-package company-php
@@ -3068,7 +3076,7 @@ If region is active, apply to active region instead."
 
   :custom
   (elfeed-db-directory
-   (ensure-directory (expand-file-name "elfeed/db" user-emacs-directory)))
+   (ensure-directory (locate-user-emacs-file "elfeed/db")))
   (elfeed-search-filter "@6-months-ago")
  ;;;;  :hook (elfeed-search-mode . #'set-scroll-margin)
   :config
@@ -3102,10 +3110,8 @@ If region is active, apply to active region instead."
   :unless noninteractive
   :config
   (setq rmh-elfeed-org-files
-        (directory-files (ensure-directory
-                          (expand-file-name
-                           "elfeed-org"
-                           user-emacs-directory)) t "\\.org$"))
+        (directory-files
+         (ensure-user-dir "elfeed-org") t "\\.org$"))
   (elfeed-org))
 
 ;;;_ , elisp-slime-nav-mode
@@ -3231,10 +3237,7 @@ If region is active, apply to active region instead."
     :load-path "/home/emacs/.emacs.d/lisp"
     :config (erc-bitlbee-twitter-decorate-mode 1))
 
-  (ensure-directory
-   (expand-file-name
-    "logs"
-    (ensure-directory (expand-file-name "erc" user-emacs-directory))))
+  (ensure-user-dir "erc/logs")
   :config
   (company-mode -1)
   (erc-spelling-mode +1)
@@ -3372,7 +3375,7 @@ FORM => (eval FORM)."
   :load-path "/home/emacs/.emacs.d/lisp"
   :config
   (add-to-list 'erc-sound-path
-               (expand-file-name "imsounds/" user-emacs-directory))
+               (locate-user-emacs-file "imsounds/"))
   (maybe-load-user-file "erc-sound-notify-config.el")
   (setq erc-sound-notify-default-sound "pop.wav"
         erc-sound-notify-volume 0.01)
@@ -3781,7 +3784,7 @@ FORM => (eval FORM)."
 ;;          ("C-x m" . compose-mail))
 ;; :init
 ;; (progn
-;;   (setq gnus-init-file (expand-file-name "dot-gnus" user-emacs-directory)
+;;   (setq gnus-init-file (locate-user-emacs-file "dot-gnus")
 ;;         gnus-home-directory "~/Messages/Gnus/"))
 
 (use-package all-the-icons-gnus
@@ -6435,7 +6438,7 @@ append it to ENTRY."
   :config
   (setq
    persistent-scratch-save-file
-   (expand-file-name "my.org" user-emacs-directory))
+   (locate-user-emacs-file "my.org"))
   (persistent-scratch-setup-default))
 
 ;;;_ , persp-mode
@@ -6657,6 +6660,9 @@ append it to ENTRY."
         '(:eval (if (file-remote-p default-directory)
                     " Prj[*remote*]"
                   (format " Prj[%s]" (projectile-project-name))))))
+
+(use-package plantuml-mode
+  :mode "\\.plantuml\\'")
 
 (use-package poporg
   :bind ("C-x C-;" . poporg-dwim))
@@ -7109,7 +7115,7 @@ append it to ENTRY."
         ;; save every minute
         savehist-autosave-interval 60
         ;; keep the home clean
-        savehist-file (expand-file-name "savehist" user-emacs-directory))
+        savehist-file (locate-user-emacs-file "savehist"))
   :config
   (savehist-mode +1))
 
@@ -7143,8 +7149,7 @@ append it to ENTRY."
 
     (defun remove-session-use-package-from-settings ()
       (when (string= (buffer-file-name)
-                     (expand-file-name "settings.el"
-                                       user-emacs-directory))
+                     (locate-user-emacs-file "settings.el"))
         (save-excursion
           (goto-char (point-min))
           (when (re-search-forward "^ '(session-use-package " nil t)
@@ -7311,8 +7316,7 @@ append it to ENTRY."
       (call-interactively #'slack-message-embed-mention)
       (insert " ")))
 
-  (when-let* ((dir (ensure-directory
-                    (expand-file-name "slack" user-emacs-directory)))
+  (when-let* ((dir (ensure-user-dir "slack"))
               (file (expand-file-name "teams.el" dir))
               (_ (file-exists-p file)))
     (load-file file))
@@ -7359,7 +7363,7 @@ append it to ENTRY."
 
 (let ((spotify-credentials
        (expand-file-name "credentials.el"
-                         (expand-file-name "spotify/" user-emacs-directory))))
+                         (locate-user-emacs-file "spotify/"))))
   (use-package spotify
     :when (file-exists-p spotify-credentials)
     :config
@@ -7401,8 +7405,7 @@ append it to ENTRY."
   (slime-kill-without-query-p t)
   (slime-repl-history-file
    (expand-file-name "slime-history.eld"
-                     (ensure-directory
-                      (expand-file-name "slime/" user-emacs-directory))) t)
+                     (ensure-user-dir "slime/")) t)
   (slime-startup-animation nil))
 
 
@@ -8252,7 +8255,7 @@ end tell"))))
                  "$0\n")))))
 
   (yas-load-directory
-   (ensure-directory (expand-file-name "snippets/" user-emacs-directory)))
+   (ensure-user-dir "snippets/"))
   (yas-global-mode +1))
 
 (use-package yasnippet-snippets
