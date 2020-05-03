@@ -465,9 +465,37 @@ Remove from `kill-buffer-hook', and also remove this function
   "Hook multiple modes at once.  FUNC and MODES are self-explanatory."
   (dolist (mode-hook modes) (add-hook mode-hook func)))
 
+(use-package dubcaps-mode
+  :unless (or install-run noninteractive)
+  :preface
+  (defun dcaps-to-scaps ()
+    "Convert word in DOuble CApitals to Single Capitals."
+    (interactive)
+    (and (= ?w (char-syntax (char-before)))
+         (save-excursion
+           (let ((end (point)))
+             (and (if (called-interactively-p)
+                      (skip-syntax-backward "w")
+                    (= -3 (skip-syntax-backward "w")))
+                  (let (case-fold-search)
+                    (looking-at "\\b[[:upper:]]\\{2\\}[[:lower:]]"))
+                  (capitalize-region (point) end))))))
+
+  (define-minor-mode dubcaps-mode
+    "Toggle `dubcaps-mode'.  Converts words in DOuble CApitals to
+Single Capitals as you type."
+    :init-value nil
+    :lighter (" DC")
+    (if dubcaps-mode
+        (add-hook 'post-self-insert-hook #'dcaps-to-scaps nil 'local)
+      (remove-hook 'post-self-insert-hook #'dcaps-to-scaps 'local)))
+  :commands (dubcaps-mode)
+  :hook ((prog-mode
+          text-mode
+          tabulated-list-mode) . #'dubcaps-mode))
+
 (use-package set-scroll-margin
-  :disabled install-run
-  :unless noninteractive
+  :unless (or install-run noninteractive)
   :preface
   (defun set-scroll-margin ()
     "Make scroll margins a quarter of the window height."
@@ -480,8 +508,7 @@ Remove from `kill-buffer-hook', and also remove this function
           tabulated-list-mode) . #'set-scroll-margin))
 
 (use-package start-per-user-server
-  :disabled install-run
-  :unless noninteractive
+  :unless (or install-run noninteractive)
   :preface
 
   (defun server-running-here-p ()
@@ -1158,7 +1185,7 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
 (bind-key "C-c =" 'count-matches)
 
 (use-package init-windows
-  :disabled install-run  
+  :unless (or install-run noninteractive)
   :when (and (window-system)
              (not noninteractive))
   :preface
@@ -1172,7 +1199,7 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
   :hook (after-init . #'init-windows))
 
 (use-package comment-line-or-region
-  :disabled install-run  
+  :unless (or install-run noninteractive)
   :preface
   (defun endless/comment-line-or-region (n)
     "Comment or uncomment current line and leave point after it.
@@ -1480,7 +1507,7 @@ If region is active, apply to active region instead."
 
 (use-package abbrev
   ;; internal
-  :disabled install-run
+  :unless install-run
   :defer 5
   :commands abbrev-mode
   :diminish abbrev-mode
@@ -1629,6 +1656,13 @@ If region is active, apply to active region instead."
 
     (add-hook 'allout-mode-hook 'my-allout-mode-hook)))
 
+(use-package anakondo
+  :unless noninteractive
+  :commands anakondo-minor-mode
+  :hook ((clojure-mode
+          clojurescript-mode
+          clojurec-mode) . #'anakondo-minor-mode))
+
 ;;;_ , anzu
 
 (use-package anzu
@@ -1640,7 +1674,7 @@ If region is active, apply to active region instead."
 ;;;_ , ascii
 
 (use-package ascii
-  :disabled install-run  
+  :unless install-run
   :commands (ascii-on ascii-toggle)
   :init
   (progn
@@ -2129,8 +2163,7 @@ If region is active, apply to active region instead."
 ;;;_ , clj-refactor
 
 (use-package clj-refactor
-  ;; BULK-ENSURE :ensure t
-  :defer t
+  :unless noninteractive
   :hook (clojure-mode . (lambda () (clj-refactor-mode +1)))
   :config
   (cljr-add-keybindings-with-prefix "C-c C-m"))
@@ -2294,7 +2327,7 @@ If region is active, apply to active region instead."
   (add-to-list 'company-backends 'company-ebdb))
 
 (use-package company-elisp
-  :disabled install-run
+  :unless install-run
   :after company
   :config
   (add-to-list 'company-backends 'company-elisp))
@@ -2444,7 +2477,7 @@ If region is active, apply to active region instead."
 ;;;_ , color-theme
 
 (use-package color-theme
-  :disabled
+  :disabled t 
   :unless noninteractive
   ;; BULK-ENSURE :ensure t
   :config
@@ -2454,13 +2487,13 @@ If region is active, apply to active region instead."
 ;;;_ , crosshairs
 
 (use-package crosshairs
-  :disabled install-run
+  :unless (or install-run noninteractive)
   :bind ("M-o c" . crosshairs-mode))
 
 ;;;_ , cus-edit
 
 (use-package cus-edit
-  :disabled install-run
+  :unless install-run
   :defer 1
   :config
   (use-package initsplit
@@ -2502,7 +2535,7 @@ If region is active, apply to active region instead."
 ;;;_ , dired
 
 (use-package dired
-  :disabled install-run
+  :unless install-run
   :bind ("C-c J" . dired-double-jump)
   :preface
   (defvar mark-files-cache (make-hash-table :test #'equal))
@@ -3476,7 +3509,7 @@ FORM => (eval FORM)."
   (setq ess-default-style 'RRR+))
 
 (use-package ess-site
-  :disabled install-run
+  :unless install-run
   :commands R)
 
 (use-package ess-smart-equals
@@ -3584,6 +3617,10 @@ FORM => (eval FORM)."
   :config
   (progn
     (flycheck-cask-setup)))
+
+(use-package flycheck-clj-kondo
+  :defer t
+  :after flycheck clojure-mode)
 
 (use-package flycheck-clojure
   :after flycheck
@@ -3770,7 +3807,6 @@ FORM => (eval FORM)."
 ;;;_ ; git-timemachine
 
 (use-package git-timemachine
-  ;; :disabled install-run
   :unless noninteractive
   :commands git-timemachine)
 
