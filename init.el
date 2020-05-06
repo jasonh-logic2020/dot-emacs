@@ -782,9 +782,9 @@ tools."
 
 (bind-key "C-a" 'cycle-bol-boi)
 
-(defvar ctl-period-map)
-(define-prefix-command 'ctl-period-map)
-(bind-key "C-." 'ctl-period-map)
+;; (defvar ctl-period-map)
+;; (define-prefix-command 'ctl-period-map)
+;; (bind-key "C-." 'ctl-period-map)
 
 (bind-key* "<C-return>" 'other-window)
 
@@ -998,6 +998,26 @@ tools."
 
 (bind-key "C-c <tab>" 'ff-find-other-file)
 (bind-key "C-c SPC" 'just-one-space)
+
+(defvar insert-and-counting--index 1)
+(defvar insert-and-counting--expr nil)
+
+(defun insert-and-counting (&optional index expr)
+  "Insert numbers starting from INDEX according to EXPR."
+  (interactive
+   (if (or current-prefix-arg
+           (not insert-and-counting--expr))
+       (list (setq insert-and-counting--index
+                   (prefix-numeric-value current-prefix-arg))
+             (setq insert-and-counting--expr
+                   (eval-expr-read-lisp-object-minibuffer "Pattern: ")))
+     (list (setq insert-and-counting--index
+                 (1+ insert-and-counting--index))
+           insert-and-counting--expr)))
+  (let ((n insert-and-counting--index))
+    (eval expr)))
+
+(bind-key "C-c #" #'insert-and-counting)
 
 ;; inspired by Erik Naggum's `recursive-edit-with-single-window'
 (defmacro recursive-edit-preserving-window-config (body)
@@ -1256,34 +1276,6 @@ If region is active, apply to active region instead."
       (forward-paragraph))))
 
 (bind-key "C-c M-q" 'unfill-paragraph)
-
-;;;_ , ctl-period-map
-
-;;;_  . C-. ?
-
-(bind-key "C-. m" 'kmacro-keymap)
-
-(bind-key "C-. C-i" 'indent-rigidly)
-
-(defvar insert-and-counting--index 1)
-(defvar insert-and-counting--expr nil)
-
-(defun insert-and-counting (&optional index expr)
-  "Insert numbers starting from INDEX according to EXPR."
-  (interactive
-   (if (or current-prefix-arg
-           (not insert-and-counting--expr))
-       (list (setq insert-and-counting--index
-                   (prefix-numeric-value current-prefix-arg))
-             (setq insert-and-counting--expr
-                   (eval-expr-read-lisp-object-minibuffer "Pattern: ")))
-     (list (setq insert-and-counting--index
-                 (1+ insert-and-counting--index))
-           insert-and-counting--expr)))
-  (let ((n insert-and-counting--index))
-    (eval expr)))
-
-(bind-key "C-. C-y" #'insert-and-counting)
 
 ;;;_ , help-map
 
