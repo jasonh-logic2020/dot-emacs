@@ -1019,6 +1019,9 @@ tools."
 
 (bind-key "C-c #" #'insert-and-counting)
 
+(bind-key "C-c C--" #'text-scale-decrease)
+(bind-key "C-c C-=" #'text-scale-increase)
+-
 ;; inspired by Erik Naggum's `recursive-edit-with-single-window'
 (defmacro recursive-edit-preserving-window-config (body)
   "*Return a command that enters a recursive edit after executing BODY.
@@ -4361,10 +4364,16 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;   :init
 ;;   (auto-image-file-mode 1))
 
+(use-package inf-clojure
+  :init
+  (defun figwheel ()
+    (interactive)
+    (run-clojure "lein figwheel"))
+  :hook ('clojurescript-mode-hook . #'inf-clojure-minor-mode))
+
 ;;;_ , impatient-mode
 
 (use-package impatient-mode
-  ;; BULK-ENSURE :ensure t
   :defer t
   :config
   (progn
