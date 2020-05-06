@@ -1019,9 +1019,9 @@ tools."
 
 (bind-key "C-c #" #'insert-and-counting)
 
-(bind-key "C-c C--" #'text-scale-decrease)
-(bind-key "C-c C-=" #'text-scale-increase)
--
+(bind-key "C-c C-+" #'text-scale-decrease)
+(bind-key "C-c C--" #'text-scale-increase)
+
 ;; inspired by Erik Naggum's `recursive-edit-with-single-window'
 (defmacro recursive-edit-preserving-window-config (body)
   "*Return a command that enters a recursive edit after executing BODY.
@@ -3177,12 +3177,13 @@ If region is active, apply to active region instead."
 
 ;;;_ , emojify
 
-(use-package emojify
+(use-package emojify-mode
   :unless noninteractive
   :if (display-graphic-p)
   ;; BULK-ENSURE :ensure t
-  :config
-  (global-emojify-mode t))
+  :hook
+  ((text-mode
+    tabulated-list-mode) #'emojify-mode))
 
 ;;;_ , erc
 
