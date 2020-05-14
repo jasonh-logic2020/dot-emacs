@@ -1654,7 +1654,8 @@ If region is active, apply to active region instead."
 (use-package anakondo
   :unless noninteractive
   :commands anakondo-minor-mode
-  :hook ((clojure-mode
+  :hook ((inf-clojure-mode
+          clojure-mode
           clojurescript-mode
           clojurec-mode) . #'anakondo-minor-mode))
 
@@ -3177,10 +3178,11 @@ If region is active, apply to active region instead."
 
 ;;;_ , emojify
 
-(use-package emojify-mode
-  :unless noninteractive
-  :if (display-graphic-p)
-  ;; BULK-ENSURE :ensure t
+(use-package emojify
+  :disabled t
+  :if (and (display-graphic-p)
+           (not noninteractive))
+  :commands (emojify-mode emmojify)
   :hook
   ((text-mode
     tabulated-list-mode) #'emojify-mode))
@@ -6346,6 +6348,8 @@ prepended to the element after the #+HEADER: tag."
   :hook ((clojure-mode
           cider-repl-mode
           lisp-mode
+          clojurescript-mode
+          inf-clojure-mode
           inferior-emacs-lisp-mode
           emacs-lisp-mode
           lisp-interaction-mode
@@ -7854,6 +7858,9 @@ append it to ENTRY."
   (setq uniquify-after-kill-buffer-p t)
   ;; don't muck with special buffers
   (setq uniquify-ignore-buffers-re "^\\*"))
+
+(use-package uuidgen
+  :commands (insert-uuid-cid))
 
 ;;;_ , all-the-icons
 
