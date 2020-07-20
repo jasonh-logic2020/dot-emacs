@@ -272,6 +272,7 @@
  kept-new-versions              6  ; Number of versions to keep
  kept-old-versions              2  ; Number of old versions
  version-control                t  ; Keep versions of every file
+ confirm-kill-processes         nil ;kill processes without asking
  show-paren-delay               0) ; Don't delay the paren update
 
 (column-number-mode             1) ; Show column number
@@ -2132,7 +2133,6 @@ If region is active, apply to active region instead."
   ;; (cider-prompt-for-symbol nil)
 
   :hook (cider-repl-mode . (lambda ()
-                             (emojify-mode -1)
                              (aggressive-indent-mode -1)
                              (lispy-mode +1)))
   :config)
@@ -2166,8 +2166,7 @@ If region is active, apply to active region instead."
 
 ;;;_ , cljr-helm
 
-(use-package cljr-helm
-  :disabled t)
+(use-package cljr-ivy)
 
 ;;;_ , clojure-mode
 
@@ -2176,6 +2175,13 @@ If region is active, apply to active region instead."
   :hook (clojure-mode . (lambda () (add-hook 'after-save-hook 'check-parens nil t)))
   :mode (("\\.edn$" . clojure-mode)
          ("\\.clj$" . clojure-mode)))
+
+(use-package clojure-essential-ref
+  :bind (
+         :map cider-mode-map
+         ("C-h F" . clojure-essential-ref)
+         :map cider-repl-mode-map
+         ("C-h F" . clojure-essential-ref)))
 
 (use-package html-to-hiccup
   ;; BULK-ENSURE :ensure t
@@ -2565,6 +2571,18 @@ If region is active, apply to active region instead."
         (call-interactively #'sr-change-window)
       (call-interactively #'other-window)))
 
+  :custom
+  (dired-recursive-deletes 'always)
+  (dired-recursive-copies 'always)
+  (dired-deletion-confirmer 'y-or-n-p)
+  (dired-clean-up-buffers-too nil)
+  (delete-by-moving-to-trash t)
+  ;; trash-directory "~/.Trash/emacs"
+  (dired-dwim-target t)
+  (dired-guess-shell-alist-user
+   '(("\\.pdf\\'" "evince")
+     ("\\.jpg\\'" "feh")))
+  (dired-listing-switches "-alv")
   :config
   (bind-key "l" #'dired-up-directory dired-mode-map)
 
@@ -3558,6 +3576,8 @@ FORM => (eval FORM)."
   :config
   (feather-mode +1))
 
+(use-package feed-discovery)
+
 ;;;_ , festival
 
 (use-package festival
@@ -3712,6 +3732,10 @@ FORM => (eval FORM)."
   :diminish "🔦"
   :init
   (add-hook 'find-file-hook 'flymake-find-file-hook))
+
+(use-package flymake-kondor
+  :after flymake
+  :hook (clojure-mode . flymake-kondor-setup))
 
 ;;;_ , flymake-shellcheck
 
@@ -4791,7 +4815,9 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;   :config
 ;;   (setq jdee-server-dir "/home/emacs/jdee-server/target"))
 
-;;;_ , js-mode
+(use-package journalctl-mode)
+
+;;;_ , JS-mode
 
 (use-package js2-mode
   :defer t
@@ -7248,6 +7274,9 @@ append it to ENTRY."
 (use-package sh-toggle
   :bind ("C-. C-z" . shell-toggle))
 
+(use-package shx
+  :hook (shell-mode . shx-mode))
+
 ;;;_ , shackle
 
 (use-package shackle
@@ -7620,6 +7649,9 @@ append it to ENTRY."
 ;;   )
 
 ;;;_ , sqlup
+
+(use-package sqlite3-api
+  :defer t)
 
 (use-package sqlup-mode
   :defer t
