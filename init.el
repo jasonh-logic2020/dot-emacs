@@ -2177,11 +2177,11 @@ If region is active, apply to active region instead."
          ("\\.clj$" . clojure-mode)))
 
 (use-package clojure-essential-ref
-  :bind (
-         :map cider-mode-map
-         ("C-h F" . clojure-essential-ref)
-         :map cider-repl-mode-map
-         ("C-h F" . clojure-essential-ref)))
+  :after clojure-mode
+  :bind (:map cider-mode-map
+              ("C-h F" . clojure-essential-ref)
+              :map cider-repl-mode-map
+              ("C-h F" . clojure-essential-ref)))
 
 (use-package html-to-hiccup
   ;; BULK-ENSURE :ensure t
@@ -2874,22 +2874,22 @@ If region is active, apply to active region instead."
   (doom-modeline-def-segment ati-lui-track
     "An `all-the-icons' segment for tracking-mode"
     (when (bound-and-true-p erc-track-mode)
-      (let ((shortened (mapcar* #'cons
-                                (mapcar
-                                 (lambda (x) (buffer-name (car x)))
-                                 erc-modified-channels-alist)
-                                (erc-unique-substrings
-                                 (mapcar
-                                  (lambda (x)
-                                    (let ((name (buffer-name (car x))))
-                                      (cond
-                                       ((string-match "#twitter_" name)
-                                        (substring name 9))
-                                       ((string-match "#" name)
-                                        (substring name 2))
-                                       (t name))))
+      (let ((shortened (mapcar*
+                        #'cons (mapcar
+                                (lambda (x) (buffer-name (car x)))
+                                erc-modified-channels-alist)
+                        (erc-unique-substrings
+                         (mapcar
+                          (lambda (x)
+                            (let ((name (buffer-name (car x))))
+                              (cond
+                               ((string-match "#twitter_" name)
+                                (substring name 9))
+                               ((string-match "#" name)
+                                (substring name 2))
+                               (t name))))
 
-                                  erc-modified-channels-alist)))))
+                          erc-modified-channels-alist)))))
         (mapcar (lambda (b)
                   (propertize
                    (let ((name (buffer-name (car b)))
@@ -6730,7 +6730,10 @@ append it to ENTRY."
                   (format " Prj[%s]" (projectile-project-name))))))
 
 (use-package plantuml-mode
-  :mode "\\.plantuml\\'")
+  :mode "\\.plantuml\\'"
+  :custom
+  (plantuml-default-exec-mode 'jar)
+  (plantuml-jar-path "/usr/share/java/plantuml.jar"))
 
 (use-package poporg
   :bind ("C-x C-;" . poporg-dwim))
