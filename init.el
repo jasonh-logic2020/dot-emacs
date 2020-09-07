@@ -3125,8 +3125,78 @@ If region is active, apply to active region instead."
   (elfeed-db-directory
    (ensure-directory (locate-user-emacs-file "elfeed/db")))
   (elfeed-search-filter "@6-months-ago")
- ;;;;  :hook (elfeed-search-mode . #'set-scroll-margin)
+;;;;  :hook (elfeed-search-mode . #'set-scroll-margin)
   :config
+
+  (defun elfeed-v-mpv (url)
+    "Watch a video from URL in MPV"
+    (async-shell-command (format "mpv %s" url)))
+
+  (defun elfeed-view-mpv (&optional use-generic-p)
+    "Youtube-feed link"
+    (interactive "P")
+    (let ((entries (elfeed-search-selected)))
+      (cl-loop for entry in entries
+               do (elfeed-untag entry 'unread)
+               when (elfeed-entry-link entry)
+               do (elfeed-v-mpv it))
+      (mapc #'elfeed-search-update-entry entries)
+      (unless (use-region-p) (forward-line))))
+
+  (define-key elfeed-search-mode-map (kbd "v") 'elfeed-view-mpv)
+
+  (defvar ap/elfeed-update-complete-hook nil
+    "Functions called with no arguments when `elfeed-update' is finished.")
+
+  (defvar ap/elfeed-updates-in-progress 0
+    "Number of feed updates in-progress.")
+
+  (defvar ap/elfeed-search-update-filter nil
+    "The filter when `elfeed-update' is called.")
+
+  (defun ap/elfeed-update-complete-hook (&rest ignore)
+    "When update queue is empty, run `ap/elfeed-update-complete-hook' functions."
+    (when (= 0 ap/elfeed-updates-in-progress)
+      (run-hooks 'ap/elfeed-update-complete-hook)))
+
+  (add-hook 'elfeed-update-hooks #'ap/elfeed-update-complete-hook)
+
+  (defun ap/elfeed-update-message-completed (&rest _ignore)
+    (message "Feeds updated")
+    (notifications-notify :title "Elfeed" :body "Feeds updated."))
+
+  (add-hook 'ap/elfeed-update-complete-hook #'ap/elfeed-update-message-completed)
+
+  (defun ap/elfeed-search-update-restore-filter (&rest ignore)
+    "Restore filter after feeds update."
+    (when ap/elfeed-search-update-filter
+      (elfeed-search-set-filter ap/elfeed-search-update-filter)
+      (setq ap/elfeed-search-update-filter nil)))
+
+  (add-hook 'ap/elfeed-update-complete-hook #'ap/elfeed-search-update-restore-filter)
+
+  (defun ap/elfeed-search-update-save-filter (&rest ignore)
+    "Save and change the filter while updating."
+    (setq ap/elfeed-search-update-filter elfeed-search-filter)
+    (setq elfeed-search-filter "#0"))
+
+  ;; NOTE: It would be better if this hook were run before starting the feed updates, but in
+  ;; `elfeed-update', it happens afterward.
+  (add-hook 'elfeed-update-init-hooks #'ap/elfeed-search-update-save-filter)
+
+  (defun ap/elfeed-update-counter-inc (&rest ignore)
+    (cl-incf ap/elfeed-updates-in-progress))
+
+  (advice-add #'elfeed-update-feed :before #'ap/elfeed-update-counter-inc)
+
+  (defun ap/elfeed-update-counter-dec (&rest ignore)
+    (cl-decf ap/elfeed-updates-in-progress)
+    (when (< ap/elfeed-updates-in-progress 0)
+      ;; Just in case
+      (setq ap/elfeed-updates-in-progress 0)))
+
+  (add-hook 'elfeed-update-hooks #'ap/elfeed-update-counter-dec)
+
   (progn
     (if (fboundp 'set-scroll-margin)
         (set-scroll-margin))
@@ -3621,6 +3691,19 @@ FORM => (eval FORM)."
       ("m" flycheck-mode)
       ("s" flycheck-select-checker)
       ("v" flycheck-verify-setup))))
+
+(use-package flycheck-aspell
+  :after flycheck
+  :defer t
+  :config
+  (progn
+    (add-to-list 'flycheck-checkers 'tex-aspell-dynamic)
+    (setq ispell-program-name "aspell"
+          ispell-silently-savep t)
+    (defun flycheck-maybe-recheck (_)
+      (when (bound-and-true-p flycheck-mode)
+        (flycheck-buffer)))
+    (advice-add #'ispell-pdict-save :after #'flycheck-maybe-recheck)))
 
 (use-package flycheck-bashate
   :after flycheck
