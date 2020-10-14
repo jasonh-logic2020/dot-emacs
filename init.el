@@ -1985,14 +1985,14 @@ If region is active, apply to active region instead."
 
 (use-package browse-at-remote
   :defer t
-  ;; BULK-ENSURE :ensure t
+  :custom
+  (browse-at-remote-add-line-number-if-no-region-selected nil)
   :bind ("C-c g g" . browse-at-remote))
 
 
 ;;;_ , browse-kill-ring+
 
 (use-package browse-kill-ring+
-  ;; TBD no melpa package
   :disabled t)
 
 ;;;_ , captain
@@ -2101,18 +2101,6 @@ If region is active, apply to active region instead."
 
 ;;;_ , cider
 
-;; (defun my-clojure-mode ()
-;;   "Start clojure mode this way."
-;;   (message "Starting my-clojure-mode customizations to %s" (buffer-name))
-;;   (setq mode-name "Clj")
-;;   (aggressive-indent-mode 1)
-;;   (company-mode 1)
-;;   (paredit-mode 1)
-;;   (eldoc-mode 1)
-;;   (yas/minor-mode 1)
-;;   (rainbow-delimiters-mode 1)
-;;   (subword-mode 1))
-
 (use-package cider
   :after clojure-mode
   :unless noninteractive
@@ -2217,7 +2205,7 @@ If region is active, apply to active region instead."
   :commands (company-mode company-indent-or-complete-common)
   :custom
   (company-tooltip-align-annotations t)
-  (company-tooltip-flip-when-above t)
+  ;; (company-tooltip-flip-when-above t)
   (company-tooltip-limit 10)
   (company-require-match nil)
   (company-dabbrev-code-other-buffers t)
@@ -2254,14 +2242,6 @@ If region is active, apply to active region instead."
       (around only-show-tooltip-when-invoked activate)
     (when (company-explicit-action-p)
       ad-do-it))
-
-  (push (apply-partially #'cl-remove-if
-                         (lambda (c)
-                           (or (string-match-p "[^\x00-\x7F]+" c)
-                               (string-match-p "[0-9]+" c)
-                               (if (equal major-mode "org")
-                                   (>= (length c) 15)))))
-        company-transformers)
 
   ;; See http://oremacs.com/2017/12/27/company-numbers/
   (defun ora-company-number ()
@@ -2318,48 +2298,43 @@ If region is active, apply to active region instead."
 
 (use-package company-dict
   :after company
-  ;; BULK-ENSURE :ensure t
   :config
   (setq company-dict-dir (ensure-user-dir "dict/"))
-  (add-to-list 'company-backends 'company-dict))
+  (cons 'company-dict company-backends))
 
 (use-package company-ebdb
   :after company
   :config
-  (add-to-list 'company-backends 'company-ebdb))
+  (cons 'company-ebdb company-backends))
 
 (use-package company-elisp
   :unless install-run
   :after company
   :config
-  (add-to-list 'company-backends 'company-elisp))
+  (cons 'company-elisp company-backends))
 
 (setq-local company-backend '(company-elisp))
 
 (use-package company-emoji
   :after company
-  ;; BULK-ENSURE :ensure t
   :config
   (progn
-    (add-to-list 'company-backends 'company-emoji)
+    (cons 'company-emoji company-backends)
     (set-fontset-font
      t 'symbol (font-spec :family "Symbola") nil 'prepend)))
 
 (use-package company-flx
   :after company
-  ;; BULK-ENSURE :ensure t
   :config
   (company-flx-mode +1))
 
 (use-package company-go
   :after company)
-  ;; BULK-ENSURE :ensure t
 
 
 (use-package company-jedi
   :disabled t
   :after company)
-  ;; BULK-ENSURE :ensure t
 
 
 (use-package company-math
@@ -2371,11 +2346,10 @@ If region is active, apply to active region instead."
 (use-package company-ngram
   :disabled t
   :after company
-  ;; BULK-ENSURE :ensure t
   :config
   (progn
-    (setq company-ngram-data-dir)
-    (locate-user-emacs-file "data/ngram")
+    (setq company-ngram-data-dir
+          (locate-user-emacs-file "data/ngram"))
     ;; company-ngram supports python 3 or newer
     company-ngram-python "python3"
     (company-ngram-init)
@@ -2391,7 +2365,6 @@ If region is active, apply to active region instead."
 
 (use-package company-php
   :after company
-  ;; BULK-ENSURE :ensure t
   :config
   (add-hook 'php-mode-hook
             '(lambda ()
@@ -2401,15 +2374,13 @@ If region is active, apply to active region instead."
 
 (use-package company-quickhelp
   :after company
-  ;; BULK-ENSURE :ensure t
   :custom
   (company-quickhelp-use-propertized-text t)
-  (company-quickhelp-delay 1)
+  (company-quickhelp-delay 0)
   :config (company-quickhelp-mode +1))
 
 (use-package company-shell
   :after company
-  ;; BULK-ENSURE :ensure t
   :config
   (progn
     (add-to-list 'company-backends 'company-shell)
@@ -2417,13 +2388,11 @@ If region is active, apply to active region instead."
 
 (use-package company-statistics
   :after company
-  ;; BULK-ENSURE :ensure t
   :config
   (company-statistics-mode))
 
 (use-package company-web
   :after company
-  ;; BULK-ENSURE :ensure t
   :preface
 
   :config
@@ -3254,6 +3223,10 @@ If region is active, apply to active region instead."
   ;; BULK-ENSURE :ensure t
   :defer 1)
 
+(use-package elpy
+  :init
+  (elpy-enable))
+
 ;;;_ , emacs-snippets
 
 (use-package emacs-snippets
@@ -3588,6 +3561,12 @@ FORM => (eval FORM)."
 (use-package eshell-z
   :after eshell)
 
+(use-package eshell-syntax-highlighting
+  :after esh-mode
+  :config
+  ;; Enable in all Eshell buffers.
+  (eshell-syntax-highlighting-global-mode +1))
+
 ;;;_ , ess
 
 (use-package ess
@@ -3780,9 +3759,7 @@ FORM => (eval FORM)."
   :after flycheck
   :defer t
   :config
-  ((progn
-     (setq flycheck-display-errors-function #'flycheck-pos-tip-error-messages)
-     (flycheck-pos-tip-mode))))
+  (flycheck-pos-tip-mode))
 
 (use-package flycheck-pyflakes
   :after flycheck
@@ -4600,9 +4577,13 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (ivy-mode +1))
 
 (use-package counsel
-  :after ivy
+  :after ivy org
   :diminish counsel-mode
-  :preface
+  :init
+  (counsel-mode +1)
+  :custom
+  (counsel-yank-pop-preselect-last t)
+  (counsel-search-engine 'google)
   :bind
   (("M-y" . counsel-yank-pop)
    :map ivy-minibuffer-map
@@ -4645,7 +4626,19 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
    ("C-c c w" . counsel-colors-web)
    ("C-c c z" . counsel-fzf))
   :config
-  (counsel-mode +1))
+  (with-eval-after-load 'helpful
+    (setq counsel-describe-function-function #'helpful-callable)
+    (setq counsel-describe-variable-function #'helpful-variable)))
+
+(use-package counsel-projectile
+  :ensure t
+  :after (counsel projectile)
+  :config
+  ;; open project in vc after switching
+  (counsel-projectile-modify-action
+   'counsel-projectile-switch-project-action
+   '((default counsel-projectile-switch-project-action-vc)))
+  (counsel-projectile-mode))
 
 (use-package counsel-flycheck
   :after counsel flycheck
@@ -6283,7 +6276,6 @@ prepended to the element after the #+HEADER: tag."
 
 (use-package org-ref
   :after org counsel-projectile
-  ;; BULK-ENSURE :ensure t
   :after async
   :config
   (progn
@@ -7366,6 +7358,7 @@ append it to ENTRY."
 ;;;_ , shackle
 
 (use-package shackle
+  :disabled t
   ;; BULK-ENSURE :ensure t
   :diminish shackle-mode
   :init
