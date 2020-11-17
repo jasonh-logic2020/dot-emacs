@@ -2212,12 +2212,12 @@ If region is active, apply to active region instead."
   (company-dabbrev-downcase t)
   (company-dabbrev-minimum-length 2)
   (company-dabbrev-ignore-case t)
-  (company-minimum-prefix-length 1)
+  (company-minimum-prefix-length 3)
   (company-idle-delay 0.1)
-  (company-show-numbers nil)
+  (company-show-numbers t)
   (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
-                       company-echo-metadata-frontend
-                       company-preview-frontend))
+                       ;; company-echo-metadata-frontend
+                       company-preview-if-just-one-frontend))
   (company-occurrence-weight-function
    #'company-occurrence-prefer-any-closest)
   (company-continue-commands
@@ -2238,24 +2238,37 @@ If region is active, apply to active region instead."
   ;;(hook-into-modes 'company-mode 'prog-mode-hook 'erc-mode)
   ;; From https://github.com/company-mode/company-mode/issues/87
   ;; See also https://github.com/company-mode/company-mode/issues/123
-  (defadvice company-pseudo-tooltip-unless-just-one-frontend
-      (around only-show-tooltip-when-invoked activate)
-    (when (company-explicit-action-p)
-      ad-do-it))
 
-  ;; See http://oremacs.com/2017/12/27/company-numbers/
+  ;; (defadvice company-pseudo-tooltip-unless-just-one-frontend
+  ;;     (around only-show-tooltip-when-invoked activate)
+  ;;   (when (company-explicit-action-p)
+  ;;     ad-do-it))
+
+  ;; see http://oremacs.com/2017/12/27/company-numbers/
+
   (defun ora-company-number ()
     "Forward to `company-complete-number'.
-
-  Unless the number is potentially part of the candidate.
-  In that case, insert the number."
+Unless the number is potentially part of the candidate.
+In that case, insert the number."
     (interactive)
     (let* ((k (this-command-keys))
            (re (concat "^" company-prefix k)))
-      (if (cl-find-if (lambda (s) (string-match re s))
-                      company-candidates)
+      (if (or (cl-find-if (lambda (s) (string-match re s))
+                          company-candidates)
+              (> (string-to-number k)
+                 (length company-candidates))
+              (looking-back "[0-9]+\\.[0-9]*" (line-beginning-position)))
           (self-insert-command 1)
-        (company-complete-number (string-to-number k)))))
+        (company-complete-number
+         (if (equal k "0")
+             10
+           (string-to-number k))))))
+
+  (defun ora--company-good-prefix-p (orig-fn prefix)
+    (unless (and (stringp prefix) (string-match-p "\\`[0-9]+\\'" prefix))
+      (funcall orig-fn prefix)))
+
+  (advice-add 'company--good-prefix-p :around #'ora--company-good-prefix-p)
 
   (let ((map company-active-map))
     (mapc
@@ -3792,6 +3805,13 @@ FORM => (eval FORM)."
   :diminish "🔦"
   :init
   (add-hook 'find-file-hook 'flymake-find-file-hook))
+
+(use-package flymake-grammarly
+  :after flymake
+  :hook ((text-mode-hook
+          latex-mode-hook
+          org-mode-hook
+          markdown-mode-hook) . #'flymake-kondor-setup))
 
 (use-package flymake-kondor
   :after flymake
