@@ -3953,6 +3953,12 @@ FORM => (eval FORM)."
 
     (add-hook 'go-mode-hook 'my-go-mode-hook)))
 
+(use-package goggles
+  :custom
+  (goggles-pulse t)
+  :config
+  (goggles-mode))
+
 ;;;_ , google-this
 (use-package google-this
   :diminish google-this-mode
@@ -8003,6 +8009,7 @@ append it to ENTRY."
 ;;;_ , volatile highlights - temporarily highlight changes from pasting etc
 
 (use-package volatile-highlights
+  :disabled t                           ;in favor of goggles
   :diminish " 🌋"
   :config
   (volatile-highlights-mode t))
