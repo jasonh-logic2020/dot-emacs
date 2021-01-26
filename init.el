@@ -495,6 +495,11 @@ Single Capitals as you type."
           text-mode
           tabulated-list-mode) . #'dubcaps-mode))
 
+(use-package justfile-mode
+  :unless (or install-run noninteractive)
+  :preface
+  (add-to-list 'auto-mode-alist '("\\Justfile$" . makefiile-mode)))
+
 (use-package set-scroll-margin
   :unless (or install-run noninteractive)
   :preface
