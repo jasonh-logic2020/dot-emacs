@@ -508,6 +508,10 @@ Single Capitals as you type."
           dired-mode
           tabulated-list-mode) . #'set-scroll-margin))
 
+(use-package scroll-on-jump
+  :config
+  (setq scroll-on-jump-duration 0.6))
+
 (use-package start-per-user-server
   :unless (or install-run noninteractive)
   :preface
@@ -3207,6 +3211,7 @@ In that case, insert the number."
 
 (use-package elfeed-org
   :unless noninteractive
+  :after org
   :config
   (setq rmh-elfeed-org-files
         (directory-files
@@ -5847,6 +5852,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;; ;;;_ , orca
 
 (use-package orca
+  :after org
   :config
   (setq orca-handler-list
         '((orca-handler-match-url
@@ -6209,6 +6215,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
   :commands (org-prettify-source-block-mode)
   :hook (org-mode . (lambda () (org-prettify-source-block-mode +1))))
+
+(use-package org-tag-beautify
+  :after org
+  :custom (org-tag-beautify-data-dir (ensure-user-dir "org-tag-beautify"))
+  :init (org-tag-beautify-mode +1))
 
 ;; ;;;_ , org-projectile
 
@@ -7449,6 +7460,9 @@ append it to ENTRY."
   (shackle-inhibit-window-quit-on-same-windows t)
   :config
   (add-hook 'after-init-hook '(lambda () (shackle-mode +1)) t))
+
+(use-package show-font
+  :defer t)
 
 ;;;_ , slack
 
