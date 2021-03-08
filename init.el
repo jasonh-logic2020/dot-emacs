@@ -495,11 +495,6 @@ Single Capitals as you type."
           text-mode
           tabulated-list-mode) . #'dubcaps-mode))
 
-(use-package justfile-mode
-  :unless (or install-run noninteractive)
-  :preface
-  (add-to-list 'auto-mode-alist '("\\Justfile$" . makefiile-mode)))
-
 (use-package set-scroll-margin
   :unless (or install-run noninteractive)
   :preface
@@ -2470,7 +2465,7 @@ In that case, insert the number."
 ;;;_ , color-theme
 
 (use-package color-theme
-  :disabled t 
+  :disabled t
   :unless noninteractive
   ;; BULK-ENSURE :ensure t
   :config
@@ -2482,6 +2477,10 @@ In that case, insert the number."
 (use-package crosshairs
   :unless (or install-run noninteractive)
   :bind ("M-o c" . crosshairs-mode))
+
+(use-package current-word-highlight
+  :unless (or install-run noninteractive)
+  :hook (prog-mode . (current-word-hightlight-mode)))
 
 ;;;_ , cus-edit
 
@@ -3745,6 +3744,7 @@ FORM => (eval FORM)."
     (flycheck-haskell-setup)))
 
 (use-package flycheck-joker
+  :disabled t
   :after flycheck)
 
 (use-package flycheck-kotlin
@@ -5007,6 +5007,9 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
                             (bound-and-true-p julia-snail-repl-mode))))
                    ;; actions:
                    (display-buffer-reuse-window display-buffer-pop-up-window)))))
+
+(use-package just-mode
+  :unless (or install-run noninteractive))
 
 ;;;_ , key-chord
 
