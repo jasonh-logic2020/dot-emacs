@@ -2480,7 +2480,7 @@ In that case, insert the number."
 
 (use-package current-word-highlight
   :unless (or install-run noninteractive)
-  :hook (prog-mode . (current-word-hightlight-mode)))
+  :hook (prog-mode . (current-word-highlight-mode)))
 
 ;;;_ , cus-edit
 
@@ -5143,6 +5143,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (lispy-compat '(edebug cider))
   :hook ((emacs-lisp-mode
           clojure-mode
+          clojurescript-mode
           lisp-mode
           scheme-mode
           python-mode) . #'lispy-mode))
