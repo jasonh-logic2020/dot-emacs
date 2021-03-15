@@ -2175,6 +2175,11 @@ If region is active, apply to active region instead."
               :map cider-repl-mode-map
               ("C-h F" . clojure-essential-ref)))
 
+(use-package clojure-essential-ref-nov
+  :disabled t
+  :init
+  (setq clojure-essential-ref-nov-epub-path "~/Downloads/Clojure_The_Essential_Reference_v29_MEAP.epub"))
+
 (use-package html-to-hiccup
   ;; BULK-ENSURE :ensure t
   :after clojure-mode
@@ -2478,9 +2483,9 @@ In that case, insert the number."
   :unless (or install-run noninteractive)
   :bind ("M-o c" . crosshairs-mode))
 
-(use-package current-word-highlight
-  :unless (or install-run noninteractive)
-  :hook (prog-mode . (current-word-highlight-mode)))
+(use-package current-word-highlight-mode
+  :disabled t
+  :unless (or install-run noninteractive))
 
 ;;;_ , cus-edit
 
@@ -3695,7 +3700,6 @@ FORM => (eval FORM)."
 
 (use-package flycheck-aspell
   :after flycheck
-  :defer t
   :config
   (progn
     (add-to-list 'flycheck-checkers 'tex-aspell-dynamic)
@@ -3721,12 +3725,10 @@ FORM => (eval FORM)."
     (flycheck-cask-setup)))
 
 (use-package flycheck-clj-kondo
-  :defer t
-  :after flycheck clojure-mode)
+  :after (flycheck (:any clojurescript-mode clojure-mode)))
 
 (use-package flycheck-clojure
   :after flycheck
-  :defer t
   :config
   (progn
     (flycheck-clojure-setup)))
