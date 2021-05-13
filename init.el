@@ -1876,8 +1876,12 @@ If region is active, apply to active region instead."
   (load-theme 'base16-tomorrow-night t))
 
 (use-package bazel-mode
+  ;;; replaced by `bazel`
+  :disabled t
   :mode "WORKSPACE"
   :mode "BUILD")
+
+(use-package bazel)
 
 ;;;_ , bbdb
 
