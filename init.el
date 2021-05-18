@@ -2156,9 +2156,24 @@ If region is active, apply to active region instead."
 
 (use-package clj-refactor
   :unless noninteractive
-  :hook (clojure-mode . (lambda () (clj-refactor-mode +1)))
+  :after clojure-mode
+  :diminish ""
+  :init
+  (add-hook 'clojure-mode-hook
+            (lambda ()
+              (clj-refactor-mode 1)
+              (yas-minor-mode 1)
+              (cljr-add-keybindings-with-prefix "C-c C-x")))
+  :custom
+  (cljr-warn-on-eval nil)
+  (cljr-ignore-analyzer-errors t)
   :config
-  (cljr-add-keybindings-with-prefix "C-c C-m"))
+  (dolist (mapping '(("time" . "clj-time.core")
+                     ("string" . "clojure.string")
+                     ("http" . "clj-http.client")
+                     ("json" . "cheshire.core")
+                     ("async" . "clojure.core.async")))
+    (add-to-list 'cljr-magic-require-namespaces mapping t)))
 
 ;;;_ , cljr-helm
 
@@ -2357,11 +2372,17 @@ In that case, insert the number."
 (use-package company-go
   :after company)
 
-
 (use-package company-jedi
-  :disabled t
-  :after company)
-
+  :unless noninteractive
+  :ensure t
+  :config
+  :hook
+  ((python-mode . jedi:setup))
+  :init
+  (setq jedi:complete-on-dot t)
+  (setq jedi:use-shortcuts t)
+  (add-hook 'python-mode-hook
+            (lambda () (add-to-list 'company-backends 'company-jedi))))
 
 (use-package company-math
   :after company
@@ -5220,6 +5241,32 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package log4j-mode
   :disabled t
   :mode ("\\.log\\'" . log4j-mode))
+
+(use-package lsp-mode
+  :ensure t
+  :defer t
+  :preface
+  (setq gc-cons-threshold 100000000
+        read-process-output-max (* 1024 1024))
+
+  :hook ((scala-mode . lsp)
+         (clojure-mode . lsp)
+         (clojurec-mode . lsp)
+         (clojurescript-mode . lsp))
+  :custom
+  (lsp-prefer-flymake nil)
+  :config
+  (dolist (m '(clojure-mode
+               clojurec-mode
+               clojurescript-mode
+               ))
+    (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
+  )
+
+(use-package lsp-ui
+  :commands lsp-ui-mode)
+(use-package lsp-ivy
+  :commands lsp-ivy-workspace-symbol)
 
 ;;;_ , lua-mode
 
