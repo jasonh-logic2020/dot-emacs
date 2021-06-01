@@ -5178,6 +5178,16 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package lively
   :bind ("C-x C-E" . lively));(current-time-string)
 
+(use-package loopy
+  :config
+  (require 'loopy-iter)
+  (require 'loopy-pcase)
+  (require 'loopy-seq))
+
+(use-package loopy-dash
+  :after (loopy)
+  :demand t)
+
 (use-package edebug)
 
 (use-package eldoc
