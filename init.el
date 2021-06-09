@@ -2409,6 +2409,13 @@ In that case, insert the number."
                          (lambda (
                              (company-ngram-command "save_cache"))))))
 
+(use-package company-org-block
+  :after org
+  :custom
+  (company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
+  :hook ((org-mode . (lambda ()
+                       (setq-local company-backends '(company-org-block))
+                       (company-mode +1)))))
 
 (use-package company-php
   :after company
