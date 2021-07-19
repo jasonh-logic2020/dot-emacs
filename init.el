@@ -5930,6 +5930,16 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 ;; ;;;_ , orca
 
+(use-package omnisharp
+  :custom
+  (omnisharp-company-sort-results t)
+  (omnisharp-auto-complete-want-documentation nil)
+  (omnisharp-company-strip-trailing-brackets nil)
+  (omnisharp-company-do-template-completion t)
+  :config
+  (add-to-list 'company-backends #'company-omnisharp)
+  (add-to-list 'auto-mode-alist '("\\.cs$" . csharp-mode)))
+
 (use-package orca
   :after org
   :config
@@ -5966,6 +5976,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; overloaded
          ("M-M"   . org-inline-note)
          ("C-c a" . org-agenda)
+         ("C-c C-h" . org-babel-remove-result)
          ("C-c S" . org-store-link)
          ;; ("C-c o l" . org-insert-link)
          )
@@ -6004,6 +6015,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (add-to-list 'org-font-lock-extra-keywords
                  '("^[[:space:]]+" 0 'org-dont-underline-indents t) 'append))
 
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
   (add-hook 'org-font-lock-set-keywords-hook
             #'org-dont-underline-indents 'append)
 
@@ -6303,6 +6315,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;; ;;;_ , org-projectile
 
 (use-package org-structure-hydra
+  :disabled t                           ;;in favor of company-org-block
   :after org hydra
   :commands (my/org-insert-structure)
   :bind (:map org-mode-map ("<" . 'my/org-insert-structure))
@@ -6467,6 +6480,13 @@ prepended to the element after the #+HEADER: tag."
      (:terminal . "gnome-terminal")))
   (org-babel-tmux-session-prefix "ob-")
   (org-babel-tmux-location (executable-find "tmux")))
+
+(use-package org-tree-slide
+  :after org
+  :custom org-image-actual-width nil)
+
+(use-package org-tree-slide-pauses
+  :after org-tree-slide)
 
 (use-package ob-translate
   :after org
