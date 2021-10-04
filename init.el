@@ -1698,6 +1698,17 @@ If region is active, apply to active region instead."
 (use-package async)
 ;; BULK-ENSURE :ensure t
 
+(use-package atomic-chrome
+  :custom
+  (atomic-chrome-url-major-mode-alist
+   '(("atlassian\\.net" . jira-markup-mode)
+     ("reddit\\.com" . markdown-mode)
+     ("github\\.com" . gfm-mode)
+     ("redmine" . textile-mode))
+   "Major modes for URLs.")
+  :config
+  (atomic-chrome-start-server))
+
 
 ;;;_ , auth-password-store
 
@@ -2357,12 +2368,19 @@ In that case, insert the number."
 (setq-local company-backend '(company-elisp))
 
 (use-package company-emoji
+  :disabled t
+  ;; in favor of coompany-emojify
   :after company
   :config
   (progn
     (cons 'company-emoji company-backends)
     (set-fontset-font
      t 'symbol (font-spec :family "Symbola") nil 'prepend)))
+
+(use-package company-emojify
+  :after company
+  :config
+  (add-to-list 'company-backends 'company-emojify))
 
 (use-package company-flx
   :after company
@@ -4961,6 +4979,14 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;   :config
 ;;   (setq jdee-server-dir "/home/emacs/jdee-server/target"))
 
+(use-package jira-markup-mode
+  :commands (jira-markup-mode)
+  :config
+  (add-hook 'jira-markup-mode-hook
+            (lambda ()
+              (word-wrap t)))
+  (add-hook 'jira-markup-mode-hook #'turn-on-orgtbl))
+
 (use-package journalctl-mode)
 
 ;;;_ , JS-mode
@@ -5179,8 +5205,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           clojure-mode
           clojurescript-mode
           lisp-mode
-          scheme-mode
-          python-mode) . #'lispy-mode))
+          scheme-mode) . #'lispy-mode))
 
 (use-package lively
   :bind ("C-x C-E" . lively));(current-time-string)
@@ -5260,7 +5285,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :mode ("\\.log\\'" . log4j-mode))
 
 (use-package lsp-mode
-  :ensure t
   :defer t
   :preface
   (setq gc-cons-threshold 100000000
@@ -5275,13 +5299,19 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (dolist (m '(clojure-mode
                clojurec-mode
+               clojurex-mode
                clojurescript-mode
                ))
     (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
   )
 
+(use-package lsp-java
+  :config
+  (add-hook 'java-mode-hook 'lsp))
+
 (use-package lsp-ui
   :commands lsp-ui-mode)
+
 (use-package lsp-ivy
   :commands lsp-ivy-workspace-symbol)
 
@@ -7085,6 +7115,16 @@ append it to ENTRY."
 
     (setq ps-print-region-function 'ps-spool-to-pdf)))
 
+(use-package puni
+  :defer t
+  :init
+  (puni-global-mode)
+  :hook (('term-mode-hook
+          'lisp-mode-hook
+          'clojure-mode-hook
+          'clojurescript-mode-hook
+          'cider-mode-hook) . #'puni-disable-puni-mode))
+
 ;;;_ , puppet-mode
 
 (use-package puppet-mode
@@ -8116,8 +8156,15 @@ append it to ENTRY."
 
 (use-package all-the-icons)
 
+(use-package all-the-icons-completion
+  :config
+  :after all-the-icons
+  (all-the-icons-completion-mode))
+
 (use-package all-the-icons-dired
   :hook (dired-mode . (lambda () (all-the-icons-dired-mode +1))))
+
+(use-package vc-backup)
 
 ;;;_ , volatile highlights - temporarily highlight changes from pasting etc
 
