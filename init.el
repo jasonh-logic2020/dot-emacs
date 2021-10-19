@@ -2636,15 +2636,6 @@ In that case, insert the number."
   (bind-key "M-!" #'async-shell-command dired-mode-map)
   (unbind-key "M-G" dired-mode-map)
 
-  (use-package dired-details+
-    ;; TBD no package  but is on emacsmirror github
-    :disabled t)
-
-
-  (use-package dired-hacks-utils)
-  ;; BULK-ENSURE :ensure t
-
-
   (use-package dired-narrow
     :defer t
     ;; BULK-ENSURE :ensure t
@@ -3700,7 +3691,7 @@ FORM => (eval FORM)."
 
 (use-package feather
   :config
-  (feather-mode +1))
+  :hook (after-init . (lambda () (feather-mode +1))))
 
 (use-package feed-discovery)
 
@@ -3709,13 +3700,6 @@ FORM => (eval FORM)."
 (use-package festival
   :disabled t
   :load-path "/home/emacs/.emacs.d/lisp")
-
-;;;_ , find-file-from-selection
-
-;; in .emacs.d/lisp, from
-;; https://github.com/asjo/fffs/find-file-from-selection.el
-(use-package find-file-from-selection
-  :bind ("C-c C-f" . find-file-from-selection))
 
 ;;;_ , flycheck
 
@@ -3784,6 +3768,7 @@ FORM => (eval FORM)."
     (flycheck-clojure-setup)))
 
 (use-package flycheck-color-mode-line
+  :disabled t
   :after flycheck
   :defer t
   :hook (flycheck-mode . flycheck-color-mode-line-mode))
@@ -3813,6 +3798,7 @@ FORM => (eval FORM)."
   (flycheck-package-setup))
 
 (use-package flycheck-perl6
+  :disabled t
   :after flycheck
   :defer t
   :hook (prog-mode . flycheck-mode))
@@ -3858,6 +3844,7 @@ FORM => (eval FORM)."
   :bind ("C-\"" . avy-flycheck-goto-error))
 
 (use-package flycheck-posframe
+  :disabled t
   :after flycheck
   :config (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
 
@@ -4918,9 +4905,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :after ivy hydra
   :defer t)
 
-(use-package ivy-pages
-  :after ivy)
-
 (use-package ivy-rtags
   :after ivy)
 
@@ -5028,9 +5012,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   )
 
 (use-package ess-julia.el
+  :disabled t
   :defer t
   :commands julia
-  :init                                ; run before actual loading
+  :init                                 ; run before actual loading
   (progn
     (autoload 'julia "ess-julia.el" nil t)
     (setq inferior-julia-program-name "/usr/bin/julia")
@@ -5039,8 +5024,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (progn
     (require 'ess-site)
     (setq inferior-julia-program-name "/usr/bin/julia")
-    (setq ess-tracebug-prefix "\M-c")   ; define debug-mode starting key
-    (setq ess-use-tracebug t)           ; tracebug is called for R
+    (setq ess-tracebug-prefix "\M-c") ; define debug-mode starting key
+    (setq ess-use-tracebug t)         ; tracebug is called for R
                                         ; AND JULIA!!
     (setq ess-tracebug-inject-source-p t)
     (add-to-list 'julia-mode-hook 'cg/command-line-keybindings)
@@ -5276,6 +5261,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;;_ , llvm-mode
 
 (use-package llvm-mode
+  :disabled t
   :mode ("\\.ll\\'" . llvm-mode))
 
 ;;;_ , log4j-mode
