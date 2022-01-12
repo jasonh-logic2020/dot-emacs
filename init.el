@@ -27,52 +27,37 @@
 
 ;;; Code:
 
-(defconst emacs-start-time (current-time))
+;; using straight instead of package 
+;; (defconst package-archives
+;;   '(("melpa-stable" . "https://stable.melpa.org/packages/")
+;;     ("melpa" . "https://melpa.org/packages/")
+;;     ("elpa" . "https://elpa.gnu.org/packages/")))
 
-(defvar file-name-handler-alist-old file-name-handler-alist)
+;; (defvar package-check-signature nil)
 
-(setq package-enable-at-startup    nil
-      file-name-handler-alist      nil
-      message-log-max              16384
-      gc-cons-threshold            402653184
-      gc-cons-percentage           0.6
-      auto-window-vscroll          nil
-      load-prefer-newer            t
-      large-file-warning-threshold 10000000)
+;; (require 'cl-lib)
+;; (defvar install-run nil)
+;; (when install-run
+;;   (package-initialize))
+;; ;; best guess single-user setup
+;; (defconst user-emacs-directory "~/.Emacs.d/")
+;; (defconst common-elpa-directory user-emacs-directory)
+;; (defconst common-emacs-directory user-emacs-directory)
 
-(setq gnutls-algorithm-priority
-      (concat "SECURE128:+SECURE192:-VERS-ALL:+VERS-TLS1.2"
-              (if (ignore-errors (> libgnutls-version 30608))
-                  ":+VERS-TLS1.3")))
+(setq custom-file (convert-standard-filename
+                   (expand-file-name "settings.el" user-emacs-directory))
+      org-init (convert-standard-filename
+                (expand-file-name "dot-org.el" user-emacs-directory)))
 
-(add-hook 'after-init-hook
-          `(lambda ()
-             (setq file-name-handler-alist file-name-handler-alist-old
-                   gc-cons-threshold 800000
-                   gc-cons-percentage 0.1)
-             (garbage-collect) t))
+(load custom-file)
 
-(defconst package-archives
-  '(("melpa-stable" . "https://stable.melpa.org/packages/")
-    ("melpa" . "https://melpa.org/packages/")
-    ("elpa" . "https://elpa.gnu.org/packages/")))
-
-(when (window-system)
-  (set-face-attribute 'default nil
-                      :height 70
-                      :width 'extra-condensed
-                      :family "DejaVu Sans Mono"))
-(defvar package-check-signature nil)
+;; (when (window-system)
+;;   (set-face-attribute 'default nil
+;;                       :height 70
+;;                       :width 'extra-condensed
+;;                       :family "DejaVu Sans Mono"))
 
 (eval-and-compile
-  (require 'cl-lib)
-  (defvar install-run nil)
-  (when install-run
-    (package-initialize))
-  ;; best guess single-user setup
-  (defconst user-emacs-directory "~/.emacs.d/")
-  (defconst common-elpa-directory user-emacs-directory)
-  (defconst common-emacs-directory user-emacs-directory)
 
   (defvar saved-window-configuration nil)
 
@@ -157,13 +142,6 @@
                      user host port)))
         (error "No auth entry found for %s@%s:%s" user host port))))
 
-  ;; (unless (require 'quelpa nil t)
-  ;;   (with-temp-buffer
-  ;;     (url-insert-file-contents "https://raw.github.com/quelpa/quelpa/master/bootstrap.el")
-  ;;     (eval-buffer)))
-
-  (require 'use-package)
-
   ;; (unless (require 'use-package nil t)
   ;;   (progn
   ;;     (message "No use-package found, auto-installing")
@@ -188,61 +166,53 @@
          body))))
 
   (advice-add 'use-package-handler/:load-path
-              :around #'load-path-handler-override)
+              :around #'load-path-handler-override))
 
-  (if init-file-debug
-      (setq use-package-verbose t
-            use-package-expand-minimally nil
-            use-package-compute-statistics t
-            debug-on-error t)
-    (setq use-package-verbose nil
-          use-package-expand-minimally t)))
+;; (when install-run
+;;   (setq use-package-always-ensure t))
 
-(when install-run
-  (setq use-package-always-ensure t))
+;; (unless noninteractive
+;;   (message "Loading %s..." load-file-name))
 
-(unless noninteractive
-  (message "Loading %s..." load-file-name))
-
-(use-package diminish                     :demand t)
-(use-package bind-key)
+;; (use-package diminish                     :demand t)
+;; (use-package bind-key)
 
 ;;;_ , use-package extensions
 
-(use-package quelpa-use-package
-  :defer t)
+;; (use-package quelpa-use-package
+;;   :defer t)
 
 (use-package el-patch)
 
 (use-package use-package-chords
   :config (key-chord-mode 1))
 
-(use-package use-package-secret
-  :disabled t
-  :load-path "/home/emacs/use-package-secret"
-  :custom
-  (use-package-secret-verbose t))
+;; (use-package use-package-secret
+;;   :disabled t
+;;   :load-path "/home/emacs/use-package-secret"
+;;   :custom
+;;   (use-package-secret-verbose t))
 
 (add-to-list 'process-coding-system-alist
+             '("python" . (utf-8 . utf-8))
              '("bash" . (undecided-dos . undecided-unix)))
 
 ;;;_ , no-littering
 
 (use-package no-littering
-  :config
-  (setq no-littering-etc-directory
-        (ensure-user-dir "config/"))
-  (setq no-littering-var-directory
-        (ensure-user-dir "data/"))
-  (require 'no-littering))
+  :custom
+  (no-littering-etc-directory
+   (ensure-user-dir "config/"))
+  (no-littering-var-directory
+   (ensure-user-dir "data/")))
 
 ;;;_ , system-wide modifications
-(require 'dired-x)
-(require 'epa)
-(require 'time)
-(require 'epa-file)
+;; (require 'dired-x)
+;; (require 'epa)
+;; (require 'time)
+;; (require 'epa-file)
 
-(epa-file-enable)
+;; (epa-file-enable)
 
 (setq-default
  line-spacing                   1       ; prevent :box redraws
@@ -286,6 +256,7 @@
 (prefer-coding-system      'utf-8) ; Always prefer UTF-8
 (scroll-bar-mode               -1) ; No scroll bar
 (show-paren-mode                1) ; Highlight matching parenthesis
+(desktop-save-mode              1) ; remember open files
 (save-place-mode                1) ; Remember per-file positions
 
 (if window-system
@@ -466,8 +437,52 @@ Remove from `kill-buffer-hook', and also remove this function
   "Hook multiple modes at once.  FUNC and MODES are self-explanatory."
   (dolist (mode-hook modes) (add-hook mode-hook func)))
 
+(eval-and-compile
+  (define-key ctl-x-map "\C-i"
+  #'endless/ispell-word-then-abbrev)
+
+(defun endless/simple-get-word ()
+  (car-safe (save-excursion (ispell-get-word nil))))
+
+(defun endless/ispell-word-then-abbrev (p)
+  "Call `ispell-word', then create an abbrev for it.
+With prefix P, create local abbrev. Otherwise it will
+be global.
+If there's nothing wrong with the word at point, keep
+looking for a typo until the beginning of buffer. You can
+skip typos you don't want to fix with `SPC', and you can
+abort completely with `C-g'."
+  (interactive "P")
+  (let (bef aft)
+    (save-excursion
+      (while (if (setq bef (endless/simple-get-word))
+                 ;; Word was corrected or used quit.
+                 (if (ispell-word nil 'quiet)
+                     nil ; End the loop.
+                   ;; Also end if we reach `bob'.
+                   (not (bobp)))
+               ;; If there's no word at point, keep looking
+               ;; until `bob'.
+               (not (bobp)))
+        (backward-word)
+        (backward-char))
+      (setq aft (endless/simple-get-word)))
+    (if (and aft bef (not (equal aft bef)))
+        (let ((aft (downcase aft))
+              (bef (downcase bef)))
+          (define-abbrev
+            (if p local-abbrev-table global-abbrev-table)
+            bef aft)
+          (message "\"%s\" now expands to \"%s\" %sally"
+                   bef aft (if p "loc" "glob")))
+      (user-error "No typo at or before point"))))
+
+(setq save-abbrevs 'silently)
+(setq-default abbrev-mode t))
+
 (use-package dubcaps-mode
-  :unless (or install-run noninteractive)
+  :unless noninteractive
+  :straight nil
   :preface
   (defun dcaps-to-scaps ()
     "Convert word in DOuble CApitals to Single Capitals."
@@ -496,24 +511,27 @@ Single Capitals as you type."
           tabulated-list-mode) . #'dubcaps-mode))
 
 (use-package set-scroll-margin
-  :unless (or install-run noninteractive)
+  :unless noninteractive
+  :straight nil
   :preface
   (defun set-scroll-margin ()
     "Make scroll margins a quarter of the window height."
     (interactive)
     (setq-local scroll-margin (/ (window-height) 4)))
   :commands (set-scroll-margin)
+  :hook (after-init . (lambda () (hook-into-modes #'set-scroll-margin
+                                             prog-mode
+                                             text-mode
+                                             dired-mode
+                                             tabulated-list-mode)))
   :hook ((prog-mode
           text-mode
           dired-mode
           tabulated-list-mode) . #'set-scroll-margin))
 
-(use-package scroll-on-jump
-  :config
-  (setq scroll-on-jump-duration 0.6))
-
 (use-package start-per-user-server
-  :unless (or install-run noninteractive)
+  :unless noninteractive
+  :straight nil
   :preface
 
   (defun server-running-here-p ()
@@ -556,63 +574,108 @@ tools."
   :commands (start-per-user-server keep-trying-to-start-server)
   :hook (after-init . #'keep-trying-to-start-server))
 
+(use-package scroll-on-jump
+  :config
+  (setq scroll-on-jump-duration 0.6))
+
+;; (eval-and-compile
+;;   (defun server-running-here-p ()
+;;     "Is an emacs server FOR THE CURRENT USER running in this process?"
+;;     (and (fboundp 'server-running-p)
+;;          (server-running-p (getenv "USER"))))
+
+;;   (defun server-running-elsewhere-p ()
+;;     "Is an emacs server FOR THE CURRENT USER running in any process?"
+;;     (and (not (server-running-here-p))
+;;          (file-exists-p
+;;           (concat (file-name-as-directory "/tmp")
+;;                   (getenv "USER")
+;;                   (number-to-string (user-uid))
+;;                   "/emacs"))))
+
+;;   (defun start-per-user-server ()
+;;     "Start emacs server for ’$USER’ unless one is already running."
+;;     (interactive)
+;;     (let* ((username (getenv "USER")))
+;;       (cond
+;;        ((eq t (server-running-here-p))
+;;         (message "This %s server is already running" username) t)
+;;        ((eq t (server-running-elsewhere-p))
+;;         (message "Another %s server is already running" username))
+;;        (t (progn)))
+;;       (setq server-name username)
+;;       (server-start)
+;;       (message "Started server %s" username)))
+
+;;   (defun keep-trying-to-start-server ()
+;;     "Try to start server until it works.
+
+;; A running server is responsible for servicing all emacsclient
+;; requests, which includes ’lookup-password’ queries from other
+;; tools."
+;;     (interactive)
+;;     (while (not (server-running-here-p))
+;;       (run-at-time "5 min" nil #'start-per-user-server)))
+;;   (add-hook 'after-init-hook #'keep-trying-to-start-server))
+
 ;;;_ , Spacemacs runoff
 
 ;; deleted "" prefixes from function names for ivy findability
+(eval-and-compile
+  (defvar useless-buffers-regexp '("*\.\+")
+    "Regexp used to determine if a buffer is not useful.")
+  (defvar useful-buffers-regexp
+    '("\\*\\(scratch\\|terminal\.\+\\|ansi-term\\|eshell\\)\\*")
+    "Regexp for useful buffers despite matching `useless-buffers-regexp'.")
 
-(defvar useless-buffers-regexp '("*\.\+")
-  "Regexp used to determine if a buffer is not useful.")
-(defvar useful-buffers-regexp
-  '("\\*\\(scratch\\|terminal\.\+\\|ansi-term\\|eshell\\)\\*")
-  "Regexp for useful buffers despite matching `useless-buffers-regexp'.")
+  (defun useless-buffer-p (buffer)
+    "Determines if a BUFFER is useful."
+    (let ((buf-paren-major-mode (get (with-current-buffer buffer
+                                       major-mode)
+                                     'derived-mode-parent))
+          (buf-name (buffer-name buffer)))
+      ;; first find if useful buffer exists, if so returns nil and don't check for
+      ;; useless buffers. If no useful buffer is found, check for useless buffers.
+      (unless (cl-loop for regexp in useful-buffers-regexp do
+                       (when (or (eq buf-paren-major-mode 'comint-mode)
+                                 (string-match regexp buf-name))
+                         (return t)))
+        (cl-loop for regexp in useless-buffers-regexp do
+                 (when (string-match regexp buf-name)
+                   (return t))))))
 
-(defun useless-buffer-p (buffer)
-  "Determines if a BUFFER is useful."
-  (let ((buf-paren-major-mode (get (with-current-buffer buffer
-                                     major-mode)
-                                   'derived-mode-parent))
-        (buf-name (buffer-name buffer)))
-    ;; first find if useful buffer exists, if so returns nil and don't check for
-    ;; useless buffers. If no useful buffer is found, check for useless buffers.
-    (unless (cl-loop for regexp in useful-buffers-regexp do
-                     (when (or (eq buf-paren-major-mode 'comint-mode)
-                               (string-match regexp buf-name))
-                       (return t)))
-      (cl-loop for regexp in useless-buffers-regexp do
-               (when (string-match regexp buf-name)
-                 (return t))))))
+  (defun next-useful-buffer ()
+    "Switch to the next buffer and avoid special buffers."
+    (interactive)
+    (let ((start-buffer (current-buffer)))
+      (next-buffer)
+      (while (and (useless-buffer-p (current-buffer))
+                  (not (eq (current-buffer) start-buffer)))
+        (next-buffer))))
 
-(defun next-useful-buffer ()
-  "Switch to the next buffer and avoid special buffers."
-  (interactive)
-  (let ((start-buffer (current-buffer)))
-    (next-buffer)
-    (while (and (useless-buffer-p (current-buffer))
-                (not (eq (current-buffer) start-buffer)))
-      (next-buffer))))
+  (defun previous-useful-buffer ()
+    "Switch to the previous buffer and avoid special buffers."
+    (interactive)
+    (let ((start-buffer (current-buffer)))
+      (previous-buffer)
+      (while (and (useless-buffer-p (current-buffer))
+                  (not (eq (current-buffer) start-buffer)))
+        (previous-buffer))))
 
-(defun previous-useful-buffer ()
-  "Switch to the previous buffer and avoid special buffers."
-  (interactive)
-  (let ((start-buffer (current-buffer)))
-    (previous-buffer)
-    (while (and (useless-buffer-p (current-buffer))
-                (not (eq (current-buffer) start-buffer)))
-      (previous-buffer))))
-
-(defun kill-file-name ()
-  "Put the current buffer’s file name on the `kill-ring`."
-  (interactive)
-  (let ((filename (if (equal major-mode 'dired-mode)
-                      default-directory
-                    (buffer-file-name))))
-    (when filename
-      (with-temp-buffer
-        (insert filename)
-        (clipboard-kill-region (point-min) (point-max)))
-      (message filename))))
+  (defun kill-file-name ()
+    "Put the current buffer’s file name on the `kill-ring`."
+    (interactive)
+    (let ((filename (if (equal major-mode 'dired-mode)
+                        default-directory
+                      (buffer-file-name))))
+      (when filename
+        (with-temp-buffer
+          (insert filename)
+          (clipboard-kill-region (point-min) (point-max)))
+        (message filename)))))
 
 ;; from magnars
+(eval-and-compile
 (defun rename-current-buffer-file ()
   "Renames current buffer and file it is visiting."
   (interactive)
@@ -651,7 +714,7 @@ tools."
       (when (yes-or-no-p "Are you sure you want to delete this file? ")
         (delete-file filename t)
         (kill-buffer buffer)
-        (message "File '%s' successfully removed" filename)))))
+        (message "File '%s' successfully removed" filename))))))
 
 ;; found at http://emacswiki.org/emacs/KillingBuffers
 (defun kill-other-buffers ()
@@ -703,24 +766,45 @@ tools."
   "Return default gnome profile."
   (shell-command-to-string "dconf list /org/gnome/terminal/legacy/profiles:/"))
 
-(load custom-file)
-
-
-(load (expand-file-name "settings" common-emacs-directory))
-
 ;;;_ , Enable disabled commands
 
-(put 'downcase-region  'disabled nil)   ; Let downcasing work
-(put 'erase-buffer     'disabled nil)
-(put 'eval-expression  'disabled nil)   ; Let ESC-ESC work
-(put 'narrow-to-page   'disabled nil)   ; Let narrowing work
-(put 'narrow-to-region 'disabled nil)   ; Let narrowing work
-(put 'set-goal-column  'disabled nil)
-(put 'upcase-region    'disabled nil)   ; Let upcasing work
+(setq disabled-command-function nil) ;; enable all commands
 
-(put 'company-coq-fold            'disabled nil)
-(put 'TeX-narrow-to-group         'disabled nil)
-(put 'LaTeX-narrow-to-environment 'disabled nil)
+;; (put 'downcase-region  'disabled nil)   ; Let downcasing work
+;; (put 'erase-buffer     'disabled nil)
+;; (put 'eval-expression  'disabled nil)   ; Let ESC-ESC work
+;; (put 'narrow-to-page   'disabled nil)   ; Let narrowing work
+;; (put 'narrow-to-region 'disabled nil)   ; Let narrowing work
+;; (put 'set-goal-column  'disabled nil)
+;; (put 'upcase-region    'disabled nil)   ; Let upcasing work
+
+;; (put 'company-coq-fold            'disabled nil)
+;; (put 'TeX-narrow-to-group         'disabled nil)
+;; (put 'LaTeX-narrow-to-environment 'disabled nil)
+
+(eval-and-compile
+  (mapc #'(lambda (entry)
+            (define-prefix-command (cdr entry))
+            (bind-key (car entry) (cdr entry)))
+        '(
+          ;; ("C-,"   . my-ctrl-comma-map)
+          ("<C-m>" . my-ctrl-m-map)
+
+          ;; ("C-h e" . my-ctrl-h-e-map)
+          ;; ("C-h x" . my-ctrl-h-x-map)
+
+          ;; ("C-c b" . my-ctrl-c-b-map)
+          ;; ("C-c e" . my-ctrl-c-e-map)
+          ;; ("C-c m" . my-ctrl-c-m-map)
+          ;; ("C-c w" . my-ctrl-c-w-map)
+          ;; ("C-c y" . my-ctrl-c-y-map)
+          ;; ("C-c H" . my-ctrl-c-H-map)
+          ;; ("C-c N" . my-ctrl-c-N-map)
+          ;; ("C-c (" . my-ctrl-c-open-paren-map)
+          ;; ("C-c -" . my-ctrl-c-minus-map)
+          ;; ("C-c =" . my-ctrl-c-equals-map)
+          ;; ("C-c ." . my-ctrl-c-r-map)
+          )))
 
 ;;;_. Keybindings
 
@@ -729,8 +813,6 @@ tools."
 (autoload 'org-cycle "org" nil t)
 (autoload 'hippie-expand "hippie-exp" nil t)
 (autoload 'indent-according-to-mode "indent" nil t)
-
-(bind-key "C-\\" 'switch-to-buffer)
 
 ;;;_ , tab
 
@@ -1165,6 +1247,7 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
 (bind-key "C-c r" 'replace-regexp)
 (bind-key "C-c s" 'replace-string)
 (bind-key "C-c u" 'rename-uniquely)
+(bind-key "M-SPC" 'cycle-spacing)
 
 (autoload 'auth-source-search "auth-source")
 
@@ -1210,25 +1293,19 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
 (bind-key "C-c z" 'clean-buffer-list)
 
 (bind-key "C-c [" 'align-regexp)
-(bind-key "C-c =" 'count-matches)
 
-(use-package init-windows
-  :unless (or install-run noninteractive)
-  :when (and (window-system)
-             (not noninteractive))
-  :preface
-  (defun init-windows ()
-    "Default window layout."
-    (interactive)
-    (if (window-full-width-p)
-        (split-window-horizontally))
-    (other-window 1))
-  :commands init-windows
-  :hook (after-init . #'init-windows))
+(unless (and noninteractive (not window-system))
+  (eval-and-compile
+    (defun init-windows ()
+      "Default window layout."
+      (interactive)
+      (if (window-full-width-p)
+          (split-window-horizontally))
+      (other-window 1))
+    (add-hook 'after-init-hook  #'init-windows)))
 
-(use-package comment-line-or-region
-  :unless (or install-run noninteractive)
-  :preface
+(unless noninteractive
+(eval-and-compile
   (defun endless/comment-line-or-region (n)
     "Comment or uncomment current line and leave point after it.
 With positive prefix, apply to N lines including current one.
@@ -1247,8 +1324,7 @@ If region is active, apply to active region instead."
       (forward-line 1)
       (back-to-indentation)))
 
-  :bind (:map prog-mode-map
-              ("C-c ;" . endless/comment-line-or-region)))
+  (bind-key "C-c ;" 'endless/comment-line-or-region prog-mode-map)))
 
 (defun vlc-play-sound (file)
   "Play a sound FILE with vlc, but do it asynchronously."
@@ -1507,7 +1583,7 @@ If region is active, apply to active region instead."
 
 (use-package abbrev
   ;; internal
-  :unless install-run
+  :straight nil
   :defer 5
   :commands abbrev-mode
   :diminish abbrev-mode
@@ -1915,6 +1991,17 @@ If region is active, apply to active region instead."
   :diminish
   :config
   (beginend-global-mode +1))
+
+(use-package blamer
+  :straight (blamer :host github :repo "artawower/blamer.el")
+  :custom
+  (blamer-idle-time 0.3)
+  (blamer-min-offset 70)
+  :custom-face
+  (blamer-face ((t :foreground "#7a88cf"
+                   :background nil
+                   :height 70
+                   :italic t))))
 
 ;;;_ , bm
 
@@ -2359,14 +2446,6 @@ In that case, insert the number."
   :config
   (cons 'company-ebdb company-backends))
 
-(use-package company-elisp
-  :unless install-run
-  :after company
-  :config
-  (cons 'company-elisp company-backends))
-
-(setq-local company-backend '(company-elisp))
-
 (use-package company-emoji
   :disabled t
   ;; in favor of coompany-emojify
@@ -2378,6 +2457,7 @@ In that case, insert the number."
      t 'symbol (font-spec :family "Symbola") nil 'prepend)))
 
 (use-package company-emojify
+  :disabled t
   :after company
   :config
   (add-to-list 'company-backends 'company-emojify))
@@ -2391,9 +2471,8 @@ In that case, insert the number."
   :after company)
 
 (use-package company-jedi
+  :disabled t
   :unless noninteractive
-  :ensure t
-  :config
   :hook
   ((python-mode . jedi:setup))
   :init
@@ -2527,24 +2606,182 @@ In that case, insert the number."
   (color-theme-initialize)
   (color-theme-charcoal-black))
 
+(use-package marginalia
+  :after vertico
+  :custom
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :init
+  (marginalia-mode +1))
+
+(use-package embark
+  :after vertico
+  :bind
+  (("C-." . embark-act)         ;; pick some comfortable binding
+   ("M-." . embark-dwim)        ;; good alternative: M-.
+   ("C-h B" . embark-bindings)) ;; alternative for `describe-bindings'
+
+  :init
+
+  ;; Optionally replace the key help with a completing-read interface
+  (setq prefix-help-command #'embark-prefix-help-command)
+
+  :config
+
+  ;; Hide the mode line of the Embark live/completions buffers
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
+                 nil
+                 (window-parameters (mode-line-format . none)))))
+
+;; Consult users will also want the embark-consult package.
+(use-package embark-consult
+  :after (embark consult)
+  :hook
+  (embark-collect-mode . consult-preview-at-point-mode))
+
+
+(use-package consult
+  ;; Replace bindings. Lazily loaded due by `use-package'.
+  :bind (;; C-c bindings (mode-specific-map)
+         ("C-c h" . consult-history)
+         ("C-c m" . consult-mode-command)
+         ("C-c b" . consult-bookmark)
+         ("C-c k" . consult-kmacro)
+         ;; C-x bindings (ctl-x-map)
+         ("C-x M-:" . consult-complex-command) ;; orig. repeat-complex-command
+         ("C-\\" . consult-buffer)
+         ("C-x b" . consult-buffer) ;; orig. switch-to-buffer
+         ("C-x 4 b" . consult-buffer-other-window) ;; orig. switch-to-buffer-other-window
+         ("C-x 5 b" . consult-buffer-other-frame) ;; orig. switch-to-buffer-other-frame
+         ;; Custom M-# bindings for fast register access
+         ("M-#" . consult-register-load)
+         ("M-'" . consult-register-store) ;; orig. abbrev-prefix-mark (unrelated)
+         ("C-M-#" . consult-register)
+         ;; Other custom bindings
+         ("M-y" . consult-yank-pop)     ;; orig. yank-pop
+         ("<help> a" . consult-apropos) ;; orig. apropos-command
+         ;; M-g bindings (goto-map)
+         ("M-g e" . consult-compile-error)
+         ("M-g f" . consult-flymake) ;; Alternative: consult-flycheck
+         ("M-g g" . consult-goto-line)   ;; orig. goto-line
+         ("M-g M-g" . consult-goto-line) ;; orig. goto-line
+         ("M-g o" . consult-outline) ;; Alternative: consult-org-heading
+         ("M-g m" . consult-mark)
+         ("M-g k" . consult-global-mark)
+         ("M-g i" . consult-imenu)
+         ("M-g I" . consult-imenu-multi)
+         ;; M-s bindings (search-map)
+         ("M-s f" . consult-find)
+         ("M-s F" . consult-locate)
+         ("M-s g" . consult-grep)
+         ("M-s G" . consult-git-grep)
+         ("M-s r" . consult-ripgrep)
+         ("M-s l" . consult-line)
+         ("M-s L" . consult-line-multi)
+         ("M-s m" . consult-multi-occur)
+         ("M-s k" . consult-keep-lines)
+         ("M-s u" . consult-focus-lines)
+         ;; Isearch integration
+         ("M-s e" . consult-isearch)
+         :map isearch-mode-map
+         ("M-e" . consult-isearch)   ;; orig. isearch-edit-string
+         ("M-s e" . consult-isearch) ;; orig. isearch-edit-string
+         ("M-s l" . consult-line) ;; needed by consult-line to detect isearch
+         ("M-s L" . consult-line-multi)) ;; needed by consult-line to detect isearch
+
+  ;; Enable automatic preview at point in the *Completions* buffer.
+  ;; This is relevant when you use the default completion UI,
+  ;; and not necessary for Vertico, Selectrum, etc.
+  :hook (completion-list-mode . consult-preview-at-point-mode)
+
+  ;; The :init configuration is always executed (Not lazy)
+  :init
+
+  ;; Optionally configure the register formatting. This improves the register
+  ;; preview for `consult-register', `consult-register-load',
+  ;; `consult-register-store' and the Emacs built-ins.
+  (setq register-preview-delay 0
+        register-preview-function #'consult-register-format)
+
+  ;; Optionally tweak the register preview window.
+  ;; This adds thin lines, sorting and hides the mode line of the window.
+  (advice-add #'register-preview :override #'consult-register-window)
+
+  ;; Optionally replace `completing-read-multiple' with an enhanced version.
+  (advice-add #'completing-read-multiple :override #'consult-completing-read-multiple)
+
+  ;; Use Consult to select xref locations with preview
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref)
+
+  ;; Configure other variables and modes in the :config section,
+  ;; after lazily loading the package.
+  :config
+
+  ;; Optionally configure preview. The default value
+  ;; is 'any, such that any key triggers the preview.
+  ;; (setq consult-preview-key 'any)
+  ;; (setq consult-preview-key (kbd "M-."))
+  ;; (setq consult-preview-key (list (kbd "<S-down>") (kbd "<S-up>")))
+  ;; For some commands and buffer sources it is useful to configure the
+  ;; :preview-key on a per-command basis using the `consult-customize' macro.
+  (consult-customize
+   consult-theme
+   :preview-key '(:debounce 0.2 any)
+   consult-ripgrep consult-git-grep consult-grep
+   consult-bookmark consult-recent-file consult-xref
+   consult--source-file consult--source-project-file consult--source-bookmark
+   :preview-key (kbd "M-."))
+
+  ;; Optionally configure the narrowing key.
+  ;; Both < and C-+ work reasonably well.
+  (setq consult-narrow-key "<") ;; (kbd "C-+")
+
+  ;; Optionally make narrowing help available in the minibuffer.
+  ;; You may want to use `embark-prefix-help-command' or which-key instead.
+  ;; (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
+
+  ;; Optionally configure a function which returns the project root directory.
+  ;; There are multiple reasonable alternatives to chose from.
+;;;; 1. project.el (project-roots)
+  (setq consult-project-root-function
+        (lambda ()
+          (when-let (project (project-current))
+            (car (project-roots project)))))
+;;;; 2. projectile.el (projectile-project-root)
+  ;; (autoload 'projectile-project-root "projectile")
+  ;; (setq consult-project-root-function #'projectile-project-root)
+;;;; 3. vc.el (vc-root-dir)
+  ;; (setq consult-project-root-function #'vc-root-dir)
+;;;; 4. locate-dominating-file
+  ;; (setq consult-project-root-function (lambda () (locate-dominating-file "." ".git")))
+  )
+
+(use-package consult-dir
+  :bind
+  (:map vertico-map
+        ("M-." . consult-dir)
+        ("M-j" . consult-dir-jump-file)))
+
+(use-package consult-projectile
+  :straight (consult-projectile
+             :type git
+             :host gitlab
+             :repo "OlMon/consult-projectile"
+             :branch "master"))
+
 ;;;_ , crosshairs
 
 (use-package crosshairs
   :unless (or install-run noninteractive)
   :bind ("M-o c" . crosshairs-mode))
 
+(use-package ctrlf
+  :config (ctrlf-mode +1))
+
 (use-package current-word-highlight-mode
   :disabled t
   :unless (or install-run noninteractive))
-
-;;;_ , cus-edit
-
-(use-package cus-edit
-  :unless install-run
-  :defer 1
-  :config
-  (use-package initsplit
-    :disabled t))
 
 ;;;_ , css-eldoc
 
@@ -2554,16 +2791,12 @@ In that case, insert the number."
 ;;;_ , dedicated
 
 (use-package dedicated
-  :defer t
-  ;; BULK-ENSURE :ensure t
-  :bind ("C-. C-d" . dedicated-mode))
+  :defer t)
 
 ;;;_ , deft
 
 (use-package deft
   :commands deft
-  ;; BULK-ENSURE :ensure t
-  :bind ("C-. d" . deft)
   :config
   (progn
     (setq deft-default-extension "org")
@@ -2582,7 +2815,7 @@ In that case, insert the number."
 ;;;_ , dired
 
 (use-package dired
-  :unless install-run
+  :straight nil
   :bind ("C-c J" . dired-double-jump)
   :preface
   (defvar mark-files-cache (make-hash-table :test #'equal))
@@ -3096,9 +3329,9 @@ In that case, insert the number."
   (use-package eclimd
     :config
     (setq eclimd-executable (concat)
-           "/home/emacs/.eclipse"
-           "/org.eclipse.platform_793567567_linux_gtk_x86_64/"
-           "eclimd"))
+          "/home/emacs/.eclipse"
+          "/org.eclipse.platform_793567567_linux_gtk_x86_64/"
+          "eclimd"))
 
   (use-package company-emacs-eclim
     :config
@@ -3107,27 +3340,31 @@ In that case, insert the number."
 ;;;_ , ediff
 
 (use-package ediff
+  :bind (("C-c = b" . ediff-buffers)
+         ("C-c = B" . ediff-buffers3)
+         ("C-c = c" . compare-windows)
+         ("C-c = =" . ediff-files)
+         ("C-c = f" . ediff-files)
+         ("C-c = F" . ediff-files3)
+         ("C-c = m" . count-matches)
+         ("C-c = r" . ediff-revision)
+         ("C-c = p" . ediff-patch-file)
+         ("C-c = P" . ediff-patch-buffer)
+         ("C-c = l" . ediff-regions-linewise)
+         ("C-c = w" . ediff-regions-wordwise))
   :init
-  (progn
-    (defvar ctl-period-equals-map)
-    (define-prefix-command 'ctl-period-equals-map)
-    (bind-key "C-. =" 'ctl-period-equals-map)
+  (defun test-compare ()
+    (interactive)
+    (delete-other-windows)
+    (let ((here (point)))
+      (search-forward "got:")
+      (split-window-below)
+      (goto-char here))
+    (search-forward "expected:")
+    (call-interactively #'compare-windows)))
 
-    (bind-key "C-. = c" 'compare-windows)) ; not an ediff command, but it fits
-
-  :bind (("C-. = b" . ediff-buffers)
-         ("C-. = B" . ediff-buffers3)
-         ("C-. = =" . ediff-files)
-         ("C-. = f" . ediff-files)
-         ("C-. = F" . ediff-files3)
-         ("C-. = r" . ediff-revision)
-         ("C-. = p" . ediff-patch-file)
-         ("C-. = P" . ediff-patch-buffer)
-         ("C-. = l" . ediff-regions-linewise)
-         ("C-. = w" . ediff-regions-wordwise))
-  :config
-  ;; in .emacs.d/lisp, from https://github.com/jweigley/lisp/dot-emacs
-  (use-package ediff-keep))
+(use-package edit-indirect
+  :bind (("C-c '" . edit-indirect-region)))
 
 ;;;_ , edit-indirect
 
@@ -3583,7 +3820,9 @@ FORM => (eval FORM)."
     (use-package em-unix
       :config
       (unintern 'eshell/su nil)
-      (unintern 'eshell/sudo nil)))
+      (unintern 'eshell/sudo nil))
+    :custom
+    (eshell-cmpl-cycle-completions nil))
 
   :init
   (add-hook 'eshell-first-time-mode-hook 'eshell-initialize))
@@ -3640,10 +3879,6 @@ FORM => (eval FORM)."
 (use-package ess
   :config
   (setq ess-default-style 'RRR+))
-
-(use-package ess-site
-  :unless install-run
-  :commands R)
 
 (use-package ess-smart-equals
   :init
@@ -3890,6 +4125,7 @@ FORM => (eval FORM)."
   :custom
   (flyspell-abbrev-p t)
   :config
+  (unbind-key "C-." flyspell-mode-map)
   (add-hook 'prog-mode-hook (lambda ()
                               (flyspell-prog-mode)))
   (defun my-flyspell-maybe-correct-transposition (beg end candidates)
@@ -3914,6 +4150,18 @@ FORM => (eval FORM)."
   :bind (("<f13>" . fold-dwim-toggle)
          ("<f14>" . fold-dwim-hide-all)
          ("<f15>" . fold-dwim-show-all)))
+
+(use-package ghub
+  :defer t
+  :config
+  (require 'auth-source-pass)
+  (defvar my-ghub-token-cache nil)
+  (advice-add
+   'ghub--token :around
+   #'(lambda (orig-func host username package &optional nocreate forge)
+       (or my-ghub-token-cache
+           (setq my-ghub-token-cache
+                 (funcall orig-func host username package nocreate forge))))))
 
 (use-package forge
   :after magit)
@@ -3960,9 +4208,6 @@ FORM => (eval FORM)."
 (use-package git-timemachine
   :unless noninteractive
   :commands git-timemachine)
-
-(use-package gitignore-mode
-  :unless noninteractive)
 
 ;;;_ , gnus
 
@@ -4040,8 +4285,7 @@ FORM => (eval FORM)."
 
 (use-package goto-last-change
   :unless noninteractive
-  :bind (("C-'" . goto-last-change)
-         ("M-g m" . goto-last-change)))
+  :bind ("M-g m" . goto-last-change))
 
 ;;;_ , grab-x-link
 
@@ -4131,9 +4375,7 @@ FORM => (eval FORM)."
                      (throw 'found buf))))))
         (if gud-buf
             (switch-to-buffer-other-window gud-buf)
-          (call-interactively 'gud-gdb))))
-
-    (bind-key "C-. g" 'show-debugger))
+          (call-interactively 'gud-gdb)))))
 
   :config
   (progn
@@ -4303,7 +4545,6 @@ FORM => (eval FORM)."
   :custom
   (hippie-expand-try-functions-list
    '(my-yas-hippie-try-expand
-     try-my-dabbrev-substring
      my-try-expand-dabbrev-visible
      try-expand-dabbrev
      try-expand-dabbrev-all-buffers
@@ -4582,14 +4823,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (autoload 'ipa-load-annotations-into-buffer "ipa")
     (add-hook 'find-file-hook 'ipa-load-annotations-into-buffer)))
 
-;;;_ , ispell-word-then-abbrev
-
-(use-package ispell-abbrev
-  :bind ("C-. i" . ispell-word-then-abbrev))
-
 ;;;_ , ivy-mode
 
 (use-package ivy
+  :disabled t
   :preface
   (defun ivy-done-or-delete-char ()
     (interactive)
@@ -4652,6 +4889,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (ivy-mode +1))
 
 (use-package counsel
+  :disabled t
   :after ivy org
   :diminish counsel-mode
   :init
@@ -4699,14 +4937,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
    ("C-c c t" . counsel-load-theme)
    ("C-c c u" . counsel-unicode-char)
    ("C-c c w" . counsel-colors-web)
-   ("C-c c z" . counsel-fzf))
-  :config
-  (with-eval-after-load 'helpful
-    (setq counsel-describe-function-function #'helpful-callable)
-    (setq counsel-describe-variable-function #'helpful-variable)))
+   ("C-c c z" . counsel-fzf)))
 
 (use-package counsel-projectile
-  :ensure t
+  :disabled t
   :after (counsel projectile)
   :config
   ;; open project in vc after switching
@@ -4716,6 +4950,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (counsel-projectile-mode))
 
 (use-package counsel-flycheck
+  :disabled t
+  :straight nil
   :after counsel flycheck
   :unless noninteractive
   :preface
@@ -4754,13 +4990,16 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :disabled t)
 
 (use-package counsel-etags
+  :disabled t
   :bind ("C-c C-t" . counsel-etags-find-tag-at-point))
 
 (use-package ivy-emoji
+  :disabled t
   :bind ("C-c i e" . ivy-emoji) ;; mnemonics i e = insert emoji
   )
 
 (use-package ivy-rich
+  :disabled t
   :after ivy
   :init
   (defun ivy-rich-bookmark-name (candidate)
@@ -4902,10 +5141,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;   :config
 ;;   (ivy-historian-mode +1))
 (use-package ivy-hydra
+  :disabled t
   :after ivy hydra
   :defer t)
 
 (use-package ivy-rtags
+  :disabled t
   :after ivy)
 
 (use-package ivy-youtube
@@ -4913,9 +5154,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :after ivy)
 
 (use-package ivy-pass
+  :disabled t
   :after ivy)
 
 (use-package ivy-todo
+  :disabled t
   ;; BULK-ENSURE :ensure t
   :after ivy
   :defer t
@@ -4923,17 +5166,19 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :commands ivy-todo)
 
 (use-package all-the-icons-ivy
+  :disabled t
   :after ivy
   :defer t
   :config
   (all-the-icons-ivy-setup))
 
 (use-package all-the-icons-ivy-rich
+  :disabled t
   :after ivy-rich
   :config (all-the-icons-ivy-rich-mode +1))
 
 (use-package swiper
-  ;; BULK-ENSURE :ensure t
+  :disabled t
   :after ivy
   :bind (("C-M-+" . swiper-mc)
          ("C-s" . swiper)
@@ -5160,7 +5405,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;;_ , lisp-mode
 
 (use-package lisp-mode
-  :defer t
+  :straight nil
   :hook (emacs-lisp-mode .
                          (lambda () (add-hook 'after-save-hook 'check-parens nil t)))
   :hook (lisp-mode . (lambda () (add-hook 'after-save-hook 'check-parens nil t)))
@@ -5193,7 +5438,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           scheme-mode) . #'lispy-mode))
 
 (use-package lively
-  :bind ("C-x C-E" . lively));(current-time-string)
+  :bind ("C-x M-e" . lively));(current-time-string)
 
 (use-package loopy
   :config
@@ -5276,7 +5521,9 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (setq gc-cons-threshold 100000000
         read-process-output-max (* 1024 1024))
 
-  :hook ((scala-mode . lsp)
+  :hook ((java-mode . lsp)
+         (python-mode . lsp)
+         (scala-mode . lsp)
          (clojure-mode . lsp)
          (clojurec-mode . lsp)
          (clojurescript-mode . lsp))
@@ -5291,9 +5538,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
   )
 
-(use-package lsp-java
-  :config
-  (add-hook 'java-mode-hook 'lsp))
+(use-package lsp-java)
 
 (use-package lsp-ui
   :commands lsp-ui-mode)
@@ -5371,6 +5616,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;;_ , markdown-mode
 
 (use-package markdown-mode
+  :mode ("\\.md\\'" . markdown-mode)
   :defer t)
 
 ;;;_ , meghanada
@@ -5805,6 +6051,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 
 (use-package mule
+  :straight nil
   :init
   (progn
     (prefer-coding-system 'utf-8)
@@ -5815,8 +6062,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package multi-term
   :defer t
-  :bind (("C-. t" . multi-term-next)
-         ("C-. T" . multi-term))
+  :bind (("C-c t" . multi-term-next)
+         ("C-c T" . multi-term))
   :init
   (defun screen ()
     (interactive)
@@ -5833,35 +6080,79 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
       (switch-to-buffer term-buffer)))
 
   :config
-  (progn
-    (if t
-        (defalias 'my-term-send-raw-at-prompt 'term-send-raw)
-      (defun my-term-send-raw-at-prompt ()
-        (interactive)
-        (if (save-excursion
-              (search-backward " $ " (line-beginning-position) t))
-            (progn
-              (if (memq 'meta (event-modifiers last-command-event))
-                  (progn
-                    (term-send-raw-string
-                     (format "\e%c"
-                             (logand last-command-event (lognot #x8000000)))))
-                (call-interactively #'term-send-raw)))
-          (call-interactively (lookup-key (current-global-map)
-                                          (vector last-command-event))))))
+  (require 'term)
 
-    (defun my-term-end-of-buffer ()
-      (interactive)
-      (call-interactively #'end-of-buffer)
-      (if (and (eobp) (bolp))
-          (delete-char -1)))
+  (defalias 'my-term-send-raw-at-prompt 'term-send-raw)
 
-    (require 'term)
+  (defun my-term-end-of-buffer ()
+    (interactive)
+    (call-interactively #'end-of-buffer)
+    (if (and (eobp) (bolp))
+        (delete-char -1)))
 
-    (defadvice term-process-pager (after term-process-rebind-keys activate)
-      (define-key term-pager-break-map  "\177" 'term-pager-back-page))))
+  (defadvice term-process-pager (after term-process-rebind-keys activate)
+    (define-key term-pager-break-map  "\177" 'term-pager-back-page)))
 
 ;;;_ , multiple-cursors
+
+(use-package multiple-cursors
+  :after selected
+  :defer 5
+
+  ;; - Sometimes you end up with cursors outside of your view. You can scroll
+  ;;   the screen to center on each cursor with `C-v` and `M-v`.
+  ;;
+  ;; - If you get out of multiple-cursors-mode and yank - it will yank only
+  ;;   from the kill-ring of main cursor. To yank from the kill-rings of every
+  ;;   cursor use yank-rectangle, normally found at C-x r y.
+
+  :bind (("<C-m> ^"     . mc/edit-beginnings-of-lines)
+         ("<C-m> `"     . mc/edit-beginnings-of-lines)
+         ("<C-m> $"     . mc/edit-ends-of-lines)
+         ("<C-m> '"     . mc/edit-ends-of-lines)
+         ("<C-m> R"     . mc/reverse-regions)
+         ("<C-m> S"     . mc/sort-regions)
+         ("<C-m> W"     . mc/mark-all-words-like-this)
+         ("<C-m> Y"     . mc/mark-all-symbols-like-this)
+         ("<C-m> a"     . mc/mark-all-like-this-dwim)
+         ("<C-m> c"     . mc/mark-all-dwim)
+         ("<C-m> l"     . mc/insert-letters)
+         ("<C-m> n"     . mc/insert-numbers)
+         ("<C-m> r"     . mc/mark-all-in-region)
+         ("<C-m> s"     . set-rectangular-region-anchor)
+         ("<C-m> %"     . mc/mark-all-in-region-regexp)
+         ("<C-m> t"     . mc/mark-sgml-tag-pair)
+         ("<C-m> w"     . mc/mark-next-like-this-word)
+         ("<C-m> x"     . mc/mark-more-like-this-extended)
+         ("<C-m> y"     . mc/mark-next-like-this-symbol)
+         ("<C-m> C-x"   . reactivate-mark)
+         ("<C-m> C-SPC" . mc/mark-pop)
+         ("<C-m> ("     . mc/mark-all-symbols-like-this-in-defun)
+         ("<C-m> C-("   . mc/mark-all-words-like-this-in-defun)
+         ("<C-m> M-("   . mc/mark-all-like-this-in-defun)
+         ("<C-m> ["     . mc/vertical-align-with-space)
+         ("<C-m> {"     . mc/vertical-align)
+
+         ("S-<down-mouse-1>")
+         ("S-<mouse-1>" . mc/add-cursor-on-click))
+
+  :bind (:map selected-keymap
+              ("c"   . mc/edit-lines)
+              ("."   . mc/mark-next-like-this)
+              ("<"   . mc/unmark-next-like-this)
+              ("C->" . mc/skip-to-next-like-this)
+              (","   . mc/mark-previous-like-this)
+              (">"   . mc/unmark-previous-like-this)
+              ("C-<" . mc/skip-to-previous-like-this)
+              ("y"   . mc/mark-next-symbol-like-this)
+              ("Y"   . mc/mark-previous-symbol-like-this)
+              ("w"   . mc/mark-next-word-like-this)
+              ("W"   . mc/mark-previous-word-like-this))
+
+  :preface
+  (defun reactivate-mark ()
+    (interactive)
+    (activate-mark)))
 
 (use-package multiple-cursors
   :defer t
@@ -5875,6 +6166,24 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
          ("s-a" . mc/edit-beginnings-of-lines)
          ("s-C-d" . mc/mark-all-like-this)))
 
+(use-package mc-calc
+  :after multiple-cursors
+  :bind (("<C-m> = c" . mc-calc)
+         ("<C-m> = =" . mc-calc-eval)
+         ("<C-m> = g" . mc-calc-grab)
+         ("<C-m> = b" . mc-calc-copy-to-buffer)))
+
+(use-package mc-extras
+  :after multiple-cursors
+  :bind (("<C-m> M-C-f" . mc/mark-next-sexps)
+         ("<C-m> M-C-b" . mc/mark-previous-sexps)
+         ("<C-m> <"     . mc/mark-all-above)
+         ("<C-m> >"     . mc/mark-all-below)
+         ("<C-m> C-d"   . mc/remove-current-cursor)
+         ("<C-m> C-k"   . mc/remove-cursors-at-eol)
+         ("<C-m> M-d"   . mc/remove-duplicated-cursors)
+         ("<C-m> |"     . mc/move-to-column)
+         ("<C-m> ~"     . mc/compare-chars)))
 ;;;_ , muse
 
 ;; (use-package muse
@@ -5925,7 +6234,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;;_ , nxml-mode
 
 (use-package nxml-mode
-  ;; internal
+  :straight nil
   :commands nxml-mode
   :init
   (defalias 'xml-mode 'nxml-mode)
@@ -5956,24 +6265,15 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (add-to-list 'company-backends #'company-omnisharp)
   (add-to-list 'auto-mode-alist '("\\.cs$" . csharp-mode)))
 
-(use-package orca
-  :after org
-  :config
-  (setq orca-handler-list
-        '((orca-handler-match-url
-           "https://emacs.stackexchange.com/"
-           "~/Dropbox/org/wiki/emacs.org"
-           "\\* Questions")
-          (orca-handler-current-buffer
-           "\\*\\* Captures")
-          (orca-handler-file
-           "~/Dropbox/org/ent.org"
-           "\\* Articles"))))
+(use-package orderless
+  :custom (completion-styles '(orderless)))
 
 ;;;_ , org-mode
 
 (use-package dot-org
-  :disabled t
+  :straight nil
+  :preface
+  (load org-init)
   :commands my-org-startup
   :bind* (("M-C"   . jump-to-org-agenda)
           ("M-m"   . org-smart-capture)
@@ -5982,234 +6282,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           ("C-c S" . org-store-link)
           ("C-c l" . org-insert-link))
   :config
-  (unless alternate-emacs
-    (run-with-idle-timer 300 t 'jump-to-org-agenda)
-    (my-org-startup)))
+  ;; (unless alternate-emacs
+  ;;   (run-with-idle-timer 300 t 'jump-to-org-agenda)
+  ;;   (my-org-startup))
+  )
 
-(use-package org
-  :bind (("M-C"   . jump-to-org-agenda)
-         ;; ("C-c o c" . org-capture)
-;;; overloaded
-         ("M-M"   . org-inline-note)
-         ("C-c a" . org-agenda)
-         ("C-c C-h" . org-babel-remove-result)
-         ("C-c S" . org-store-link)
-         ;; ("C-c o l" . org-insert-link)
-         )
-  :init
-  ;; (add-to-list 'auto-insert-alist
-  ;;              '(("\\.org\\'" . "Org mode")
-  ;;                . ["snippet.org" autoinsert-yas-expand]))
 
-  :custom
-  (org-src-window-setup 'current-window)
-  (org-use-speed-commands t)
-  (org-src-fontify-natively t)           ;; better looking source code
-  (org-return-follows-link t)            ;; make RET follow links
-  (org-list-allow-alphabetical t)        ;; allow alphabetical list
-  (org-hide-emphasis-markers t)          ;; hide markers
-  (org-pretty-entities t)                ;; make latex look good
-  (org-fontify-quote-and-verse-blocks t) ;; make quotes stand out
-  (org-table-export-default-format "orgtbl-to-csv") ;; export for
-  ;; org-tables to csv
-  (org-ellipsis "↷")               ;; nicer elipses "↴" "▼"
-  (org-confirm-babel-evaluate nil) ;; evaluate src block without confirmation
-  (org-startup-indented t)         ;; start in indent mode
-  ;; org-src-tab-acts-natively t ;; indent for src code natively
-  ;; org-src-preserve-indentation nil
-  ;; org-edit-src-content-indentation t
-  (org-imenu-depth 8)
-  (imenu-auto-rescan t)
-  (org-plantuml-jar-path (expand-file-name "/usr/share/java/plantuml.jar"))
-
-  :config
-  (defface org-dont-underline-indents '((t :underline nil))
-    "Avoid underlining of indentation.")
-
-  (defun org-dont-underline-indents ()
-    "Remove underlining at indents."
-    (add-to-list 'org-font-lock-extra-keywords
-                 '("^[[:space:]]+" 0 'org-dont-underline-indents t) 'append))
-
-  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
-  (add-hook 'org-font-lock-set-keywords-hook
-            #'org-dont-underline-indents 'append)
-
-  ;; (progn
-  ;;   ;; Set up blog for export as an Org-mode project.
-  ;;   ;; (setq org-publish-project-alist
-  ;;   ;;       '(("blog"
-  ;;   ;;          :base-directory "~/.emacs.d/posts/"
-  ;;   ;;          :publishing-directory "~/src/blog/_posts/"
-  ;;   ;;          :base-extension "org"
-  ;;   ;;          :sub-superscript ""
-  ;;   ;;          :toc nil
-  ;;   ;;          :publishing-function org-html-publish-to-html
-  ;;   ;;          :html-extension "html"
-  ;;   ;;          :body-only t)))
-
-  (org-display-inline-images t t)
-
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((emacs-lisp . t)
-     (shell . t)))
-
-  (defadvice org-babel-execute-src-block (around load-language nil activate)
-    "Load language if needed"
-    (let ((language (org-element-property :language (org-element-at-point))))
-      (unless (cdr (assoc (intern language) org-babel-load-languages))
-        (add-to-list 'org-babel-load-languages (cons (intern language) t))
-        (org-babel-do-load-languages 'org-babel-load-languages
-                                     org-babel-load-languages))
-      ad-do-it))
-
-  ;;   ;; (org-babel-do-load-languages
-  ;;   ;;  'org-babel-load-languages
-  ;;   ;;  '((awk . t)
-  ;;   ;;    (C . t)
-  ;;   ;;    (calc . t)
-  ;;   ;;    (clojure . t)
-  ;;   ;;    (css . t)
-  ;;   ;;    (gnuplot . t)
-  ;;   ;;    (emacs-lisp . t)
-  ;;   ;;    (haskell . t)
-  ;;   ;;    (java . t)
-  ;;   ;;    (js . t)
-  ;;   ;;    (latex . t)
-  ;;   ;;    (makefile . t)
-  ;;   ;;    (org . t)
-  ;;   ;;    (perl . t)
-  ;;   ;;    (python . t)
-  ;;   ;;    (ruby . t)
-  ;;   ;;    (scala . t)
-  ;;   ;;    (sed . t)
-  ;;   ;;    (sh . t)
-  ;;   ;;    (shell . t)
-  ;;   ;;    (sql . t)
-  ;;   ;;    (ditaa . t)))
-
-  ;;   ;;   (setq org-default-notes-file
-  ;;   ;;         (concat (expand-file-name "notes.org" projectile-project-name)))
-
-  ;;   (defun org-meta-return-around (org-fun &rest args)
-  ;;     "Run `ober-eval-in-repl' if in source code block,
-  ;;   `ober-eval-block-in-repl' if at header,
-  ;;   and `org-meta-return' otherwise."
-  ;;     (if (org-in-block-p '("src"))
-  ;;         (let* ((point (point))
-  ;;                (element (org-element-at-point))
-  ;;                (area (org-src--contents-area element))
-  ;;                (beg (copy-marker (nth 0 area))))
-  ;;           (if (< point beg)
-  ;;               (ober-eval-block-in-repl)
-  ;;             (ober-eval-in-repl)))
-  ;;       (apply org-fun args)))
-  ;;   (advice-add 'org-meta-return :around #'org-meta-return-around)
-
-  ;;   (defadvice org-edit-src-code (around set-buffer-file-name activate compile)
-  ;;     (let ((file-name (buffer-file-name)))
-  ;;       ad-do-it
-  ;;       (setq buffer-file-name file-name)))
-
-  ;;   (setq org-use-fast-todo-selection t)
-  ;;   (setq org-treat-S-cursor-todo-selection-as-state-change nil)
-  ;;   (setq org-todo-state-tags-triggers
-  ;;         (quote (("CANCELLED" ("CANCELLED" . t))
-  ;;                 ("WAITING" ("WAITING" . t))
-  ;;                 ("HOLD" ("WAITING") ("HOLD" . t))
-  ;;                 (done ("WAITING") ("HOLD"))
-  ;;                 ("TODO" ("WAITING") ("CANCELLED") ("HOLD"))
-  ;;                 ("NEXT" ("WAITING") ("CANCELLED") ("HOLD"))
-  ;;                 ("DONE" ("WAITING") ("CANCELLED") ("HOLD")))))
-
-  ;;   (if (string-match "\\.elc\\'" load-file-name)
-  ;;       (add-hook 'after-init-hook
-  ;;                 #'(lambda ()
-  ;;                     (org-agenda-list)
-  ;;                     (org-fit-agenda-window)
-  ;;                     (org-resolve-clocks))) t))
-
-  ;; org journal
-
-  (defhydra hydra-org (:color blue :timeout 12 :columns 4)
-    "Org commands"
-    ("i" (lambda () (interactive) (org-clock-in '(4))) "Clock in")
-    ("o" org-clock-out "Clock out")
-    ("q" org-clock-cancel "Cancel a clock")
-    ("<f10>" org-clock-in-last "Clock in the last task")
-    ("j" (lambda () (interactive) (org-clock-goto '(4))) "Go to a clock")
-    ("m" make-this-message-into-an-org-todo-item "Flag and capture this message"))
-  (global-set-key (kbd "<f10>") 'hydra-org/body)
-
-  (defun get-journal-file-today ()
-    "Return filename for today's journal entry."
-    (let ((daily-name (format-time-string "%Y%m%d")))
-      (expand-file-name (concat org-journal-dir daily-name))))
-
-  (defun journal-file-today ()
-    "Create and load a journal file based on today's date."
-    (interactive)
-    (find-file (get-journal-file-today)))
-
-  (defun get-journal-file-yesterday ()
-    "Return filename for yesterday's journal entry."
-    (let ((daily-name
-           (format-time-string "%Y%m%d"
-                               (time-subtract
-                                (current-time) (days-to-time 1)))))
-      (expand-file-name (concat org-journal-dir daily-name))))
-
-  (defun journal-file-yesterday ()
-    "Creates and load a file based on yesterday's date."
-    (interactive)
-    (find-file (get-journal-file-yesterday)))
-
-  (defun journal-last-year-file ()
-    "Returns the string corresponding to the journal entry that
-    happened 'last year' at this same time (meaning on the same day
-    of the week)."
-    (let* ((last-year-seconds (- (float-time) (* 365 24 60 60)))
-           (last-year (seconds-to-time last-year-seconds))
-           (last-year-dow (nth 6 (decode-time last-year)))
-           (this-year-dow (nth 6 (decode-time)))
-           (difference (if (> this-year-dow last-year-dow)
-                           (- this-year-dow last-year-dow)
-                         (- last-year-dow this-year-dow)))
-           (target-date-seconds (+ last-year-seconds (* difference 24 60 60)))
-           (target-date (seconds-to-time target-date-seconds)))
-      (format-time-string "%Y%m%d" target-date)))
-
-  (defun journal-last-year ()
-    "Loads last year's journal entry, which is not necessary the
-    same day of the month, but will be the same day of the week."
-    (interactive)
-    (let ((journal-file (concat org-journal-dir (journal-last-year-file))))
-      (find-file journal-file)))
-
-  (use-package org-pomodoro
-    :commands org-pomodoro
-    ;; BULK-ENSURE :ensure t
-    :init
-    (progn
-      (setq org-pomodoro-audio-player "/usr/bin/play")))
-
-  (add-hook 'org-agenda-finalize-hook 'org-timeline-insert-timeline :append)
-
-  (defun my/remove-empty-drawer-on-clock-out ()
-    (interactive)
-    (save-excursion
-      (beginning-of-line 0)
-      (org-remove-empty-drawer-at "LOGBOOK" (point))))
-
-  (add-hook 'org-clock-out-hook 'my/remove-empty-drawer-on-clock-out 'append)
-
-  (defun my/org-insert-link ()
-    (interactive)
-    (when (org-in-regexp org-bracket-link-regexp 1)
-      (goto-char (match-end 0))
-      (insert "\n"))
-    (call-interactively 'org-insert-link)))
 
 ;; (key-chord-define-global
 ;;  "hh"
@@ -6224,322 +6302,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 ;; org prettify
 
-(use-package org-prettify-source-block
-  :unless noninteractive
-  :after org
-  :preface
-  (defvar-local opsb-org-at-src-begin -1
-    "Variable that holds whether last position was a ")
-
-  (defvar opsb-ob-header-symbol ?☰
-    "Symbol used for babel headers")
-
-  (defun opsb-org-prettify-src--update ()
-    (let ((case-fold-search t)
-          (re "^[ \t]*#\\+begin_src[ \t]+[^ \f\t\n\r\v]+[ \t]*")
-          found)
-      (save-excursion
-        (goto-char (point-min))
-        (while (re-search-forward re nil t)
-          (goto-char (match-end 0))
-          (let ((args (org-trim
-                       (buffer-substring-no-properties (point)
-                                                       (line-end-position)))))
-            (when (org-string-nw-p args)
-              (let ((new-cell (cons args opsb-ob-header-symbol)))
-                (cl-pushnew new-cell prettify-symbols-alist :test #'equal)
-                (cl-pushnew new-cell found :test #'equal)))))
-
-        (setq prettify-symbols-alist
-              (cl-set-difference prettify-symbols-alist
-                                 (cl-set-difference
-                                  (cl-remove-if-not
-                                   (lambda (elm)
-                                     (eq (cdr elm) opsb-ob-header-symbol))
-                                   prettify-symbols-alist)
-                                  found :test #'equal)))
-
-        ;; Clean up old font-lock-keywords.
-        (font-lock-remove-keywords nil prettify-symbols--keywords)
-        (setq prettify-symbols--keywords (prettify-symbols--make-keywords))
-        (font-lock-add-keywords nil prettify-symbols--keywords)
-        (while (re-search-forward re nil t)
-          (font-lock-flush (line-beginning-position) (line-end-position))))))
-
-  (defun opsb-org-prettify-src ()
-    "Hide src options via `prettify-symbols-mode'.
-      `prettify-symbols-mode' is used because it has
-      uncollapsing. It may not be efficient."
-    (let* ((case-fold-search t)
-           (at-src-block
-            (save-excursion
-              (beginning-of-line)
-              (looking-at "^[ \t]*#\\+begin_src[ \t]+[^ \f\t\n\r\v]+[ \t]*"))))
-      ;; Test if we moved out of a block.
-      (when (or (and opsb-org-at-src-begin
-                     (not at-src-block))
-                ;; File was just opened.
-                (eq opsb-org-at-src-begin -1))
-        (opsb-org-prettify-src--update))
-      (setq opsb-org-at-src-begin at-src-block)))
-
-  (defvar opsb-block-alist `(("#+begin_src" . ?╦) ;; ➤ 🖝 ➟ ➤ ✎ ✎
-                             ("#+end_src"   . ?╩) ;; □
-                             ("#+header:" . ,opsb-ob-header-symbol)
-                             ("#+begin_comment" . ?✎)
-                             ("#+end_comment" . ?✎)
-                             ("#+begin_notes" . ?➤)
-                             ("#+end_notes" . ?➤)
-                             ("#+begin_quote" . ?»)
-                             ("#+end_quote" . ?«)))
-
-  (defsubst opsb-append-upcase (the-list)
-    "Duplicate THE-LIST with upcased cars."
-    (cl-reduce 'append
-               (mapcar (lambda (x) (list x (cons (upcase (car x)) (cdr x))))
-                       the-list)))
-
-  (defun opsb-append-org-prettify-symbols ()
-    (setq prettify-symbols-alist
-          (cl-union prettify-symbols-alist
-                    (opsb-append-upcase opsb-block-alist))))
-
-  (defun opsb-delete-org-prettify-symbols ()
-    (setq prettify-symbols-alist
-          (cl-set-difference prettify-symbols-alist
-                             (opsb-append-upcase opsb-block-alist))))
-
-  (define-minor-mode org-prettify-source-block-mode
-    "Toggle prettification of org source blocks."
-    :lighter ""                         ; for desktop.el
-    (if org-prettify-source-block-mode
-        (progn
-          (turn-on-prettify-symbols-mode)
-          (add-hook 'post-command-hook 'opsb-org-prettify-src t t)
-          (opsb-append-org-prettify-symbols))
-      (remove-hook 'post-command-hook 'opsb-org-prettify-src t)
-      (opsb-delete-org-prettify-symbols)))
-
-  :commands (org-prettify-source-block-mode)
-  :hook (org-mode . (lambda () (org-prettify-source-block-mode +1))))
-
-(use-package org-tag-beautify
-  :after org
-  :custom (org-tag-beautify-data-dir (ensure-user-dir "org-tag-beautify"))
-  :init (org-tag-beautify-mode +1))
-
-;; ;;;_ , org-projectile
-
-(use-package org-structure-hydra
-  :disabled t                           ;;in favor of company-org-block
-  :after org hydra
-  :commands (my/org-insert-structure)
-  :bind (:map org-mode-map ("<" . 'my/org-insert-structure))
-  :preface
-  (defhydra hydra-org-template (:color blue :hint nil)
-    "
- _c_enter  _q_uote     _e_macs-lisp    _L_aTeX:
- _l_atex   _E_xample   _p_erl          _i_ndex:
- _a_scii   _v_erse     _P_erl tangled  _I_NCLUDE:
- _s_rc     _n_ote      plant_u_ml      _H_TML:
- _h_tml    ^ ^         ^ ^             _A_SCII:
-"
-    ("s" (hot-expand "<s"))
-    ("E" (hot-expand "<e"))
-    ("q" (hot-expand "<q"))
-    ("v" (hot-expand "<v"))
-    ("n" (hot-expand "<not"))
-    ("c" (hot-expand "<c"))
-    ("l" (hot-expand "<l"))
-    ("h" (hot-expand "<h"))
-    ("a" (hot-expand "<a"))
-    ("L" (hot-expand "<L"))
-    ("i" (hot-expand "<i"))
-    ("e" (hot-expand "<s" "emacs-lisp"))
-    ("p" (hot-expand "<s" "perl"))
-    ("u" (hot-expand "<s" "plantuml :file CHANGE.png"))
-    ("P" (hot-expand "<s" "perl" ":results output :exports both :shebang \"#!/usr/bin/env perl\"\n"))
-    ("I" (hot-expand "<I"))
-    ("H" (hot-expand "<H"))
-    ("A" (hot-expand "<A"))
-    ("<" self-insert-command "ins")
-    ("o" nil "quit"))
-
-  (defun hot-expand (str &optional mod header)
-    "Expand org template.
-
-STR is a structure template string recognised by org like <s. MOD is a
-string with additional parameters to add the begin line of the
-structure element. HEADER string includes more parameters that are
-prepended to the element after the #+HEADER: tag."
-    (let (text)
-      (when (region-active-p)
-        (setq text (buffer-substring (region-beginning) (region-end)))
-        (delete-region (region-beginning) (region-end))
-        (deactivate-mark))
-      (when header (insert "#+HEADER: " header) (forward-line))
-      (insert str)
-      (org-try-structure-completion)
-      (when mod (insert mod) (forward-line))
-      (when text (insert text))))
-
-  (defun my/org-insert-structure ()
-    "Insert block when at beginning of line or region active."
-    (interactive)
-    (if (or (region-active-p) (looking-back "^"))
-        (hydra-org-template/body)
-      (self-insert-command 1)))
-
-  '(cl-pushnew
-    '("not" "#+BEGIN_NOTES\n?\n#+END_NOTES")
-    org-structure-template-alist))
-
-(use-package org-bullets
-  :unless noninteractive
-  :after org
-  :commands org-bullets-mode
-  :hook (org-mode .
-                  (lambda ()
-                    (org-bullets-mode +1))))
-
-(use-package org-seek
-  :after org
-  :commands (org-seek-string org-seek-regexp org-seek-headlines))
-
-(use-package org-sticky-header
-  :unless noninteractive
-  :after org
-  :hook (org-mode . (lambda () (org-sticky-header-mode +1))))
-
-(use-package org-gcal
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package org-autolist
-  :after org)
-
-(use-package org-ref
-  :after org counsel-projectile
-  :after async
-  :config
-  (progn
-    (setq org-ref-bibliography-notes
-          (expand-file-name "notes.org" projectile-project-root)
-          org-ref-default-bibliography
-          (expand-file-name "references.bib" projectile-project-root)
-          org-ref-pdf-directory
-          (expand-file-name "bibtex-pdfs/" projectile-project-root))))
-
-(use-package org-board
-  :after org projectile
-  ;; BULK-ENSURE :ensure t
-  :config
-  (progn
-    (setq as/org-board-capture-file
-          (expand-file-name "my-board.org" projectile-project-name))
-    (defun as/do-org-board-dl-hook ()
-      (when (equal (buffer-name)
-                   (concat "CAPTURE-" as/org-board-capture-file))
-        (org-board-archive)))
-
-    (add-hook 'org-capture-before-finalize-hook
-              'as/do-org-board-dl-hook)))
-
-(use-package org-doing
-  :after org)
-
-(use-package ob-async
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ob-http
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ob-kotlin
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ob-go
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ob-sql-mode
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ob-redis
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ob-restclient
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ob-tmux
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t
-  :custom
-  (org-babel-default-header-args:tmux
-   '((:results . "silent")   ;
-     (:session . "default")   ; The default tmux session to send code to
-     (:socket  . nil)            ; The default tmux socket to communicate with
-     (:terminal . "gnome-terminal")))
-  (org-babel-tmux-session-prefix "ob-")
-  (org-babel-tmux-location (executable-find "tmux")))
-
-(use-package org-tree-slide
-  :after org
-  :custom org-image-actual-width nil)
-
-(use-package org-tree-slide-pauses
-  :after org-tree-slide)
-
-(use-package ob-translate
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package ox-jira
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-(use-package ox-ioslide
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :defer t)
-
-(use-package org-projectile
-  :unless noninteractive
-  :after org
-  ;; BULK-ENSURE :ensure t
-  :bind (("C-c C-n p" . org-projectile:project-todo-completing-read)
-         ("C-c c" . org-capture))
-  :config
-  (org-projectile-per-project)
-  (setq org-projectile-per-project-filepath "notes.org")
-  (setq org-agenda-files (append org-agenda-files (org-projectile-todo-files)))
-  (setq org-projectile:projects-file
-        "~/.emacs.d/org/projects.org")
-  (add-to-list 'org-capture-templates
-               (org-projectile:project-todo-entry "p")))
-
-(use-package poly-noweb
-  :defer t
-  :after org)
-
-(use-package poly-org
-  :defer t
-  :after org)
 
 ;;;_ , outline
 
@@ -6570,13 +6332,12 @@ prepended to the element after the #+HEADER: tag."
   :diminish pabbrev-mode)
 
 ;;;_ ; paradox
-(when install-run
-  (package-install 'paradox))
 (use-package paradox
-  ;; TBD maybe this should be ensured since it's deferred by commands
   :custom
   (paradox-execute-asynchronously nil)
-  :commands (paradox-upgrade-packages paradox-list-packages)
+  ;; (paradox-github-token (cadr (auth-source-user-and-password
+  ;;                              "api.github.com"
+  ;;                              (concat user-login-name "^paradox"))))
   :config/el-patch
   (defun package-menu-refresh ()
     "Patch package-menu-refresh to work around Malabarba/paradox#175"
@@ -6982,12 +6743,18 @@ append it to ENTRY."
 
 ;; (use-package predictive)
 
+(use-package prescient)
+
 (use-package prism
   :disabled t
   :hook ((lisp-mode clojure-mode json-mode) . prism-mode)
   :hook ((lisp-mode python-mode) . prism-whitespace-mode))
 
 ;;;_ , projectile
+
+(use-package project
+  :config
+  (setq project-switch-commands (list)))
 
 (use-package projectile
   :bind-keymap (("C-c p" . projectile-mode-map))
@@ -7021,6 +6788,7 @@ append it to ENTRY."
   (projectile-mode +1))
 
 (use-package counsel-projectile
+  :disabled t
   :after projectile
   ;; :after persp-projectile
   :custom
@@ -7438,13 +7206,17 @@ append it to ENTRY."
 ;;;_ , selected
 
 (use-package selected
-  :commands selected-minor-mode
+  :diminish selected-minor-mode
   :bind (:map selected-keymap
-              ("q" . selected-off)
-              ("u" . upcase-region)
+              ("[" . align-code)
+              ("f" . fill-region)
+              ("U" . unfill-region)
               ("d" . downcase-region)
-              ("w" . count-words-region)
-              ("m" . apply-macro-to-region-lines)))
+              ("u" . upcase-region)
+              ("r" . reverse-region)
+              ("s" . sort-lines))
+  :config
+  (selected-global-mode +1))
 
 ;;;_ , session
 
@@ -7512,7 +7284,8 @@ append it to ENTRY."
 ;;;_ , sh-toggle
 
 (use-package sh-toggle
-  :bind ("C-. C-z" . shell-toggle))
+  :disabled t
+  :bind ("C-x C-z" . shell-toggle))
 
 (use-package shx
   :hook (shell-mode . shx-mode))
@@ -7585,9 +7358,6 @@ append it to ENTRY."
   (shackle-inhibit-window-quit-on-same-windows t)
   :config
   (add-hook 'after-init-hook '(lambda () (shackle-mode +1)) t))
-
-(use-package show-font
-  :defer t)
 
 ;;;_ , slack
 
@@ -7894,7 +7664,7 @@ append it to ENTRY."
 
 ;;;_ , sqlup
 
-(use-package sqlite3-api
+(use-package sqlite3
   :defer t)
 
 (use-package sqlup-mode
@@ -7917,6 +7687,7 @@ append it to ENTRY."
 ;;;_ , stopwatch
 
 (use-package stopwatch
+  :straight (:host github :repo "blue0513/stopwatch")
   :bind ("<f8>" . stopwatch))
 
 ;;;_ , sunrise-commander
@@ -8127,6 +7898,7 @@ append it to ENTRY."
 ;;;_ , uniquify
 
 (use-package uniquify
+  :straight nil
   :config
   (setq uniquify-buffer-name-style 'forward)
   (setq uniquify-separator "/")
@@ -8160,112 +7932,21 @@ append it to ENTRY."
   :config
   (volatile-highlights-mode t))
 
+(use-package vertico
+  :init
+  (vertico-mode)
+
+  ;; Grow and shrink the Vertico minibuffer
+  ;; (setq vertico-resize t)
+
+  ;; Optionally enable cycling for `vertico-next' and `vertico-previous'.
+  ;; (setq vertico-cycle t)
+  )
+
 ;;;_ , w3m
 
 (use-package w3m
-  :commands w3m-search
-  :bind (("C-. u"   . w3m-browse-url)
-         ("C-. U"   . w3m-browse-url-new-session)
-         ("C-. A-u" . w3m-browse-chrome-url-new-session))
-  :init
-  (progn
-    (setq w3m-command "/usr/bin/w3m")
-
-    (setq w3m-coding-system 'utf-8
-          w3m-file-coding-system 'utf-8
-          w3m-file-name-coding-system 'utf-8
-          w3m-input-coding-system 'utf-8
-          w3m-output-coding-system 'utf-8
-          w3m-terminal-coding-system 'utf-8)
-
-    (add-hook 'w3m-mode-hook 'w3m-link-numbering-mode)
-
-    (autoload 'w3m-session-crash-recovery-remove "w3m-session")
-
-    (defun wikipedia-query (term)
-      (interactive (list (read-string "Wikipedia search: " (word-at-point))))
-      (require 'w3m-search)
-      (w3m-search "en.wikipedia" term))
-
-    (eval-when-compile
-      (autoload 'w3m-search-escape-query-string "w3m-search"))
-
-    (defun wolfram-alpha-query (term)
-      (interactive (list (read-string "Ask Wolfram Alpha: " (word-at-point))))
-      (require 'w3m-search)
-      (w3m-browse-url (format "http://m.wolframalpha.com/input/?i=%s"
-                              (w3m-search-escape-query-string term))))
-
-    (defun goto-emacswiki ()
-      (interactive)
-      (w3m-browse-url "http://www.emacswiki.org"))
-
-    (defun w3m-browse-url-new-session (url)
-      (interactive (progn
-                     (require 'browse-url)
-                     (browse-url-interactive-arg "Emacs-w3m URL: ")))
-      (w3m-browse-url url t))
-
-    (defun w3m-browse-chrome-url-new-session ()
-      (interactive)
-      (let ((url (do-applescript
-                  (string-to-multibyte "tell application \"Google Chrome\"
-        URL of active tab of front window
-end tell"))))
-        (w3m-browse-url (substring url 1 (1- (length url))) t)))
-
-    (bind-key "A-M-e" 'goto-emacswiki)
-    (bind-key "A-M-g" 'w3m-search)
-    (bind-key "A-M-h" 'wolfram-alpha-query)
-    (bind-key "A-M-w" 'wikipedia-query))
-
-  :config
-  (let (proxy-host proxy-port)
-    (with-temp-buffer
-      (shell-command "scutil --proxy" (current-buffer))
-
-      (when (re-search-forward "HTTPPort : \\([0-9]+\\)" nil t)
-        (setq proxy-port (match-string 1)))
-      (when (re-search-forward "HTTPProxy : \\(\\S-+\\)" nil t)
-        (setq proxy-host (match-string 1))))
-
-    (if (and proxy-host proxy-port)
-        (setq w3m-command-arguments
-              (nconc w3m-command-arguments
-                     (list "-o" (format "http_proxy=http://%s:%s/"
-                                        proxy-host proxy-port)))))
-
-    ;; seems only to exist as janky code of unknown provenance
-    ;; (use-package w3m-type-ahead
-    ;;   :requires w3m
-    ;;   :init
-    ;;   (add-hook 'w3m-mode-hook 'w3m-type-ahead-mode))
-
-    (add-hook 'w3m-display-hook
-              (lambda (url)
-                (let ((buffer-read-only nil))
-                  (delete-trailing-whitespace))))
-
-    (defun my-w3m-linknum-follow ()
-      (interactive)
-      (w3m-linknum-follow))
-
-    (bind-key "k" 'w3m-delete-buffer w3m-mode-map)
-    (bind-key "i" 'w3m-view-previous-page w3m-mode-map)
-    (bind-key "p" 'w3m-previous-anchor w3m-mode-map)
-    (bind-key "n" 'w3m-next-anchor w3m-mode-map)
-
-    (defun dka-w3m-textarea-hook()
-      (save-excursion
-        (while (re-search-forward "\r\n" nil t)
-          (replace-match "\n" nil nil))
-        (delete-other-windows)))
-
-    (add-hook 'w3m-form-input-textarea-mode-hook 'dka-w3m-textarea-hook)
-
-    (bind-key "<return>" 'w3m-view-url-with-external-browser
-              w3m-minor-mode-map)
-    (bind-key "S-<return>" 'w3m-safe-view-this-url w3m-minor-mode-map)))
+  :commands (w3m-browse-url w3m-find-file))
 
 ;;;_ , wee-chat
 
@@ -8544,12 +8225,17 @@ end tell"))))
           fill-column 65)
     (set-window-margins (selected-window) 50 50)))
 
+(use-package wdired
+  :straight nil
+  :config (setq wdired-allow-to-change-permissions t))
+
+(use-package wgrep)
+
 ;;;_ , yasnippet
 
 (use-package yasnippet
   :unless noninteractive
-  :after prog-mode
-  :diminish (yas-minor-mode . " Ⓨ")
+  :diminish yas-minor-mode
   :bind (("C-c y d" . yas-load-directory)
          ("C-c y i" . yas-insert-snippet)
          ("C-c y f" . yas-visit-snippet-file)

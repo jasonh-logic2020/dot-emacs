@@ -1,0 +1,16 @@
+#+STARTUP: showall
+* Feeds                                                              :elfeed:
+** Project Activity
+*** https://github.com/jwiegley/dot-emacs/commits/master.atom          :gh:
+** Emacs                                                              :news:
+*** http://planet.emacslife.com/atom.xml
+
+** Emacs Github
+*** https://github.com/jwiegley/dot-emacs/commits/master.atom          :gh:
+
+** reddit                                                           :reddit:
+*** http://www.reddit.com/r/emacs/.rss
+*** http://www.reddit.com/r/orgmode/.rss
+
+** stack exchange                                                       :sx:
+*** https://stackoverflow.com/feeds/tag?tagnames=emacs&sort=newest
