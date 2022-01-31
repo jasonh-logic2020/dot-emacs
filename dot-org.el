@@ -1681,7 +1681,8 @@ prepended to the element after the #+HEADER: tag."
   :after org
   :defer t)
 
-(use-package ob-redis
+(use-package ob-redi
+  :disabled t ;; repo vanished
   :after org
   :defer t)
 
