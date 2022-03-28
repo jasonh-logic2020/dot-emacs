@@ -49,6 +49,8 @@ raxod502/straight.el/develop/install.el"
 
 (straight-use-package 'use-package)
 
+(setq use-package-verbose t)
+
 (use-package bind-key)
 ;; (use-package no-littering)
 (use-package use-package-ensure-system-package)

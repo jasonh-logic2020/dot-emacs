@@ -532,7 +532,9 @@ Single Capitals as you type."
 (use-package start-per-user-server
   :unless noninteractive
   :straight nil
+  :defer 5
   :preface
+  (require 'server)
 
   (defun server-running-here-p ()
     "Is an emacs server FOR THE CURRENT USER running in this process?"
@@ -552,15 +554,16 @@ Single Capitals as you type."
     "Start emacs server for ’$USER’ unless one is already running."
     (interactive)
     (let* ((username (getenv "USER")))
+      (message "per-user server for user %s is %s" username (if (server-running-here-p) "running" "not running"))
       (cond
        ((eq t (server-running-here-p))
         (message "This %s server is already running" username) t)
        ((eq t (server-running-elsewhere-p))
         (message "Another %s server is already running" username))
-       (t (progn)))
-      (setq server-name username)
-      (server-start)
-      (message "Started server %s" username)))
+       (t (progn
+            (setq server-name username)
+            (server-start)
+            (message "Started server %s" username))))))
 
   (defun keep-trying-to-start-server ()
     "Try to start server until it works.
@@ -570,9 +573,10 @@ requests, which includes ’lookup-password’ queries from other
 tools."
     (interactive)
     (while (not (server-running-here-p))
+      (message "got here")
       (run-at-time "5 min" nil #'start-per-user-server)))
   :commands (start-per-user-server keep-trying-to-start-server)
-  :hook (after-init . #'keep-trying-to-start-server))
+  :config (keep-trying-to-start-server))
 
 (use-package scroll-on-jump
   :config
@@ -2338,8 +2342,8 @@ If region is active, apply to active region instead."
   (company-dabbrev-downcase t)
   (company-dabbrev-minimum-length 2)
   (company-dabbrev-ignore-case t)
-  (company-minimum-prefix-length 3)
-  (company-idle-delay 0.1)
+  (company-minimum-prefix-length 1)
+  (company-idle-delay 0.0)
   (company-show-numbers t)
   (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
                        ;; company-echo-metadata-frontend
@@ -2730,7 +2734,7 @@ In that case, insert the number."
    :preview-key '(:debounce 0.2 any)
    consult-ripgrep consult-git-grep consult-grep
    consult-bookmark consult-recent-file consult-xref
-   consult--source-file consult--source-project-file consult--source-bookmark
+   consult--source-recent-file consult--source-project-recent-file consult--source-bookmark
    :preview-key (kbd "M-."))
 
   ;; Optionally configure the narrowing key.
@@ -2758,10 +2762,18 @@ In that case, insert the number."
   )
 
 (use-package consult-dir
+  :after consult
   :bind
   (:map vertico-map
         ("M-." . consult-dir)
         ("M-j" . consult-dir-jump-file)))
+
+(use-package consult-project-extra
+  :defer t)
+
+(use-package consult-eglot
+  :after consult eglot
+  :defer t)
 
 (use-package consult-projectile
   :straight (consult-projectile
@@ -3132,7 +3144,10 @@ In that case, insert the number."
     "Given string, return smallest string and propertized forms.")
 
 
-  :hook (after-init . doom-modeline-init)
+  :hook (after-init . (lambda () (doom-modeline-mode 1)))
+  :custom
+  (doom-modeline-project-detection 'auto)
+  (doom-modeline-buffer-file-name-style 'truncate-except-project)
   :config
   (doom-modeline-def-segment ati-erc-server-alive
     "An `all-the-icons’ segment for erc-server-process-alive"
@@ -3378,6 +3393,47 @@ In that case, insert the number."
 ;;   (progn
 ;;     (add-hook 'after-init-hook 'server-start t)
 ;;     (add-hook 'after-init-hook 'edit-server-start t)))
+
+(use-package eglot
+  :ensure t
+  :commands (eglot eglot-ensure)
+  :hook ((swift-mode . eglot-ensure)
+         (clojure-mode . eglot-ensure)
+         (clojurec-mode . eglot-ensure)
+         (clojurescript-mode . eglot-ensure)
+         (scala-mode . eglot-ensure)
+         (python-mode . eglot-ensure)
+         (java-mode . eglot-ensure)
+         (go-mode . eglot-ensure)
+         (yaml-mode . eglot-ensure)
+         (rust-mode . eglot-ensure)
+         (c-mode . eglot-ensure)
+         (c++-mode . eglot-ensure)
+         (obc-c-mode . eglot-ensure))
+  :custom
+  (eglot-confirm-server-initiated-edits nil))
+  ;;; inherited cruft, not sure if needed
+  ;; :config
+  ;; (setq pd-toolchain-directory "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/")
+  ;; (setq pd-clangd-path (pcase system-type
+  ;;                        (`darwin "/opt/homebrew/opt/llvm/bin/clangd")
+  ;;                        (_ "clangd")))
+  ;; (setq pd-sourcekit-lsp-path (pcase system-type
+  ;;                               (`darwin (concat pd-toolchain-directory "usr/bin/sourcekit-lsp"))
+  ;;                               (_ "sourcekit-lsp")))
+
+  ;; (defun pd-cc-mode-lsp-server (arg)
+  ;;   "Figure if we want to use sourcekit-lsp or clangd as our server."
+  ;;   (let* ((root (nth 0 (project-roots (project-current))))
+  ;;          (swift-package-file (concat root "Package.swift"))
+  ;;          (cmake-file (concat root "CMakeLists.txt")))
+  ;;     (if (and (not (file-exists-p cmake-file)) (file-exists-p swift-package-file) (file-exists-p pd-sourcekit-lsp-path))
+  ;;         (list pd-sourcekit-lsp-path)
+  ;;       (list pd-clangd-path))))
+
+  ;; (add-to-list 'eglot-server-programs '((swift-mode) . (pd-sourcekit-lsp-path)))
+  ;; (add-to-list 'eglot-server-programs '((c-mode c++-mode obj-c-mode) . pd-cc-mode-lsp-server))
+  ;; (add-to-list 'eglot-server-programs '(rust-mode "rust-analyzer")))
 
 ;;;_ , elfeed
 
@@ -4233,8 +4289,6 @@ FORM => (eval FORM)."
   (progn
     (use-package flymake-go)
 
-    (use-package go-eldoc)
-
     (defun my-go-mode-hook ()
       (abbrev-mode 1)
       (gtags-mode 1)
@@ -4246,6 +4300,16 @@ FORM => (eval FORM)."
       (diminish 'hs-minor-mode))
 
     (add-hook 'go-mode-hook 'my-go-mode-hook)))
+
+(use-package go-mod-mode
+  :disabled t
+  :config
+  (progn
+    (flycheck-go-mod-setup)))
+
+(use-package go-eldoc
+  :unless noninteractive
+  :after go-mode)
 
 (use-package goggles
   :custom
@@ -4625,6 +4689,10 @@ FORM => (eval FORM)."
             #'(lambda ()
                 (ibuffer-switch-to-saved-filter-groups "default"))))
 
+(use-package iedit
+  :bind (("C-x ," . iedit-mode)))
+
+(provide 'init-iedit)
 ;;;_ , ido
 
 (use-package ido
@@ -5516,12 +5584,17 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :mode ("\\.log\\'" . log4j-mode))
 
 (use-package lsp-mode
+  :disabled t
   :defer t
   :preface
   (setq gc-cons-threshold 100000000
         read-process-output-max (* 1024 1024))
-
-  :hook ((java-mode . lsp)
+  (defun lsp-go-install-save-hooks ()
+    (add-hook 'before-save-hook #'lsp-format-buffer t t)
+    (add-hook 'before-save-hook #'lsp-organize-imports t t))
+  :hook ((go-mode . #'lsp-deferred)
+         (go-mode . #'lsp-go-install-save-hooks)
+         (java-mode . lsp)
          (python-mode . lsp)
          (scala-mode . lsp)
          (clojure-mode . lsp)
@@ -5530,6 +5603,9 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :custom
   (lsp-prefer-flymake nil)
   :config
+  (lsp-register-custom-settings
+   '(("gopls.completeUnimported" t t)
+     ("gopls.staticcheck" t t)))
   (dolist (m '(clojure-mode
                clojurec-mode
                clojurex-mode
@@ -5568,11 +5644,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 ;;;_ , magit
 
-(setq magit-last-seen-setup-instructions "1.4.0")
 (use-package magit
   :unless noninteractive
-  ;; BULK-ENSURE :ensure t
-  :defer t
+  :init
+  (setq magit-last-seen-setup-instructions "1.4.0")
   :bind ("C-x g" . magit-status)
   :custom
   (magit-process-find-password-functions '(magit-process-password-auth-source))
@@ -5596,10 +5671,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :unless noninteractive
   :after magit)
 
- (use-package magit-topgit
-   :after magit
-   ;; BULK-ENSURE :ensure t
-   :defer t)
+(use-package magit-topgit
+  :after magit
+  ;; BULK-ENSURE :ensure t
+  :defer t)
 
 (use-package magit-filenotify
   :after magit)
@@ -6729,6 +6804,7 @@ append it to ENTRY."
 ;;;_ , powerline
 
 (use-package powerline
+  :disabled t
   :config
   (powerline-default-theme))
 
@@ -6868,6 +6944,52 @@ append it to ENTRY."
         (call-process (executable-find "open") nil nil nil temp-file)))
 
     (setq ps-print-region-function 'ps-spool-to-pdf)))
+
+(use-package pulsar
+  :custom
+  (pulsar-pulse-functions
+   '(isearch-repeat-forward
+     isearch-repeat-backward
+     recenter-top-bottom
+     move-to-window-line-top-bottom
+     reposition-window
+     bookmark-jump
+     other-window
+     delete-window
+     delete-other-windows
+     forward-page
+     backward-page
+     scroll-up-command
+     scroll-down-command
+     windmove-right
+     windmove-left
+     windmove-up
+     windmove-down
+     windmove-swap-states-right
+     windmove-swap-states-left
+     windmove-swap-states-up
+     windmove-swap-states-down
+     tab-new
+     tab-close
+     tab-next
+     org-next-visible-heading
+     org-previous-visible-heading
+     org-forward-heading-same-level
+     org-backward-heading-same-level
+     outline-backward-same-level
+     outline-forward-same-level
+     outline-next-visible-heading
+     outline-previous-visible-heading
+     outline-up-heading))
+
+  (pulsar-pulse t)
+  (pulsar-delay 0.055)
+  (pulsar-iterations 10)
+  (pulsar-face 'pulsar-magenta)
+  (pulsar-highlight-face 'pulsar-yellow)
+  :config
+  (pulsar-global-mode +1))
+
 
 (use-package puni
   :defer t
