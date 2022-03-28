@@ -1,0 +1,14 @@
+* New emacs user
+
+** clone repo
+
+** add symlinks
+
+#+begin_src shell user-emacs-files
+  ln -s ~/dot-emacs/init.el ~/.emacs.d/init.el
+  ln -s ~/dot-emacs/early-init.el ~/.emacs.d/early-init.el
+  ln -s ~/dot-emacs/early-init.el ~/.emacs.d/early-init.el
+  ln -s ~/dot-emacs/dot-org.el ~/.emacs.d/dot-org.el
+  ln -s ~/dot-emacs/org-settings.el ~/.emacs.d/org-settings.el
+  
+#+end_src
