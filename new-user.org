@@ -1,14 +1,23 @@
 * New emacs user
 
+** add user to group
+See ‘init.el‘ for group creation instructions
+
+#+NAME: add-user-to-group
+#+begin_src shell :exports none
+  usermod -aG sharedelpa ${whoiami}
+  newgrp sharedelpa
+#+end_src
+
 ** clone repo
 
 ** add symlinks
 
-#+begin_src shell user-emacs-files
+#+NAME: create-symlinks
+#+begin_src shell :rexports none 
   ln -s ~/dot-emacs/init.el ~/.emacs.d/init.el
   ln -s ~/dot-emacs/early-init.el ~/.emacs.d/early-init.el
   ln -s ~/dot-emacs/early-init.el ~/.emacs.d/early-init.el
   ln -s ~/dot-emacs/dot-org.el ~/.emacs.d/dot-org.el
   ln -s ~/dot-emacs/org-settings.el ~/.emacs.d/org-settings.el
-  
 #+end_src
