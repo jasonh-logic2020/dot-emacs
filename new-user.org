@@ -5,7 +5,7 @@ See ‘init.el‘ for group creation instructions
 
 #+NAME: add-user-to-group
 #+begin_src shell :exports none
-  usermod -aG sharedelpa ${whoiami}
+  usermod -aG sharedelpa $(whoami)
   newgrp sharedelpa
 #+end_src
 

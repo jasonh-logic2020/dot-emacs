@@ -1767,6 +1767,7 @@ prepended to the element after the #+HEADER: tag."
   :defer t)
 
 (use-package ox-odt
+  :disabled t
   :straight (org-mode-ox-odt
              :type git
              :host github
