@@ -27,7 +27,7 @@
 
 ;;; Code:
 
-;; using straight instead of package 
+;; using straight instead of package
 ;; (defconst package-archives
 ;;   '(("melpa-stable" . "https://stable.melpa.org/packages/")
 ;;     ("melpa" . "https://melpa.org/packages/")
@@ -46,8 +46,10 @@
 
 (setq custom-file (convert-standard-filename
                    (expand-file-name "settings.el" user-emacs-directory))
-      org-init (convert-standard-filename
-                (expand-file-name "dot-org.el" user-emacs-directory)))
+      dot-org (convert-standard-filename
+               (expand-file-name "dot-org.el" user-emacs-directory))
+      org-settings (convert-standard-filename
+                    (expand-file-name "org-settings.el" user-emacs-directory)))
 
 (load custom-file)
 
@@ -2720,6 +2722,12 @@ In that case, insert the number."
 
   ;; Configure other variables and modes in the :config section,
   ;; after lazily loading the package.
+  :custom
+  (consult-buffer-sources '(consult--source-hidden-buffer
+                            consult--source-buffer consult--source-recent-file
+                            consult--source-bookmark))
+  ;; removed consult--source-project-buffer consult--source-project-recent-file
+
   :config
 
   ;; Optionally configure preview. The default value
@@ -6345,24 +6353,17 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 ;;;_ , org-mode
 
-(use-package dot-org
+(use-package my-dot-org
   :straight nil
   :preface
-  (load org-init)
+  (load dot-org)
   :commands my-org-startup
   :bind* (("M-C"   . jump-to-org-agenda)
           ("M-m"   . org-smart-capture)
           ("M-M"   . org-inline-note)
           ("C-c a" . org-agenda)
           ("C-c S" . org-store-link)
-          ("C-c l" . org-insert-link))
-  :config
-  ;; (unless alternate-emacs
-  ;;   (run-with-idle-timer 300 t 'jump-to-org-agenda)
-  ;;   (my-org-startup))
-  )
-
-
+          ("C-c l" . org-insert-link)))
 
 ;; (key-chord-define-global
 ;;  "hh"
@@ -8053,6 +8054,8 @@ append it to ENTRY."
   :diminish " 🌋"
   :config
   (volatile-highlights-mode t))
+
+(use-package verb)
 
 (use-package vertico
   :init
