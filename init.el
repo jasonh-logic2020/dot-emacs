@@ -2463,7 +2463,6 @@ In that case, insert the number."
      t 'symbol (font-spec :family "Symbola") nil 'prepend)))
 
 (use-package company-emojify
-  :disabled t
   :after company
   :config
   (add-to-list 'company-backends 'company-emojify))
@@ -3154,6 +3153,7 @@ In that case, insert the number."
 
   :hook (after-init . (lambda () (doom-modeline-mode 1)))
   :custom
+  (doom-modeline-irc nil)
   (doom-modeline-project-detection 'auto)
   (doom-modeline-buffer-file-name-style 'truncate-except-project)
   :config
@@ -3609,13 +3609,13 @@ In that case, insert the number."
 ;;;_ , emojify
 
 (use-package emojify
-  :disabled t
   :if (and (display-graphic-p)
            (not noninteractive))
-  :commands (emojify-mode emmojify)
   :hook
-  ((text-mode
-    tabulated-list-mode) #'emojify-mode))
+  (after-init . global-emojify-mode)
+  ;; ((text-mode tabulated-list-mode)
+  ;;  #'emojify-mode)
+  )
 
 ;;;_ , erc
 
