@@ -9,3 +9,9 @@
 
 # Undo-tree save-files
 *.~undo-tree
+
+# flycheck temp files
+flycheck_init.el
+
+# emacs lock files
+*#*#

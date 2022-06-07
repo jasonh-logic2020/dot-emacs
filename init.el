@@ -7974,6 +7974,8 @@ append it to ENTRY."
   (tagedit-add-paredit-like-keybindings)
   (add-hook 'html-mode-hook (lambda () (tagedit-mode 1))))
 
+(use-package terraform-mode)
+
 ;;;_ , texinfo
 
 (use-package texinfo
