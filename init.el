@@ -3569,6 +3569,21 @@ In that case, insert the number."
          (ensure-user-dir "elfeed-org") t "\\.org$"))
   (elfeed-org))
 
+(use-package elfeed-tube
+  :straight (:host github :repo "karthink/elfeed-tube")
+  :after elfeed
+  :config
+  ;; (setq elfeed-tube-auto-save-p nil) ;; t is auto-save (not default)
+  ;; (setq elfeed-tube-auto-fetch-p t) ;;  t is auto-fetch (default)
+  (elfeed-tube-setup)
+
+  :bind (:map elfeed-show-mode-map
+              ("F" . elfeed-tube-fetch)
+              ([remap save-buffer] . elfeed-tube-save)
+              :map elfeed-search-mode-map
+              ("F" . elfeed-tube-fetch)
+              ([remap save-buffer] . elfeed-tube-save)))
+
 ;;;_ , elisp-slime-nav-mode
 
 (use-package elisp-slime-nav
