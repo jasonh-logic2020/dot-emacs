@@ -508,7 +508,8 @@ Single Capitals as you type."
         (add-hook 'post-self-insert-hook #'dcaps-to-scaps nil 'local)
       (remove-hook 'post-self-insert-hook #'dcaps-to-scaps 'local)))
   :commands (dubcaps-mode)
-  :hook ((prog-mode
+  :hook ((erc-mode
+          prog-mode
           text-mode
           tabulated-list-mode) . #'dubcaps-mode))
 
@@ -961,6 +962,14 @@ tools."
 
 ;;;_  . C-x
 
+(defun dired-here ()
+  "Make an up-to-date Dired buffer for the current location."
+  (interactive)
+  (dired ".")
+  (revert-buffer))
+
+(global-set-key (kbd "C-x d") 'dired-here)
+
 ;;; I don't use rectangles enough to justify these bindings
 ;;
 ;; (defvar edit-rectangle-origin)
@@ -1310,8 +1319,10 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
       (other-window 1))
     (add-hook 'after-init-hook  #'init-windows)))
 
-(unless noninteractive
-(eval-and-compile
+(use-package comment-line-or-region
+  :straight nil
+  :unless noninteractive
+  :preface
   (defun endless/comment-line-or-region (n)
     "Comment or uncomment current line and leave point after it.
 With positive prefix, apply to N lines including current one.
@@ -1330,13 +1341,14 @@ If region is active, apply to active region instead."
       (forward-line 1)
       (back-to-indentation)))
 
-  (bind-key "C-c ;" 'endless/comment-line-or-region prog-mode-map)))
+  :bind (:map prog-mode-map
+              ("C-c ;" . endless/comment-line-or-region)))
 
 (defun vlc-play-sound (file)
   "Play a sound FILE with vlc, but do it asynchronously."
   (start-process-shell-command "cvlc"
-             nil
-             (concat "cvlc --play-and-stop " file)))
+                               nil
+                               (concat "cvlc --play-and-stop " file)))
 
 ;;;_  . C-c C-
 
@@ -3026,8 +3038,15 @@ In that case, insert the number."
                "\\)")))
         (funcall dired-omit-regexp-orig)))))
 
+(use-package dired-duplicates
+  :disabled t)
+
 (use-package dired-git
   :hook (dired-mode-hook . #'dired-git-mode))
+
+(use-package dirvish
+  :init
+  (dirvish-override-dired-mode))
 
 ;;;_ , disable-mouse-mode
 
@@ -3286,15 +3305,24 @@ In that case, insert the number."
 ;;;_ , dumb-jump
 
 (use-package dumb-jump
-  ;; BULK-ENSURE :ensure t
+  :after hydra
   :bind (("M-g o" . dumb-jump-go-other-window))
   ("M-g j" . dumb-jump-go)
   ("M-g b" . dumb-jump-back)
   ("M-g x" . dumb-jump-go-prefer-external)
   ("M-g z" . dumb-jump-go-prefer-external-other-window)
   :config
-  (setq dumb-jump-selector 'ivy))
+  (defhydra dumb-jump-hydra (:color blue :columns 3)
+    "Dumb Jump"
+    ("j" dumb-jump-go "Go")
+    ("o" dumb-jump-go-other-window "Other window")
+    ("e" dumb-jump-go-prefer-external "Go external")
+    ("x" dumb-jump-go-prefer-external-other-window "Go external other window")
+    ("i" dumb-jump-go-prompt "Prompt")
+    ("l" dumb-jump-quick-look "Quick look")
+    ("b" dumb-jump-back "Back")))
 
+(use-package dwim-shell-command)
 
 ;;;_ , dynamic-spaces
 
@@ -3405,7 +3433,8 @@ In that case, insert the number."
 (use-package eglot
   :ensure t
   :commands (eglot eglot-ensure)
-  :hook ((swift-mode . eglot-ensure)
+  :hook ((bash-mode . eglot-ensure)
+         (swift-mode . eglot-ensure)
          (clojure-mode . eglot-ensure)
          (clojurec-mode . eglot-ensure)
          (clojurescript-mode . eglot-ensure)
@@ -6847,6 +6876,13 @@ append it to ENTRY."
 (use-package project
   :config
   (setq project-switch-commands (list)))
+
+(use-package project-x
+  :straight (:host github :repo "karthink/project-x")
+  :after project
+  :config
+  (setq project-x-save-interval 600)  ;Save project state every 10 min
+  (project-x-mode +1))
 
 (use-package projectile
   :bind-keymap (("C-c p" . projectile-mode-map))
