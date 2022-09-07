@@ -1751,6 +1751,7 @@ If region is active, apply to active region instead."
     (add-hook 'allout-mode-hook 'my-allout-mode-hook)))
 
 (use-package anakondo
+  :disabled t
   :unless noninteractive
   :commands anakondo-minor-mode
   :hook ((inf-clojure-mode
@@ -1811,6 +1812,9 @@ If region is active, apply to active region instead."
   :disabled t
   :config
   (auth-pass-enable))
+
+(use-package autorevert
+  :hook (after-init . global-auto-revert-mode))
 
 ;;;_ , avy
 
@@ -2011,6 +2015,7 @@ If region is active, apply to active region instead."
   (beginend-global-mode +1))
 
 (use-package blamer
+  :after posframe
   :straight (blamer :host github :repo "artawower/blamer.el")
   :custom
   (blamer-idle-time 0.3)
@@ -2228,7 +2233,6 @@ If region is active, apply to active region instead."
 (use-package cider
   :after clojure-mode
   :unless noninteractive
-  ;; BULK-ENSURE :ensure t
   :custom
   ;; (cider-repl-pop-to-buffer-on-connect nil)
   ;; (nrepl-hide-special-buffers t)
@@ -2343,232 +2347,313 @@ If region is active, apply to active region instead."
 
 ;;;_ , company
 
-(use-package company
-  :defer 1
-  :diminish " 𝍎"
-  :commands (company-mode company-indent-or-complete-common)
+;; (use-package company
+;;   :defer 1
+;;   :diminish " 𝍎"
+;;   :commands (company-mode company-indent-or-complete-common)
+;;   :custom
+;;   (company-tooltip-align-annotations t)
+;;   ;; (company-tooltip-flip-when-above t)
+;;   (company-tooltip-limit 10)
+;;   (company-require-match nil)
+;;   (company-dabbrev-code-other-buffers t)
+;;   (company-dabbrev-downcase t)
+;;   (company-dabbrev-minimum-length 2)
+;;   (company-dabbrev-ignore-case t)
+;;   (company-minimum-prefix-length 1)
+;;   (company-idle-delay 0.0)
+;;   (company-show-numbers t)
+;;   (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
+;;                        ;; company-echo-metadata-frontend
+;;                        company-preview-if-just-one-frontend))
+;;   (company-occurrence-weight-function
+;;    #'company-occurrence-prefer-any-closest)
+;;   (company-continue-commands
+;;    '(append company-continue-commands
+;;             '(comint-previous-matching-input-from-input
+;;               comint-next-matching-input-from-input)))
+
+;;   :init
+;;   (dolist (hook '(prog-mode
+;;                   emacs-lisp-mode-hook
+;;                   haskell-mode-hook
+;;                   c-mode-common-hook))
+;;     (add-hook hook
+;;               #'(lambda ()
+;;                   (local-set-key (kbd "<tab>")
+;;                                  #'company-indent-or-complete-common))))
+;;   :config
+;;   ;;(hook-into-modes 'company-mode 'prog-mode-hook 'erc-mode)
+;;   ;; From https://github.com/company-mode/company-mode/issues/87
+;;   ;; See also https://github.com/company-mode/company-mode/issues/123
+
+;;   ;; (defadvice company-pseudo-tooltip-unless-just-one-frontend
+;;   ;;     (around only-show-tooltip-when-invoked activate)
+;;   ;;   (when (company-explicit-action-p)
+;;   ;;     ad-do-it))
+
+;;   ;; see http://oremacs.com/2017/12/27/company-numbers/
+
+;;   (defun ora-company-number ()
+;;     "Forward to `company-complete-number'.
+;; Unless the number is potentially part of the candidate.
+;; In that case, insert the number."
+;;     (interactive)
+;;     (let* ((k (this-command-keys))
+;;            (re (concat "^" company-prefix k)))
+;;       (if (or (cl-find-if (lambda (s) (string-match re s))
+;;                           company-candidates)
+;;               (> (string-to-number k)
+;;                  (length company-candidates))
+;;               (looking-back "[0-9]+\\.[0-9]*" (line-beginning-position)))
+;;           (self-insert-command 1)
+;;         (company-complete-number
+;;          (if (equal k "0")
+;;              10
+;;            (string-to-number k))))))
+
+;;   (defun ora--company-good-prefix-p (orig-fn prefix)
+;;     (unless (and (stringp prefix) (string-match-p "\\`[0-9]+\\'" prefix))
+;;       (funcall orig-fn prefix)))
+
+;;   (advice-add 'company--good-prefix-p :around #'ora--company-good-prefix-p)
+
+;;   (let ((map company-active-map))
+;;     (mapc
+;;      (lambda (x)
+;;        (define-key map (format "%d" x) 'ora-company-number))
+;;      (number-sequence 0 9))
+;;     (define-key map " " (lambda ()
+;;                           (interactive)
+;;                           (company-abort)
+;;                           (self-insert-command 1))))
+
+;;   (defun check-expansion ()
+;;     (save-excursion
+;;       (if (outline-on-heading-p t)
+;;           nil
+;;         (if (looking-at "\\_>") t
+;;           (backward-char 1)
+;;           (if (looking-at "\\.") t
+;;             (backward-char 1)
+;;             (if (looking-at "->") t nil))))))
+
+;;   (define-key company-mode-map [tab]
+;;     '(menu-item "maybe-company-expand" nil
+;;                 :filter (lambda (&optional _)
+;;                           (when (check-expansion)
+;;                             #'company-complete-common))))
+
+;;   (eval-after-load "yasnippet"
+;;     '(progn
+;;        (defun company-mode/backend-with-yas (backend)
+;;          (if (and (listp backend) (member 'company-yasnippet backend))
+;;              backend
+;;            (append (if (consp backend) backend (list backend))
+;;                    '(:with company-yasnippet))))
+;;        (setq company-backends
+;;              (mapcar #'company-mode/backend-with-yas company-backends))))
+
+;;   (global-company-mode +1))
+
+
+;; (use-package company-dict
+;;   :after company
+;;   :config
+;;   (setq company-dict-dir (ensure-user-dir "dict/"))
+;;   (cons 'company-dict company-backends))
+
+;; (use-package company-ebdb
+;;   :after company
+;;   :config
+;;   (cons 'company-ebdb company-backends))
+
+;; (use-package company-emoji
+;;   :disabled t
+;;   ;; in favor of coompany-emojify
+;;   :after company
+;;   :config
+;;   (progn
+;;     (cons 'company-emoji company-backends)
+;;     (set-fontset-font
+;;      t 'symbol (font-spec :family "Symbola") nil 'prepend)))
+
+;; (use-package company-emojify
+;;   :after company
+;;   :config
+;;   (add-to-list 'company-backends 'company-emojify))
+
+;; (use-package company-flx
+;;   :after company
+;;   :config
+;;   (company-flx-mode +1))
+
+;; (use-package company-go
+;;   :after company)
+
+;; (use-package company-jedi
+;;   :disabled t
+;;   :unless noninteractive
+;;   :hook
+;;   ((python-mode . jedi:setup))
+;;   :init
+;;   (setq jedi:complete-on-dot t)
+;;   (setq jedi:use-shortcuts t)
+;;   (add-hook 'python-mode-hook
+;;             (lambda () (add-to-list 'company-backends 'company-jedi))))
+
+;; (use-package company-math
+;;   :after company
+;;   :defer t
+;;   :config
+;;   (add-to-list 'company-backends 'company-math-symbols-unicode))
+
+;; (use-package company-ngram
+;;   :disabled t
+;;   :after company
+;;   :config
+;;   (progn
+;;     (setq company-ngram-data-dir
+;;           (locate-user-emacs-file "data/ngram"))
+;;     ;; company-ngram supports python 3 or newer
+;;     company-ngram-python "python3"
+;;     (company-ngram-init)
+;;     (add-to-list 'company-backends #'company-ngram-backend)
+;;     ;; or use `M-x turn-on-company-ngram' and
+;;     ;; `M-x turn-off-company-ngram' on individual buffers
+
+;;     ;; save the cache of candidates
+;;     (run-with-idle-timer 7200 t
+;;                          (lambda (
+;;                              (company-ngram-command "save_cache"))))))
+
+;; (use-package company-org-block
+;;   :after org
+;;   :custom
+;;   (company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
+;;   :hook ((org-mode . (lambda ()
+;;                        (setq-local company-backends '(company-org-block))
+;;                        (company-mode +1)))))
+
+;; (use-package company-php
+;;   :after company
+;;   :config
+;;   (add-hook 'php-mode-hook
+;;             '(lambda ()
+;;                (require 'company-php)
+;;                (company-mode t)
+;;                (add-to-list 'company-backends 'company-ac-php-backend))))
+
+;; (use-package company-quickhelp
+;;   :after company
+;;   :custom
+;;   (company-quickhelp-use-propertized-text t)
+;;   (company-quickhelp-delay 0)
+;;   :config (company-quickhelp-mode +1))
+
+;; (use-package company-shell
+;;   :after company
+;;   :config
+;;   (progn
+;;     (add-to-list 'company-backends 'company-shell)
+;;     (add-to-list 'company-backends 'company-shell-env)))
+
+;; (use-package company-statistics
+;;   :after company
+;;   :config
+;;   (company-statistics-mode))
+
+;; (use-package company-web
+;;   :after company
+;;   :preface
+
+;;   :config
+;;   (add-hook
+;;    'web-mode-hook (lambda ()
+;;                     (set (make-local-variable 'company-backends)
+;;                          '(company-web-html))
+;;                     (company-mode t))))
+
+(use-package corfu
+  :bind (:map corfu-map
+              ("TAB" . corfu-next)
+              ([tab] . corfu-next)
+              ("S-TAB" . corfu-previous)
+              ([backtab] . corfu-previous)
+              ([remap completion-at-point] . corfu-complete)
+              ("RET" . corfu-complete-and-quit)
+              ("<return>" . corfu-complete-and-quit))
   :custom
-  (company-tooltip-align-annotations t)
-  ;; (company-tooltip-flip-when-above t)
-  (company-tooltip-limit 10)
-  (company-require-match nil)
-  (company-dabbrev-code-other-buffers t)
-  (company-dabbrev-downcase t)
-  (company-dabbrev-minimum-length 2)
-  (company-dabbrev-ignore-case t)
-  (company-minimum-prefix-length 1)
-  (company-idle-delay 0.0)
-  (company-show-numbers t)
-  (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
-                       ;; company-echo-metadata-frontend
-                       company-preview-if-just-one-frontend))
-  (company-occurrence-weight-function
-   #'company-occurrence-prefer-any-closest)
-  (company-continue-commands
-   '(append company-continue-commands
-            '(comint-previous-matching-input-from-input
-              comint-next-matching-input-from-input)))
-
-  :init
-  (dolist (hook '(prog-mode
-                  emacs-lisp-mode-hook
-                  haskell-mode-hook
-                  c-mode-common-hook))
-    (add-hook hook
-              #'(lambda ()
-                  (local-set-key (kbd "<tab>")
-                                 #'company-indent-or-complete-common))))
+  (corfu-cycle t)
+  (corfu-preselect-first t)
+  (corfu-scroll-margin 4)
+  (corfu-quit-no-match t)
+  (corfu-quit-at-boundary t)
+  (corfu-max-width 100)
+  (corfu-min-width 42)
+  (corfu-count 9)
+  ;; should be configured in the `indent' package, but `indent.el'
+  ;; doesn't provide the `indent' feature.
+  (tab-always-indent 'complete)
   :config
-  ;;(hook-into-modes 'company-mode 'prog-mode-hook 'erc-mode)
-  ;; From https://github.com/company-mode/company-mode/issues/87
-  ;; See also https://github.com/company-mode/company-mode/issues/123
+  (defun dima-corfu-prescient-remember (&rest _)
+    "Advice for `corfu--insert.'"
+    (when (>= corfu--index 0)
+      (prescient-remember (nth corfu--index corfu--candidates))))
 
-  ;; (defadvice company-pseudo-tooltip-unless-just-one-frontend
-  ;;     (around only-show-tooltip-when-invoked activate)
-  ;;   (when (company-explicit-action-p)
-  ;;     ad-do-it))
+  (advice-add #'corfu--insert :before #'dima-corfu-prescient-remember)
 
-  ;; see http://oremacs.com/2017/12/27/company-numbers/
+  (setq corfu-sort-function #'prescient-sort)
+  (setq corfu-sort-override-function #'prescient-sort)
 
-  (defun ora-company-number ()
-    "Forward to `company-complete-number'.
-Unless the number is potentially part of the candidate.
-In that case, insert the number."
+  (defun corfu-complete-and-quit ()
     (interactive)
-    (let* ((k (this-command-keys))
-           (re (concat "^" company-prefix k)))
-      (if (or (cl-find-if (lambda (s) (string-match re s))
-                          company-candidates)
-              (> (string-to-number k)
-                 (length company-candidates))
-              (looking-back "[0-9]+\\.[0-9]*" (line-beginning-position)))
-          (self-insert-command 1)
-        (company-complete-number
-         (if (equal k "0")
-             10
-           (string-to-number k))))))
-
-  (defun ora--company-good-prefix-p (orig-fn prefix)
-    (unless (and (stringp prefix) (string-match-p "\\`[0-9]+\\'" prefix))
-      (funcall orig-fn prefix)))
-
-  (advice-add 'company--good-prefix-p :around #'ora--company-good-prefix-p)
-
-  (let ((map company-active-map))
-    (mapc
-     (lambda (x)
-       (define-key map (format "%d" x) 'ora-company-number))
-     (number-sequence 0 9))
-    (define-key map " " (lambda ()
-                          (interactive)
-                          (company-abort)
-                          (self-insert-command 1))))
-
-  (defun check-expansion ()
-    (save-excursion
-      (if (outline-on-heading-p t)
-          nil
-        (if (looking-at "\\_>") t
-          (backward-char 1)
-          (if (looking-at "\\.") t
-            (backward-char 1)
-            (if (looking-at "->") t nil))))))
-
-  (define-key company-mode-map [tab]
-    '(menu-item "maybe-company-expand" nil
-                :filter (lambda (&optional _)
-                          (when (check-expansion)
-                            #'company-complete-common))))
-
-  (eval-after-load "yasnippet"
-    '(progn
-       (defun company-mode/backend-with-yas (backend)
-         (if (and (listp backend) (member 'company-yasnippet backend))
-             backend
-           (append (if (consp backend) backend (list backend))
-                   '(:with company-yasnippet))))
-       (setq company-backends
-             (mapcar #'company-mode/backend-with-yas company-backends))))
-
-  (global-company-mode +1))
-
-
-(use-package company-dict
-  :after company
-  :config
-  (setq company-dict-dir (ensure-user-dir "dict/"))
-  (cons 'company-dict company-backends))
-
-(use-package company-ebdb
-  :after company
-  :config
-  (cons 'company-ebdb company-backends))
-
-(use-package company-emoji
-  :disabled t
-  ;; in favor of coompany-emojify
-  :after company
-  :config
-  (progn
-    (cons 'company-emoji company-backends)
-    (set-fontset-font
-     t 'symbol (font-spec :family "Symbola") nil 'prepend)))
-
-(use-package company-emojify
-  :after company
-  :config
-  (add-to-list 'company-backends 'company-emojify))
-
-(use-package company-flx
-  :after company
-  :config
-  (company-flx-mode +1))
-
-(use-package company-go
-  :after company)
-
-(use-package company-jedi
-  :disabled t
-  :unless noninteractive
-  :hook
-  ((python-mode . jedi:setup))
+    (corfu-complete)
+    (corfu-quit))
+  (defun corfu-enable-always-in-minibuffer ()
+    "Enable Corfu in the minibuffer if Vertico/Mct are not active."
+    (unless (or (bound-and-true-p mct--active) ; Useful if I ever use MCT
+                (bound-and-true-p vertico--input))
+      (setq-local corfu-auto nil) ; Ensure auto completion is disabled
+      (corfu-mode 1)))
+  (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
   :init
-  (setq jedi:complete-on-dot t)
-  (setq jedi:use-shortcuts t)
-  (add-hook 'python-mode-hook
-            (lambda () (add-to-list 'company-backends 'company-jedi))))
+  (global-corfu-mode +1))
 
-(use-package company-math
-  :after company
-  :defer t
-  :config
-  (add-to-list 'company-backends 'company-math-symbols-unicode))
-
-(use-package company-ngram
-  :disabled t
-  :after company
-  :config
-  (progn
-    (setq company-ngram-data-dir
-          (locate-user-emacs-file "data/ngram"))
-    ;; company-ngram supports python 3 or newer
-    company-ngram-python "python3"
-    (company-ngram-init)
-    (add-to-list 'company-backends #'company-ngram-backend)
-    ;; or use `M-x turn-on-company-ngram' and
-    ;; `M-x turn-off-company-ngram' on individual buffers
-
-    ;; save the cache of candidates
-    (run-with-idle-timer 7200 t
-                         (lambda (
-                             (company-ngram-command "save_cache"))))))
-
-(use-package company-org-block
-  :after org
+(use-package corfu-doc
+  :straight (:host github
+                   :repo "galeo/corfu-doc"
+                   :branch "main")
+  :when (display-graphic-p)
+  :bind ( :map corfu-map
+          ("M-p" . corfu-doc-scroll-down)
+          ("M-n" . corfu-doc-scroll-up))
+  :hook (corfu-mode . corfu-doc-mode)
   :custom
-  (company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
-  :hook ((org-mode . (lambda ()
-                       (setq-local company-backends '(company-org-block))
-                       (company-mode +1)))))
+  (corfu-doc-delay 2)
+  (corfu-doc-max-height 20)
+  (corfu-doc-max-width 84))
 
-(use-package company-php
-  :after company
+(use-package popon
+  :straight (:type git
+                   :repo "https://codeberg.org/akib/emacs-popon.git"
+                   :branch "master")
+  :unless (display-graphic-p))
+
+(use-package corfu-terminal
+  :straight (:type git
+                   :repo "https://codeberg.org/akib/emacs-corfu-terminal.git"
+                   :branch "master")
+  :requires popon
+  :unless (display-graphic-p)
   :config
-  (add-hook 'php-mode-hook
-            '(lambda ()
-               (require 'company-php)
-               (company-mode t)
-               (add-to-list 'company-backends 'company-ac-php-backend))))
+  (corfu-terminal-mode +1))
 
-(use-package company-quickhelp
-  :after company
-  :custom
-  (company-quickhelp-use-propertized-text t)
-  (company-quickhelp-delay 0)
-  :config (company-quickhelp-mode +1))
-
-(use-package company-shell
-  :after company
+(use-package cape
   :config
-  (progn
-    (add-to-list 'company-backends 'company-shell)
-    (add-to-list 'company-backends 'company-shell-env)))
+  (setq completion-at-point-functions
+        '(cape-file cape-dabbrev)))
 
-(use-package company-statistics
-  :after company
-  :config
-  (company-statistics-mode))
-
-(use-package company-web
-  :after company
-  :preface
-
-  :config
-  (add-hook
-   'web-mode-hook (lambda ()
-                    (set (make-local-variable 'company-backends)
-                         '(company-web-html))
-                    (company-mode t))))
 
 ;;;_ , compile
 
@@ -2626,6 +2711,7 @@ In that case, insert the number."
 (use-package marginalia
   :after vertico
   :custom
+  (marginalia-align 'right)
   (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
   :init
   (marginalia-mode +1))
@@ -4259,6 +4345,11 @@ FORM => (eval FORM)."
          ("<f14>" . fold-dwim-hide-all)
          ("<f15>" . fold-dwim-show-all)))
 
+(use-package gcmh
+  :delight gcmh-mode
+  :init
+  (gcmh-mode +1))
+
 (use-package ghub
   :defer t
   :config
@@ -4364,10 +4455,9 @@ FORM => (eval FORM)."
   :after go-mode)
 
 (use-package goggles
-  :custom
-  (goggles-pulse t)
+  :hook ((prog-mode text-mode) . goggles-mode)
   :config
-  (goggles-mode))
+  (setq-default goggles-pulse t))
 
 ;;;_ , google-this
 (use-package google-this
@@ -4675,6 +4765,18 @@ FORM => (eval FORM)."
      try-expand-line-all-buffers
      try-complete-lisp-symbol-partially
      try-complete-lisp-symbol)))
+
+(use-package hl-indent-scope
+  :disabled t
+  :commands (hl-indent-scope-mode)
+  :hook ((c-mode
+          c++-mode
+          clojure-mode
+          clojurescript-mode
+          clojurec-mode
+          cmake-mode
+          python-mode
+          emacs-lisp-mode) . hl-indent-scope-mode))
 
 ;;;_ , htmlize
 
@@ -5432,6 +5534,31 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (setq key-chord-two-keys-delay 0.1))
 
+(use-package kind-icon
+  :after corfu
+  :custom
+  (kind-icon-use-icons t)
+  (kind-icon-default-face 'corfu-default) ; Have background color be the same as `corfu' face background
+  (kind-icon-blend-background nil)  ; Use midpoint color between foreground and background colors ("blended")?
+  (kind-icon-blend-frac 0.08)
+
+  ;; NOTE 2022-02-05: `kind-icon' depends `svg-lib' which creates a cache
+  ;; directory that defaults to the `user-emacs-directory'. Here, I change that
+  ;; directory to a location appropriate to `no-littering' conventions, a
+  ;; package which moves directories of other packages to sane locations.
+  (svg-lib-icons-dir (no-littering-expand-var-file-name "svg-lib/cache/")) ; Change cache dir
+  :config
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter) ; Enable `kind-icon'
+
+  ;; Add hook to reset cache so the icon colors match my theme
+  ;; NOTE 2022-02-05: This is a hook which resets the cache whenever I switch
+  ;; the theme using my custom defined command for switching themes. If I don't
+  ;; do this, then the backgound color will remain the same, meaning it will not
+  ;; match the background color corresponding to the current theme. Important
+  ;; since I have a light theme and dark theme I switch between. This has no
+  ;; function unless you use something similar
+  (add-hook 'kb/themes-hooks #'(lambda () (interactive) (kind-icon-reset-cache))))
+
 ;;;_ , kotlin-mode
 
 (use-package kotlin-mode
@@ -5574,6 +5701,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package eldoc
   :diminish
+  :custom
+  (eldoc-echo-area-use-multiline-p nil)
   :hook (prog-mode . eldoc-mode))
 
 (use-package eldoc-overlay
@@ -5666,7 +5795,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (add-to-list 'lsp-language-id-configuration `(,m . "clojure")))
   )
 
-(use-package lsp-java)
+(use-package lsp-java
+  :disabled t)
+
+(use-package lsp-treemacs
+  :disabled t)
 
 (use-package lsp-ui
   :commands lsp-ui-mode)
@@ -6393,7 +6526,9 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (add-to-list 'auto-mode-alist '("\\.cs$" . csharp-mode)))
 
 (use-package orderless
-  :custom (completion-styles '(orderless)))
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
 
 ;;;_ , org-mode
 
@@ -6846,6 +6981,8 @@ append it to ENTRY."
 (use-package poporg
   :bind ("C-x C-;" . poporg-dwim))
 
+(use-package posframe)
+
 ;;;_ , powerline
 
 (use-package powerline
@@ -6874,8 +7011,57 @@ append it to ENTRY."
 ;;;_ , projectile
 
 (use-package project
+  :bind ( :map project-prefix-map
+          ("s" . project-save-some-buffers))
+  :preface
+  (unless (boundp 'project-switch-commands)
+    (defvar project-switch-commands nil))
+  :custom
+  (project-compilation-buffer-name-function 'project-prefixed-buffer-name)
+  (project-switch-commands (list))
+  :preface
+  (defcustom project-root-markers
+    '("Cargo.toml" "compile_commands.json" "compile_flags.txt"
+      "project.clj" ".git" "deps.edn" "shadow-cljs.edn")
+    "Files or directories that indicate the root of a project."
+    :type '(repeat string)
+    :group 'project)
   :config
-  (setq project-switch-commands (list)))
+  (add-to-list 'project-switch-commands
+               '(project-switch-to-buffer "Switch buffer"))
+  (defun project-root-p (path)
+    "Check if the current PATH has any of the project root markers."
+    (catch 'found
+      (dolist (marker project-root-markers)
+        (when (file-exists-p (concat path marker))
+          (throw 'found marker)))))
+  (defun project-find-root (path)
+    "Search up the PATH for `project-root-markers'."
+    (when-let ((root (locate-dominating-file path #'project-root-p)))
+      (cons 'transient (expand-file-name root))))
+  (add-to-list 'project-find-functions #'project-find-root)
+  (define-advice project-compile (:around (fn) save-project-buffers)
+    "Only ask to save project-related buffers."
+    (let* ((project-buffers (project-buffers (project-current)))
+           (compilation-save-buffers-predicate
+            (lambda () (memq (current-buffer) project-buffers))))
+      (funcall fn)))
+  (define-advice recompile (:around (fn &optional edit-command) save-project-buffers)
+    "Only ask to save project-related buffers if inside of a project."
+    (if (project-current)
+        (let* ((project-buffers (project-buffers (project-current)))
+               (compilation-save-buffers-predicate
+                (lambda () (memq (current-buffer) project-buffers))))
+          (funcall fn edit-command))
+      (funcall fn edit-command)))
+  (defun project-save-some-buffers (&optional arg)
+    "Save some modified file-visiting buffers in the current project.
+Optional argument ARG (interactively, prefix argument) non-nil
+means save all with no questions."
+    (interactive "P")
+    (let* ((project-buffers (project-buffers (project-current)))
+           (pred (lambda () (memq (current-buffer) project-buffers))))
+      (funcall-interactively #'save-some-buffers arg pred))))
 
 (use-package project-x
   :straight (:host github :repo "karthink/project-x")
@@ -6885,6 +7071,7 @@ append it to ENTRY."
   (project-x-mode +1))
 
 (use-package projectile
+  :disabled t
   :bind-keymap (("C-c p" . projectile-mode-map))
   :custom
   (projectile-keymap-prefix "C-c p")
@@ -8025,6 +8212,45 @@ append it to ENTRY."
   (tagedit-add-paredit-like-keybindings)
   (add-hook 'html-mode-hook (lambda () (tagedit-mode 1))))
 
+(use-package tempel
+  ;; Require trigger prefix before template name when completing.
+  ;; :custom
+  ;; (tempel-trigger-prefix "<")
+
+  :bind (("M-+" . tempel-complete) ;; Alternative tempel-expand
+         ("M-*" . tempel-insert))
+
+  :init
+  ;; (defvar my-global-templates
+  ;;   '((example "Global example template"))
+  ;;   "My global templates.")
+  ;; (defvar-local my-local-templates nil
+  ;;   "Buffer-local templates.")
+  ;; (add-to-list 'tempel-template-sources 'my-global-templates)
+  ;; (add-to-list 'tempel-template-sources 'my-local-templates)
+  
+  ;; Setup completion at point
+  (defun tempel-setup-capf ()
+    ;; Add the Tempel Capf to `completion-at-point-functions'.
+    ;; `tempel-expand' only triggers on exact matches. Alternatively use
+    ;; `tempel-complete' if you want to see all matches, but then you
+    ;; should also configure `tempel-trigger-prefix', such that Tempel
+    ;; does not trigger too often when you don't expect it. NOTE: We add
+    ;; `tempel-expand' *before* the main programming mode Capf, such
+    ;; that it will be tried first.
+    (setq-local completion-at-point-functions
+                (cons #'tempel-expand
+                      completion-at-point-functions)))
+
+  (add-hook 'prog-mode-hook 'tempel-setup-capf)
+  (add-hook 'text-mode-hook 'tempel-setup-capf)
+
+  ;; Optionally make the Tempel templates available to Abbrev,
+  ;; either locally or globally. `expand-abbrev' is bound to C-x '.
+  ;; (add-hook 'prog-mode-hook #'tempel-abbrev-mode)
+  ;; (global-tempel-abbrev-mode)
+  )
+
 (use-package terraform-mode)
 
 ;;;_ , texinfo
@@ -8119,7 +8345,10 @@ append it to ENTRY."
 
   ;; Optionally enable cycling for `vertico-next' and `vertico-previous'.
   ;; (setq vertico-cycle t)
-  )
+
+  :bind (:map vertico-map
+              ("M-RET" . vertico-exit-input)))
+
 
 ;;;_ , w3m
 
@@ -8412,6 +8641,7 @@ append it to ENTRY."
 ;;;_ , yasnippet
 
 (use-package yasnippet
+  :disabled t
   :unless noninteractive
   :diminish yas-minor-mode
   :bind (("C-c y d" . yas-load-directory)

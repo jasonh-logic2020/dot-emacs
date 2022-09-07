@@ -55,4 +55,5 @@ raxod502/straight.el/develop/install.el"
 ;; (use-package no-littering)
 (use-package use-package-ensure-system-package)
 
+(provide 'early-init)
 ;;; early-init ends here

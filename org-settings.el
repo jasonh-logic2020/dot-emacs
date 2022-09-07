@@ -319,7 +319,7 @@
  '(org-mode-hook
    '(org-babel-result-hide-spec org-babel-hide-all-hashes abbrev-mode))
  '(org-modules '(org-gnus org-habit org-info org-depend))
- '(org-plantuml-jar-path "~/.nix-profile/lib/plantuml.jar")
+ '(org-plantuml-jar-path "/usr/share/java/plantuml.jar")
  '(org-pretty-entities t)
  '(org-priority-faces
    '((65 :foreground "White" :weight bold)
