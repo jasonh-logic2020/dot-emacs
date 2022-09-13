@@ -3736,6 +3736,9 @@ If region is active, apply to active region instead."
   :config
   (yas-reload-all))
 
+(use-package ement
+  :straight (ement :host github :repo "alphapapa/ement.el"))
+
 ;;;_ , emojify
 
 (use-package emojify
