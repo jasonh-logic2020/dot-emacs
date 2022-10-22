@@ -6397,9 +6397,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;   :commands nf-procmail-mode)
 
 (use-package native-complete
-  :after shell
   :config
-  (native-complete-setup-bash))
+  (add-to-list 'completion-at-point-functions 'native-complete-at-point)
+  (with-eval-after-load 'shell
+    (native-complete-setup-bash)))
 
 ;;;_ , nroff-mode
 
