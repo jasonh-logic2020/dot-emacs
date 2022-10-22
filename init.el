@@ -2535,6 +2535,7 @@ If region is active, apply to active region instead."
   (corfu-max-width 100)
   (corfu-min-width 42)
   (corfu-count 9)
+  (corfu-auto-prefix 2)                 ;start after 2 chars
   ;; should be configured in the `indent' package, but `indent.el'
   ;; doesn't provide the `indent' feature.
   (tab-always-indent 'complete)
@@ -6458,7 +6459,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package orderless
   :custom
   (completion-styles '(orderless basic))
-  (completion-category-overrides '((file (styles basic partial-completion)))))
+  (completion-category-defaults nil)
+  (completion-category-overrides '((file (styles . (partial-completion))))))
 
 ;;;_ , org-mode
 
@@ -8652,3 +8654,5 @@ means save all with no questions."
 ;; End:
 
 ;;; init.el ends here
+
+                                        ; LocalWords:  CApitals
