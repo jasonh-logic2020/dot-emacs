@@ -1658,58 +1658,6 @@ If region is active, apply to active region instead."
   :config
   (aggressive-indent-global-mode 1))
 
-;;;_ , airline-themes
-
-(use-package airline-themes
-  :disabled t
-  :init
-  (progn
-    (require 'airline-themes)
-    (load-theme 'airline-doom-one t))
-  :config
-  (progn
-    (set-face-attribute 'mode-line          nil :font "Fira Mono")
-    (set-face-attribute 'mode-line-inactive nil :font "Fira Mono")
-    (setq powerline-utf-8-separator-left        #xe0b0
-          powerline-utf-8-separator-right       #xe0b2
-          airline-utf-glyph-separator-left      #xe0b0
-          airline-utf-glyph-separator-right     #xe0b2
-          airline-utf-glyph-subseparator-left   #xe0b1
-          airline-utf-glyph-subseparator-right  #xe0b3
-          airline-utf-glyph-branch              #xe0a0
-          airline-utf-glyph-readonly            #xe0a2
-          airline-utf-glyph-linenumber          #xe0a1))
-
-  (setq eshell-prompt-regexp "^ [^$]*[$] "
-        eshell-prompt-function
-        (lambda ()
-          (concat
-           (propertize
-            (concat " " (airline-shorten-directory (eshell/pwd) 16) " ")
-            'face `(:foreground ,(face-foreground 'airline-normal-outer)
-                                :background ,(face-background 'airline-normal-outer)))
-
-           (propertize
-            (char-to-string airline-utf-glyph-separator-left)
-            'face `(:foreground ,(face-background 'airline-normal-outer)
-                                :background ,(face-background 'airline-normal-inner)))
-
-           (let ((git-branch (airline-curr-dir-git-branch-string (eshell/pwd))))
-             (if (not (or (null git-branch) (string= "" git-branch)))
-                 (concat
-                  (propertize
-                   (concat " " (char-to-string airline-utf-glyph-branch) " " git-branch " ")
-                   'face `(:foreground ,(face-background 'airline-insert-outer)
-                                       :background ,(face-background 'airline-insert-inner))))))
-
-           (propertize
-            (char-to-string airline-utf-glyph-subseparator-left)
-            'face `(:foreground ,(face-background 'airline-insert-outer)
-                                :background ,(face-background 'airline-insert-inner)))
-
-           (propertize "$" 'invisible t)
-           (propertize " " 'face `())))))
-
 ;;;_ , alert
 
 (use-package alert)
@@ -1977,12 +1925,6 @@ If region is active, apply to active region instead."
   :after yasnippet
   :bind (("C-c y e" . aya-expand)
          ("C-c y c" . aya-create)))
-
-;;;_ , base16-theme
-
-(use-package base16-theme
-  :config
-  (load-theme 'base16-tomorrow-night t))
 
 (use-package bazel-mode
   ;;; replaced by `bazel`
@@ -2698,16 +2640,6 @@ If region is active, apply to active region instead."
          ("M-o" . isearch-moccur)
          ("M-O" . isearch-moccur-all)))
 
-;;;_ , color-theme
-
-(use-package color-theme
-  :disabled t
-  :unless noninteractive
-  ;; BULK-ENSURE :ensure t
-  :config
-  (color-theme-initialize)
-  (color-theme-charcoal-black))
-
 (use-package marginalia
   :after vertico
   :custom
@@ -3186,18 +3118,6 @@ If region is active, apply to active region instead."
 (use-package docker-tramp)
 ;; BULK-ENSURE :ensure t
 
-
-;;;_ , doom-themes
-
-(use-package doom-themes
-  :disabled t ;; in favor of base-16
-  :load-path ("~/emacs-doom-themes/" "~/emacs-doom-themes/themes/")
-  :config
-  (progn
-    (load-theme 'doom-tomorrow-night t)
-    (doom-themes-neotree-config)
-    (doom-themes-org-config)))
-
 (use-package doom-modeline
   ;; BULK-ENSURE :ensure t
   :preface
@@ -3515,6 +3435,13 @@ If region is active, apply to active region instead."
 ;;   (progn
 ;;     (add-hook 'after-init-hook 'server-start t)
 ;;     (add-hook 'after-init-hook 'edit-server-start t)))
+
+(use-package ef-themes
+  :custom
+  (ef-themes-to-toggle '(ef-dark ef-night ef-dark ef-spring
+                                 ef-summer ef-autumn ef-winter))
+  :config
+  (ef-themes-select 'ef-dark))
 
 (use-package eglot
   :ensure t
@@ -5909,12 +5836,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :defer t
   :bind ("M-o m" . minimap-mode))
 
-(use-package modus-operandi-theme
-  :disabled t)
-
-(use-package modus-vivendi-theme
-  :disabled t)
-
 ;; ;;;_ , mu4e
 
 (use-package mu4e
@@ -6986,13 +6907,6 @@ append it to ENTRY."
 
 (use-package posframe)
 
-;;;_ , powerline
-
-(use-package powerline
-  :disabled t
-  :config
-  (powerline-default-theme))
-
 ;;;_ , pp-c-l
 
 (use-package pp-c-l
@@ -7978,22 +7892,6 @@ means save all with no questions."
   :defer t
   :commands smart-tabs-mode)
 
-;;;_ , smart-mode-line
-
-(use-package smart-mode-line
-  :disabled t
-  :config
-  (sml/setup)
-  (sml/apply-theme 'dark))
-
-(use-package smart-mode-line-powerline-theme
-  :disabled t
-  :after powerline
-  :after smart-mode-line
-  :config
-  (sml/setup)
-  (sml/apply-theme 'powerline))
-
 ;;;_ , solaire-mode
 
 (use-package solaire-mode
@@ -8002,18 +7900,6 @@ means save all with no questions."
   (add-hook 'after-change-major-mode-hook 'turn-on-solaire-mode))
 
 ;;;_ , solarized-theme
-
-(use-package solarized-theme
-  :disabled t
-  :init
-  (setq solarized-distinct-fringe-background t
-        solarized-use-variable-pitch nil
-        solarized-high-contrast-mode-line t
-        x-underline-at-descent-line t)
-  :config
-  (progn
-    ;; (load-theme 'solarized-light t)
-    (load-theme 'solarized-dark t)))
 
 ;;;_ , sparql-mode
 
