@@ -224,6 +224,7 @@
 (setq
  echo-keystrokes              0.5  ; minibuffer echo delay (default 1 sec)
  auth-sources '("~/.authinfo.gpg") ; set auth store
+ auth-source-debug              t  ; always debug due to constant decay
  initial-major-mode     'org-mode  ; orgmode please
  scroll-step                    1  ; How many lines to scroll at once
  scroll-conservatively      10000  ; Max lines to scroll to recenter point
