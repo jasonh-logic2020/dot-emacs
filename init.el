@@ -2843,6 +2843,10 @@ If region is active, apply to active region instead."
 (use-package dedicated
   :defer t)
 
+(use-package default-text-scale
+  :config)
+(default-text-scale-mode +1)
+
 ;;;_ , deft
 
 (use-package deft
