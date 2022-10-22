@@ -4253,6 +4253,7 @@ FORM => (eval FORM)."
   ;; :hook (text-mode . 'flyspell-mode)
   :custom
   (flyspell-abbrev-p t)
+  (flyspell-use-global-abbrev-table-p t)
   :config
   (unbind-key "C-." flyspell-mode-map)
   (add-hook 'prog-mode-hook (lambda ()
