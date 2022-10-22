@@ -3606,6 +3606,10 @@ If region is active, apply to active region instead."
      ("R" . elfeed-mark-all-as-read))
     (run-with-idle-timer 3000 t 'elfeed-update)))
 
+(use-package elfeed-goodies
+  :config
+  (elfeed-goodies/setup))
+
 ;;;_ , elfeed-org
 
 (use-package elfeed-org
