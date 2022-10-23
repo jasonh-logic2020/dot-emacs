@@ -7750,6 +7750,8 @@ means save all with no questions."
       (eval-buffer))
     ))
 
+(use-package ssh-agency)
+
 (use-package tracking
   :defer t
   :config
@@ -8251,6 +8253,7 @@ means save all with no questions."
   :bind (:map vertico-map
               ("M-RET" . vertico-exit-input)))
 
+(use-package vterm)
 
 ;;;_ , w3m
 
