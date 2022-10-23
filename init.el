@@ -170,6 +170,14 @@
   (advice-add 'use-package-handler/:load-path
               :around #'load-path-handler-override))
 
+(defun hoagie-rename-and-select-occur-buffer ()
+  "Renames the current buffer to *Occur: [term] [buffer]*.
+Meant to be added to `occur-hook'."
+  (cl-destructuring-bind (search-term _ (buffer-name &rest _)) occur-revert-arguments
+    (pop-to-buffer
+     (rename-buffer (format "*Occur: %s %s*" search-term buffer-name) t))))
+(add-hook 'occur-hook #'hoagie-rename-and-select-occur-buffer)
+
 ;; (when install-run
 ;;   (setq use-package-always-ensure t))
 
