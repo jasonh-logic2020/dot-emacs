@@ -173,7 +173,8 @@
 (defun hoagie-rename-and-select-occur-buffer ()
   "Renames the current buffer to *Occur: [term] [buffer]*.
 Meant to be added to `occur-hook'."
-  (cl-destructuring-bind (search-term _ (buffer-name &rest _)) occur-revert-arguments
+  (cl-destructuring-bind (search-term _ (buffer-name &rest _))
+      occur-revert-arguments
     (pop-to-buffer
      (rename-buffer (format "*Occur: %s %s*" search-term buffer-name) t))))
 (add-hook 'occur-hook #'hoagie-rename-and-select-occur-buffer)
@@ -238,7 +239,7 @@ Meant to be added to `occur-hook'."
  scroll-conservatively      10000  ; Max lines to scroll to recenter point
  scroll-preserve-screen-position t ; Max lines to scroll to recenter point
  auto-window-vscroll            t  ; Adjust scroll for tall glyphs
- epa-pinentry-mode      'loopback  ; ask in emacs
+ epg-pinentry-mode      'loopback  ; ask in emacs
  auto-revert-verbose          nil  ; Be quiet about reverts
  disabled-command-function    nil  ; Enable disabled commands
  display-time-24hr-format       t  ; 24 hour time format
