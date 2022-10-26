@@ -264,9 +264,10 @@ Meant to be added to `occur-hook'."
  confirm-kill-processes       nil  ; kill processes without asking
  show-paren-delay               0  ; Don't delay the paren update
  enable-recursive-minibuffers   t  ; Enable minibuffer recursion
- minibuffer-prompt-properties    '(read-only t ; don’t let the cursor
-                                        ; in the prompt
-                                             cursor-intangible t
+ minibuffer-prompt-properties    '(read-only t
+                                        ; don’t allow the cursor
+                                        ; in the minibuffer prompt
+                                             cursor-intangible-mode t
                                              face minibuffer-prompt))
 
 (column-number-mode             1) ; Show column number
@@ -6450,9 +6451,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package orderless
   :custom
-  (completion-styles '(orderless basic))
   (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles . (partial-completion))))))
+  (completion-category-overrides '((file (styles . (partial-completion)))))
+  :config
+  (add-to-list 'completion-styles 'orderless))
 
 ;;;_ , org-mode
 
@@ -8242,7 +8244,14 @@ means save all with no questions."
   ;; (setq vertico-cycle t)
 
   :bind (:map vertico-map
-              ("M-RET" . vertico-exit-input)))
+              ("M-RET" . vertico-exit-input))
+  :config
+  (add-to-list 'completion-styles 'substring)
+  (add-to-list 'completion-styles 'flex)
+
+  (setq read-file-name-completion-ignore-case t
+        read-buffer-completion-ignore-case t
+        completion-ignore-case t))
 
 (use-package vterm)
 
