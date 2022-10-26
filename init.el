@@ -1673,7 +1673,7 @@ If region is active, apply to active region instead."
 
 (use-package aggressive-indent
   :config
-  (aggressive-indent-global-mode 1))
+  (aggressive-indent-global-mode +1))
 
 ;;;_ , alert
 
@@ -2777,7 +2777,6 @@ If region is active, apply to active region instead."
       (clojure-mode    . ("clojure-1.11"))
       (python-mode     . ("python~3.10" "python~2.7"))
       (ruby-mode       . ("ruby~3.1"))
-      (go-mode         . ("go"))
       (rustic-mode     . ("rust"))
       (css-mode        . ("css"))
       (html-mode       . ("html"))
@@ -4679,6 +4678,10 @@ FORM => (eval FORM)."
           python-mode
           emacs-lisp-mode) . hl-indent-scope-mode))
 
+(use-package hl-line
+  :config
+  (global-hl-line-mode +1))
+
 ;;;_ , htmlize
 
 ;; (use-package htmlize
@@ -5549,6 +5552,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package lice
   :defer t)
+
+(use-package lin
+  :config
+  (lin-global-mode +1))
 
 ;;;_ , lisp-mode
 
