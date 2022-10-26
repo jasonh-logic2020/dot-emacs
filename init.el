@@ -2450,6 +2450,7 @@ If region is active, apply to active region instead."
               ("RET" . corfu-complete-and-quit)
               ("<return>" . corfu-complete-and-quit))
   :custom
+  (corfu-auto t)
   (corfu-cycle t)
   (corfu-preselect-first t)
   (corfu-scroll-margin 4)
@@ -2463,16 +2464,6 @@ If region is active, apply to active region instead."
   ;; doesn't provide the `indent' feature.
   (tab-always-indent 'complete)
   :config
-  (defun dima-corfu-prescient-remember (&rest _)
-    "Advice for `corfu--insert.'"
-    (when (>= corfu--index 0)
-      (prescient-remember (nth corfu--index corfu--candidates))))
-
-  (advice-add #'corfu--insert :before #'dima-corfu-prescient-remember)
-
-  (setq corfu-sort-function #'prescient-sort)
-  (setq corfu-sort-override-function #'prescient-sort)
-
   (defun corfu-complete-and-quit ()
     (interactive)
     (corfu-complete)
@@ -2517,9 +2508,39 @@ If region is active, apply to active region instead."
   (corfu-terminal-mode +1))
 
 (use-package cape
+  :bind (("C-c p p" . completion-at-point) ;; capf
+         ("C-c p t" . complete-tag)        ;; etags
+         ("C-c p d" . cape-dabbrev)        ;; or dabbrev-completion
+         ("C-c p h" . cape-history)
+         ("C-c p f" . cape-file)
+         ("C-c p k" . cape-keyword)
+         ("C-c p s" . cape-symbol)
+         ("C-c p a" . cape-abbrev)
+         ("C-c p i" . cape-ispell)
+         ("C-c p l" . cape-line)
+         ("C-c p w" . cape-dict)
+         ("C-c p \\" . cape-tex)
+         ("C-c p _" . cape-tex)
+         ("C-c p ^" . cape-tex)
+         ("C-c p &" . cape-sgml)
+         ("C-c p r" . cape-rfc1345))
   :config
-  (setq completion-at-point-functions
-        '(cape-file cape-dabbrev)))
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  ;;(add-to-list 'completion-at-point-functions #'cape-history)
+  ;;(add-to-list 'completion-at-point-functions #'cape-keyword)
+  ;;(add-to-list 'completion-at-point-functions #'cape-tex)
+  ;;(add-to-list 'completion-at-point-functions #'cape-sgml)
+  ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345)
+  ;;(add-to-list 'completion-at-point-functions #'cape-abbrev)
+  ;;(add-to-list 'completion-at-point-functions #'cape-ispell)
+  ;;(add-to-list 'completion-at-point-functions #'cape-dict)
+  ;;(add-to-list 'completion-at-point-functions #'cape-symbol)
+  ;;(add-to-list 'completion-at-point-functions #'cape-line)
+
+  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
+  (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify)
+  )
 
 
 ;;;_ , compile
@@ -6920,7 +6941,19 @@ append it to ENTRY."
 
 ;; (use-package predictive)
 
-(use-package prescient)
+(use-package prescient
+  :after corfu
+  :config
+  (defun dima-corfu-prescient-remember (&rest _)
+    "Advice for `corfu--insert.'"
+    (when (>= corfu--index 0)
+      (prescient-remember (nth corfu--index corfu--candidates))))
+
+  (advice-add #'corfu--insert :before #'dima-corfu-prescient-remember)
+
+  (add-to-list 'completion-styles 'prescient)
+  (setq corfu-sort-function #'prescient-completion-sort)
+  (setq corfu-sort-override-function #'prescient-completion-sort))
 
 (use-package prism
   :disabled t
