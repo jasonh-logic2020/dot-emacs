@@ -507,6 +507,77 @@ abort completely with `C-g'."
 (setq save-abbrevs 'silently)
 (setq-default abbrev-mode t))
 
+(use-package alert         :defer t)
+(use-package anaphora      :defer t)
+(use-package apiwrap       :defer t)
+(use-package asoc          :defer t
+  :straight (asoc :host github :repo "troy/asoc.el"))
+(use-package async         :defer t)
+(use-package button-lock   :defer t)
+(use-package ctable        :defer t)
+(use-package dash          :defer t)
+(use-package deferred      :defer t)
+(use-package diminish      )
+(use-package el-mock       :defer t)
+(use-package elisp-refs    :defer t)
+(use-package epc           :defer t)
+(use-package epl           :defer t)
+(use-package esxml         :defer t)
+(use-package f             :defer t)
+(use-package fn            :defer t)
+(use-package fringe-helper :defer t)
+(use-package fuzzy         :defer t)
+
+(use-package ghub
+  :defer t
+  :config
+  (require 'auth-source-pass)
+  (defvar my-ghub-token-cache nil)
+  (advice-add
+   'ghub--token :around
+   #'(lambda (orig-func host username package &optional nocreate forge)
+       (or my-ghub-token-cache
+           (setq my-ghub-token-cache
+                 (funcall orig-func host username package nocreate forge))))))
+
+(use-package ghub+         :defer t)
+(use-package ht            :defer t)
+(use-package kv            :defer t)
+(use-package list-utils    :defer t)
+(use-package logito        :defer t)
+(use-package loop          :defer t)
+(use-package m-buffer      :defer t)
+(use-package makey         :defer t)
+(use-package marshal       :defer t)
+(use-package names         :defer t)
+(use-package noflet        :defer t)
+(use-package oauth2        :defer t)
+(use-package ov            :defer t)
+(use-package packed        :defer t)
+(use-package parent-mode   :defer t)
+(use-package parsebib      :defer t)
+(use-package parsec        :defer t)
+(use-package peval         :defer t)
+(use-package pfuture       :defer t)
+(use-package pkg-info      :defer t)
+(use-package popup         :defer t)
+(use-package popup-pos-tip :defer t)
+(use-package popwin        :defer t)
+(use-package pos-tip       :defer t)
+(use-package request       :defer t)
+(use-package rich-minority :defer t)
+(use-package s             :defer t)
+(use-package simple-httpd  :defer t)
+(use-package spinner       :defer t)
+(use-package tablist       :defer t)
+(use-package uuidgen       :defer t)
+(use-package web           :defer t)
+(use-package web-server    :defer t)
+(use-package websocket     :defer t)
+(use-package with-editor   :defer t)
+(use-package xml-rpc       :defer t)
+(use-package zoutline      :defer t)
+
 (use-package crm-prompt
   :unless noninteractive
   :straight nil
@@ -1346,16 +1417,6 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
 (bind-key "C-c z" 'clean-buffer-list)
 
 (bind-key "C-c [" 'align-regexp)
-
-(unless (and noninteractive (not window-system))
-  (eval-and-compile
-    (defun init-windows ()
-      "Default window layout."
-      (interactive)
-      (if (window-full-width-p)
-          (split-window-horizontally))
-      (other-window 1))
-    (add-hook 'after-init-hook  #'init-windows)))
 
 (use-package comment-line-or-region
   :straight nil
@@ -8684,6 +8745,17 @@ means save all with no questions."
 
 ;;;_. Post initialization
 
+(unless (and noninteractive (not window-system))
+  (eval-and-compile
+    (defun init-windows ()
+      "Default window layout."
+      (interactive)
+      (if (window-full-width-p)
+          (split-window-horizontally))
+      (other-window 1)
+      (vterm))
+    (add-hook 'after-init-hook  #'init-windows)))
+
 (message "Init done")
 
 (when window-system
@@ -8703,6 +8775,5 @@ means save all with no questions."
 ;;   outline-regexp: "^;;;_\\([,. ]+\\)"
 ;; End:
 
+;; ; LocalWords:  CApitals
 ;;; init.el ends here
-
-                                        ; LocalWords:  CApitals
