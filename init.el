@@ -2749,7 +2749,16 @@ If region is active, apply to active region instead."
   :bind
   (:map vertico-map
         ("M-." . consult-dir)
-        ("M-j" . consult-dir-jump-file)))
+        ("M-j" . consult-dir-jump-file))
+  :custom
+  (consult-dir-shadow-filenames nil)
+  (consult-dir-sources '( consult-dir--source-bookmark
+                          consult-dir--source-default
+                          consult-dir--source-project
+                          consult-dir--source-recentf))
+  :config
+  (dolist (map (list global-map minibuffer-local-filename-completion-map))
+    (define-key map (kbd "C-x C-d") #'consult-dir)))
 
 (use-package consult-project-extra
   :defer t)
