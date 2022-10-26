@@ -48,6 +48,8 @@
                    (expand-file-name "settings.el" user-emacs-directory))
       dot-org (convert-standard-filename
                (expand-file-name "dot-org.el" user-emacs-directory))
+      dot-gnus (convert-standard-filename
+                (expand-file-name "dot-gnus.el" user-emacs-directory))
       org-settings (convert-standard-filename
                     (expand-file-name "org-settings.el" user-emacs-directory)))
 
@@ -197,6 +199,11 @@ Meant to be added to `occur-hook'."
 
 (use-package use-package-chords
   :config (key-chord-mode 1))
+
+;; spacial placement for use-package extension
+(use-package major-mode-hydra
+  :bind
+  ("M-SPC" . major-mode-hydra))
 
 ;; (use-package use-package-secret
 ;;   :disabled t
@@ -1772,7 +1779,8 @@ If region is active, apply to active region instead."
   (auth-pass-enable))
 
 (use-package autorevert
-  :hook (after-init . global-auto-revert-mode))
+  :hook ((dired-mode . auto-revert-mode)
+         (after-init . global-auto-revert-mode)))
 
 ;;;_ , avy
 
@@ -1781,125 +1789,6 @@ If region is active, apply to active region instead."
   ("M-`" . avy-goto-char-2)
   :config
   (avy-setup-default))
-
-;;;_ , auto-complete
-
-(use-package auto-complete-config
-  :disabled t ;; in favor of company-mode
-  :commands auto-complete-mode
-  :diminish auto-complete-mode
-  :config
-  (progn
-    ;;(ac-set-trigger-key "TAB")
-    (setq ac-use-menu-map t)
-
-    (unbind-key "C-s" ac-completing-map)
-
-    (defalias 'yas/current-snippet-table 'yas--get-snippet-tables)
-
-    (setq-default ac-sources
-                  '(
-                    (if (featurep 'semantic)
-                        'ac-source-semantic)
-                    ac-source-yasnippet
-                    ac-source-abbrev
-                    ac-source-words-in-buffer
-                    ac-source-words-in-same-mode-buffers
-                    (if (featurep 'ac-nrepl)
-                        'ac-nrepl)
-                    ac-source-files-in-current-dir
-                    ac-source-filename))))
-
-;;;_ , auto-highlight-symbol-mode
-
-(use-package auto-highlight-symbol
-  :disabled t
-  ;; BULK-ENSURE :ensure t
-  :unless noninteractive
-  :bind (:map auto-highlight-symbol-mode-map
-              ("M-p"     . ahs-backward)
-              ("M-n"     . ahs-forward)
-              ("M-_"     . ahs-back-to-start)
-              ("C-x M-_" . ahs-change-range)
-              ("C-x C-a" . ahs-edit-mode))
-  :custom
-  (ahs-default-range 'ahs-range-whole-buffer)
-  (ahs-face-check-include-overlay t)
-  (ahs-inhibit-face-list
-   '(font-lock-comment-delimiter-face
-     font-lock-comment-face
-     font-lock-doc-face
-     font-lock-doc-string-face
-     font-lock-string-face
-     font-lock-keyword-face
-     region
-     loccur-custom-buffer-grep
-     isearch))
-
-  :hook (prog-mode . 'auto-highlight-symbol-mode)
-  :config
-  (set-face-attribute 'ahs-face nil
-                      :background 'unspecified :box t)
-  (set-face-attribute 'ahs-plugin-whole-buffer-face nil
-                      :background 'unspecified
-                      :foreground 'unspecified
-                      :box '(:color 'GreenYellow))
-  (add-hook 'yas-before-expand-snippet-hook
-            (lambda () (auto-highlight-symbol-mode 0)))
-  (add-hook 'yas-after-exit-snippet-hook
-            (lambda () (when prog-mode-hook (auto-highlight-symbol-mode 1)))))
-
-;;;_, autoinsert
-
-(use-package autoinsert
-  :disabled t
-  :after yasnippet
-  :unless noninteractive
-  :preface
-  (defun autoinsert-yas-expand ()
-    "Replace text in yasnippet template."
-    (save-excursion
-      (goto-char (point-min))
-      (when (re-search-forward "^# --.*$" nil t 1)
-        (delete-region (point-min) (+ (point) 1))))
-    (yas-expand-snippet (buffer-string) (point-min) (point-max)))
-
-  (defun add-my-autoinsert-snippet (filename)
-    "Add autoinsert rule for snippet FILENAME."
-    (let ((ext  (file-name-extension    filename))
-          (name (file-name-nondirectory filename)))
-      (cond
-       ((> (length ext) 0)
-        (define-auto-insert (concat "\\." ext "$") (vector name 'autoinsert-yas-expand)))
-       ((> (length name) 0)
-        (define-auto-insert (concat "^" name) (vector name 'autoinsert-yas-expand)))
-       (t (message "No auto-insert created for %s" filename)))))
-
-  :custom
-  (auto-insert-directory
-   (ensure-directory (expand-file-name "autoinsert" common-emacs-directory)))
-  (auto-insert 'other)
-  (auto-insert-query nil)
-  :config
-  (mapc #'add-my-autoinsert-snippet
-        (directory-files auto-insert-directory t
-                         directory-files-no-dot-files-regexp))
-  (auto-insert-mode +1))
-
-;;;_ , autopair
-;; using paredit instead
-
-(use-package autopair
-  :disabled t ;; in favor of paredit
-  :commands autopair-mode
-  :diminish autopair-mode
-  :hook (c-mode-common . #'autopair-mode)
-  :hook (text-mode . #'autopair-mode)
-  :hook (ruby-mode . #'autopair-mode)
-  :hook (python-mode . #'autopair-mode)
-  :hook (go-mode . #'autopair-mode)
-  :hook (js2-mode . #'autopair-mode)
-  :hook (sh-mode . #'autopair-mode))
 
 ;;;_ , backup-each-save
 
@@ -2179,6 +2068,10 @@ If region is active, apply to active region instead."
       (global-semantic-idle-tag-highlight-mode 1)
       (when (cedet-ectag-version-check)
         (semantic-load-enable-primary-exuberent-ctags-support)))))
+
+(use-package centered-cursor-mode
+  :config
+  (global-centered-cursor-mode +1))
 
 ;;;_ , cider
 
@@ -2871,6 +2764,62 @@ If region is active, apply to active region instead."
                                    (case-fn . downcase)))
     (setq deft-directory "~/SparkleShare/org/notes")))
 
+(use-package devdocs
+  :straight nil
+  :autoload (devdocs--installed-docs devdocs--available-docs)
+  :bind (:map prog-mode-map
+              ("M-<f1>" . devdocs-dwim)
+              ("C-h D"  . devdocs-dwim))
+  :init
+  (defconst devdocs-major-mode-docs-alist
+    '((c-mode          . ("c"))
+      (c++-mode        . ("cpp"))
+      (clojure-mode    . ("clojure-1.11"))
+      (python-mode     . ("python~3.10" "python~2.7"))
+      (ruby-mode       . ("ruby~3.1"))
+      (go-mode         . ("go"))
+      (rustic-mode     . ("rust"))
+      (css-mode        . ("css"))
+      (html-mode       . ("html"))
+      (julia-mode      . ("julia~1.8"))
+      (js-mode         . ("javascript" "jquery"))
+      (js2-mode        . ("javascript" "jquery"))
+      (emacs-lisp-mode . ("elisp")))
+    "Alist of major-mode and docs.")
+
+  (mapc
+   (lambda (mode)
+     (add-hook (intern (format "%s-hook" (car mode)))
+               (lambda ()
+                 (setq-local devdocs-current-docs (cdr mode)))))
+   devdocs-major-mode-docs-alist)
+
+  (setq devdocs-data-dir (expand-file-name "devdocs" user-emacs-directory))
+
+  (defun devdocs-dwim()
+    "Look up a DevDocs documentation entry.
+Install the doc if it's not installed."
+    (interactive)
+    ;; Install the doc if it's not installed
+    (mapc
+     (lambda (slug)
+       (unless (member slug (let ((default-directory devdocs-data-dir))
+                              (seq-filter #'file-directory-p
+                                          (when (file-directory-p devdocs-data-dir)
+                                            (directory-files "." nil "^[^.]")))))
+         (mapc
+          (lambda (doc)
+            (when (string= (alist-get 'slug doc) slug)
+              (devdocs-install doc)))
+          (devdocs--available-docs))))
+     (alist-get major-mode devdocs-major-mode-docs-alist))
+
+    ;; Lookup the symbol at point
+    (devdocs-lookup nil (thing-at-point 'symbol t))))
+
+(use-package denote)
+
+
 ;;;_ , diff-mode
 
 (use-package diff-mode
@@ -3078,6 +3027,7 @@ If region is active, apply to active region instead."
   :hook (dired-mode-hook . #'dired-git-mode))
 
 (use-package dirvish
+  :disabled t
   :init
   (dirvish-override-dired-mode))
 
@@ -3326,13 +3276,14 @@ If region is active, apply to active region instead."
 ;;;_ , dumb-jump
 
 (use-package dumb-jump
-  :after hydra
-  :bind (("M-g o" . dumb-jump-go-other-window))
-  ("M-g j" . dumb-jump-go)
-  ("M-g b" . dumb-jump-back)
-  ("M-g x" . dumb-jump-go-prefer-external)
-  ("M-g z" . dumb-jump-go-prefer-external-other-window)
+  :bind (("M-g o" . dumb-jump-go-other-window)
+         ("M-g j" . dumb-jump-go)
+         ("M-g b" . dumb-jump-back)
+         ("M-g x" . dumb-jump-go-prefer-external)
+         ("M-g z" . dumb-jump-go-prefer-external-other-window))
   :config
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
+  (setq xref-show-definitions-function #'xref-show-definitions-completing-read)
   (defhydra dumb-jump-hydra (:color blue :columns 3)
     "Dumb Jump"
     ("j" dumb-jump-go "Go")
@@ -7495,6 +7446,10 @@ means save all with no questions."
   :config
   (savehist-mode +1))
 
+(use-package saveplace
+  :config
+  (save-place-mode +1))
+
 ;;;_ , sed-mode
 
 (use-package sed-mode)
@@ -8666,7 +8621,7 @@ means save all with no questions."
                           ,load-file-name elapsed)))
             t))
 
-;;   mode: allout
+;;   mode: emacs-lisp
 ;;   outline-regexp: "^;;;_\\([,. ]+\\)"
 ;; End:
 
