@@ -261,8 +261,13 @@ Meant to be added to `occur-hook'."
  kept-new-versions              6  ; Number of versions to keep
  kept-old-versions              2  ; Number of old versions
  version-control                t  ; Keep versions of every file
- confirm-kill-processes         nil ;kill processes without asking
- show-paren-delay               0) ; Don't delay the paren update
+ confirm-kill-processes       nil  ; kill processes without asking
+ show-paren-delay               0  ; Don't delay the paren update
+ enable-recursive-minibuffers   t  ; Enable minibuffer recursion
+ minibuffer-prompt-properties    '(read-only t ; don’t let the cursor
+                                        ; in the prompt
+                                             cursor-intangible t
+                                             face minibuffer-prompt))
 
 (column-number-mode             1) ; Show column number
 (electric-quote-mode            1) ; Easier “quote” typing
@@ -277,6 +282,8 @@ Meant to be added to `occur-hook'."
 (show-paren-mode                1) ; Highlight matching parenthesis
 (desktop-save-mode              1) ; remember open files
 (save-place-mode                1) ; Remember per-file positions
+
+(add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
 (if window-system
     (add-hook 'after-init-hook #'toggle-frame-maximized))
@@ -498,6 +505,19 @@ abort completely with `C-g'."
 
 (setq save-abbrevs 'silently)
 (setq-default abbrev-mode t))
+
+(use-package crm-prompt
+  :unless noninteractive
+  :straight nil
+  :init
+  (defun crm-indicator (args)
+    (cons (format "[CRM%s] %s"
+                  (replace-regexp-in-string
+                   "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" ""
+                   crm-separator)
+                  (car args))
+          (cdr args)))
+  (advice-add #'completing-read-multiple :filter-args #'crm-indicator))
 
 (use-package dubcaps-mode
   :unless noninteractive
