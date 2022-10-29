@@ -168,7 +168,7 @@
                      `(eval-and-compile (add-to-list 'load-path ,path t)))
                  args)
          body))))
-
+  
   (advice-add 'use-package-handler/:load-path
               :around #'load-path-handler-override))
 
@@ -4756,28 +4756,30 @@ FORM => (eval FORM)."
       (undo 1)
       nil))
 
-  (defun my-try-expand-company (old)
-    (unless company-candidates
-      (company-auto-begin))
-    (if (not old)
-        (progn
-          (he-init-string (he-lisp-symbol-beg) (point))
-          (if (not (he-string-member he-search-string he-tried-table))
-              (setq he-tried-table (cons he-search-string he-tried-table)))
-          (setq he-expand-list
-                (and (not (equal he-search-string ""))
-                     company-candidates))))
+  (defun he-tag-beg ()
+    (let ((p
+           (save-excursion
+             (backward-word 1)
+             (point))))
+      p))
+
+  (defun try-expand-tag (old)
+    (unless  old
+      (he-init-string (he-tag-beg) (point))
+      (setq he-expand-list
+            (sort
+             (all-completions he-search-string
+                              'tags-complete-tag) 'string-lessp)))
     (while (and he-expand-list
                 (he-string-member (car he-expand-list) he-tried-table))
       (setq he-expand-list (cdr he-expand-list)))
     (if (null he-expand-list)
         (progn
-          (if old (he-reset-string))
+          (when old (he-reset-string))
           ())
-      (progn
-        (he-substitute-string (car he-expand-list))
-        (setq he-expand-list (cdr he-expand-list))
-        t)))
+      (he-substitute-string (car he-expand-list))
+      (setq he-expand-list (cdr he-expand-list))
+      t))
 
   (defun my-try-expand-dabbrev-visible (old)
     (save-excursion (try-expand-dabbrev-visible old)))
@@ -8417,6 +8419,10 @@ means save all with no questions."
 (use-package vertico-directory
   :after vertico
   :straight nil
+  :preface
+  (load-file (expand-file-name
+              "straight/repos/vertico/extensions/vertico-directory.el"
+              straight-base-dir ))
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
@@ -8427,6 +8433,10 @@ means save all with no questions."
 (use-package vertico-quick
   :after vertico
   :straight nil
+  :preface
+  (load-file (expand-file-name
+              "straight/repos/vertico/extensions/vertico-quick.el"
+              straight-base-dir ))
   :bind (
          :map vertico-map
          ("M-q" . vertico-quick-insert)
@@ -8439,13 +8449,16 @@ means save all with no questions."
 (use-package vertico-multiform
   :after vertico
   :straight nil
+  :preface
+  (load-file (expand-file-name
+              "straight/repos/vertico/extensions/vertico-multiform.el"
+              straight-base-dir ))
   :config
-  (progn
-    (vertico-multiform-mode)
+  (vertico-multiform-mode +1)
 
-    (setq vertico-multiform-commands
-          '(;; show grep results in a dedicated buffer:
-            (consult-ripgrep buffer)))))
+  (setq vertico-multiform-commands
+        '(;; show grep results in a dedicated buffer:
+          (consult-ripgrep buffer))))
 
 (use-package vterm)
 
