@@ -510,8 +510,9 @@ abort completely with `C-g'."
 (use-package alert         :defer t)
 (use-package anaphora      :defer t)
 (use-package apiwrap       :defer t)
-(use-package asoc          :defer t
-  :straight (asoc :host github :repo "troy/asoc.el"))
+(use-package asoc
+  :defer t
+  :straight (asoc :host github :repo "troyp/asoc.el"))
 (use-package async         :defer t)
 (use-package button-lock   :defer t)
 (use-package ctable        :defer t)
@@ -557,7 +558,8 @@ abort completely with `C-g'."
 (use-package parent-mode   :defer t)
 (use-package parsebib      :defer t)
 (use-package parsec        :defer t)
-(use-package peval         :defer t)
+(use-package peval         :defer t
+  :straight (peval :host github :repo "Wilfred/peval"))
 (use-package pfuture       :defer t)
 (use-package pkg-info      :defer t)
 (use-package popup         :defer t)
@@ -579,9 +581,10 @@ abort completely with `C-g'."
 (use-package zoutline      :defer t)
 
 (use-package crm-prompt
+  :disabled t
   :unless noninteractive
   :straight nil
-  :init
+  :preface
   (defun crm-indicator (args)
     (cons (format "[CRM%s] %s"
                   (replace-regexp-in-string
@@ -989,6 +992,7 @@ tools."
 ;; (define-prefix-command 'ctl-period-map)
 ;; (bind-key "C-." 'ctl-period-map)
 
+(bind-key* "C-\\" 'switch-to-buffer)
 (bind-key* "<C-return>" 'other-window)
 
 (defun collapse-or-expand ()
@@ -2691,7 +2695,7 @@ If region is active, apply to active region instead."
          ("C-c k" . consult-kmacro)
          ;; C-x bindings (ctl-x-map)
          ("C-x M-:" . consult-complex-command) ;; orig. repeat-complex-command
-         ("C-\\" . consult-buffer)
+         ([remap switch-to-buffer] . consult-buffer)
          ("C-x b" . consult-buffer) ;; orig. switch-to-buffer
          ("C-x 4 b" . consult-buffer-other-window) ;; orig. switch-to-buffer-other-window
          ("C-x 5 b" . consult-buffer-other-frame) ;; orig. switch-to-buffer-other-frame
@@ -2877,6 +2881,7 @@ If region is active, apply to active region instead."
     (setq deft-directory "~/SparkleShare/org/notes")))
 
 (use-package devdocs
+  :disabled t
   :straight nil
   :autoload (devdocs--installed-docs devdocs--available-docs)
   :bind (:map prog-mode-map
@@ -3136,6 +3141,25 @@ Install the doc if it's not installed."
 
 (use-package dired-git
   :hook (dired-mode-hook . #'dired-git-mode))
+
+(use-package dired-imenu
+  :after dired)
+
+(use-package dired-rsync
+  :config
+  (defun my/dired-rsync-update-modeline (&optional err ind)
+    (let ((job-count (length (dired-rsync--get-active-buffers))))
+      (cond
+       ;; error has occurred
+       (err (alert (format "%d job failed: %s" job-count err)
+                   :severity 'urgent
+                   :title "dired-rsync"))
+       ((zerop job-count) (alert "done"
+                                 :severity 'normal
+                                 :title "dired-rsync")))))
+
+  (advice-add #'dired-rsync--update-modeline :after #'my/dired-rsync-update-modeline))
+
 
 (use-package dirvish
   :disabled t
@@ -6367,6 +6391,38 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (defadvice term-process-pager (after term-process-rebind-keys activate)
     (define-key term-pager-break-map  "\177" 'term-pager-back-page)))
 
+(use-package multi-vterm
+  :bind ("C-<f9>" . multi-vterm)
+  :custom (multi-vterm-buffer-name "vterm")
+  :config
+  (with-no-warnings
+    ;; Use `pop-to-buffer' instead of `switch-to-buffer'
+    (defun my-multi-vterm ()
+      "Create new vterm buffer."
+      (interactive)
+      (let ((vterm-buffer (multi-vterm-get-buffer)))
+        (setq multi-vterm-buffer-list
+              (nconc multi-vterm-buffer-list (list vterm-buffer)))
+        (set-buffer vterm-buffer)
+        (multi-vterm-internal)
+        (pop-to-buffer vterm-buffer)))
+    (advice-add #'multi-vterm :override #'my-multi-vterm)
+
+    ;; FIXME: `project-root' is introduced in 27+.
+    (defun my-multi-vterm-project-root ()
+      "Get `default-directory' for project using projectile or project.el."
+      (unless (boundp 'multi-vterm-projectile-installed-p)
+        (setq multi-vterm-projectile-installed-p (require 'projectile nil t)))
+      (if multi-vterm-projectile-installed-p
+          (projectile-project-root)
+        (let ((project (or (project-current)
+                           `(transient . ,default-directory))))
+          (if (fboundp 'project-root)
+              (project-root project)
+            (cdr project)))))
+    (advice-add #'multi-vterm-project-root :override
+                #'my-multi-vterm-project-root)))
+
 ;;;_ , multiple-cursors
 
 (use-package multiple-cursors
@@ -7605,6 +7661,8 @@ means save all with no questions."
   :config
   (selected-global-mode +1))
 
+(use-package serenade-mode)
+
 ;;;_ , session
 
 (use-package session
@@ -8355,6 +8413,39 @@ means save all with no questions."
   (setq read-file-name-completion-ignore-case t
         read-buffer-completion-ignore-case t
         completion-ignore-case t))
+
+(use-package vertico-directory
+  :after vertico
+  :straight nil
+  :bind (:map vertico-map
+              ("RET" . vertico-directory-enter)
+              ("DEL" . vertico-directory-delete-char)
+              ("M-DEL" . vertico-directory-delete-word))
+  ;; Tidy shadowed file names
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
+
+(use-package vertico-quick
+  :after vertico
+  :straight nil
+  :bind (
+         :map vertico-map
+         ("M-q" . vertico-quick-insert)
+         ("C-q" . vertico-quick-exit))
+  :init
+  (progn
+    (setq vertico-quick1 "arstdhn")
+    (setq vertico-quick2 "oie")))
+
+(use-package vertico-multiform
+  :after vertico
+  :straight nil
+  :config
+  (progn
+    (vertico-multiform-mode)
+
+    (setq vertico-multiform-commands
+          '(;; show grep results in a dedicated buffer:
+            (consult-ripgrep buffer)))))
 
 (use-package vterm)
 
