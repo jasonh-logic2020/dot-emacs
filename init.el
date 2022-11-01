@@ -581,9 +581,9 @@ abort completely with `C-g'."
 (use-package zoutline      :defer t)
 
 (use-package crm-prompt
-  :disabled t
   :unless noninteractive
   :straight nil
+  :no-require t
   :preface
   (defun crm-indicator (args)
     (cons (format "[CRM%s] %s"
@@ -2933,7 +2933,7 @@ Install the doc if it's not installed."
     ;; Lookup the symbol at point
     (devdocs-lookup nil (thing-at-point 'symbol t))))
 
-(use-package denote)
+(use-package denote)                    ;TODO
 
 
 ;;;_ , diff-mode
@@ -3850,8 +3850,6 @@ Install the doc if it's not installed."
     :docstring "Searchin' the wikis.")
   (engine-mode t))
 
-
-
 (use-package erc
   :preface
   (require 'erc)
@@ -3867,27 +3865,14 @@ Install the doc if it's not installed."
   :config
   (company-mode -1)
   (erc-spelling-mode +1)
-  (make-variable-buffer-local
-   (defvar erc-last-datestamp nil))
-
-  (defun ks-timestamp (string)
-    (erc-insert-timestamp-left string)
-    (let ((datestamp (erc-format-timestamp
-                      (current-time) erc-datestamp-format)))
-      (unless (or (string= datestamp erc-last-datestamp)
-                  (= (point-max) (point-min)))
-        (erc-insert-timestamp-left datestamp)
-        (setq erc-last-datestamp datestamp))))
 
   (setq erc-header-line-format nil
         erc-input-line-position -1
-        erc-show-my-nick 1
         erc-timestamp-only-if-changed-flag t
         erc-timestamp-format "[%H:%M] "
         erc-datestamp-format " === [%Y-%m-%d %a] ===\n" ; mandatory ascii art
         erc-fill-prefix "      "
-        erc-query-display 'buffer
-        erc-insert-timestamp-function #'ks-timestamp)
+        erc-query-display 'buffer)
 
   (setq erc-fill-column 180
         erc-fill-function 'erc-fill-static
@@ -3897,7 +3882,8 @@ Install the doc if it's not installed."
                       :font "Roboto Condensed" :width 'condensed)
   (add-hook 'erc-send-pre-hook #'define-abbrev-sedlike)
 
-  (bind-key "<tab>" 'completion-at-point erc-mode-map)
+  ;; (bind-key "<tab>" 'completion-at-point erc-mode-map)
+  ;; probably don’t want to bind tab anymore
   (bind-key "C-s" 'isearch-forward erc-mode-map)
   (bind-key "C-r" 'isearch-backward erc-mode-map)
   (erc-track-minor-mode 1)
@@ -3925,15 +3911,6 @@ Install the doc if it's not installed."
 
   (bind-key "C-c b" 'switch-to-bitlbee erc-mode-map)
 
-  (defun erc-receiverize-prompt ()
-    (if (and (boundp 'erc-default-recipients)
-             (erc-default-target))
-        (erc-propertize (concat (erc-default-target) ">")
-                        'read-only t 'rear-nonsticky t
-                        'front-nonsticky t)
-      (erc-propertize (concat "ERC>") 'read-only t
-                      'rear-nonsticky t
-                      'front-nonsticky t)))
 
   (defun erc-cmd-CLEAR ()
     "Clears the current buffer"
@@ -3946,6 +3923,15 @@ Install the doc if it's not installed."
             (erc-truncate-buffer-to-size 0 (get-buffer buffer)))
           (erc-all-buffer-names)))
 
+  (defun erc-receiverize-prompt ()
+    (if (and (boundp 'erc-default-recipients)
+             (erc-default-target))
+        (erc-propertize (concat (erc-default-target) ">")
+                        'read-only t 'rear-nonsticky t
+                        'front-nonsticky t)
+      (erc-propertize (concat "ERC>") 'read-only t
+                      'rear-nonsticky t
+                      'front-nonsticky t)))
   (defun erc-cmd-SHOW (&rest form)
     "Eval FORM and send the result and the original form as:
 FORM => (eval FORM)."
@@ -4016,6 +4002,231 @@ FORM => (eval FORM)."
   :after erc
   :init
   (bind-key "C-y" 'erc-yank erc-mode-map))
+
+;; (use-package erc
+;;   :straight nil
+;;   :preface
+;;   (require 'erc)
+;;   :custom-face
+;;   (erc-default-face ((t (:font "Roboto Condensed" :width condensed))))
+;;   :custom
+;;   (erc-show-my-nick 1)
+;;   (erc-interpret-mirc-color t)
+;;   (erc-kill-buffer-on-part nil)
+;;   (erc-kill-queries-on-quit nil)
+;;   (erc-kill-server-buffer-on-quit t)
+;;   (erc-query-display 'buffer)
+;;   (erc-prompt (lambda () (concat "[" (buffer-name) "]")))
+;;   (erc-auto-discard-away t)
+;;   (erc-autoaway-idle-seconds 1200)
+;;   (erc-server-coding-system '(utf-8 . utf-8))
+;;   (erc-server-auto-reconnect t)
+;;   (erc-server-reconnect-attempts t)
+;;   :hook
+;;   ;; update modules
+;;   (erc-connect-pre . (lambda (x) (erc-update-modules))))
+
+(use-package erc-timestamp
+  :straight nil
+  :no-require t
+  :preface
+  (make-variable-buffer-local
+   (defvar erc-last-datestamp nil))
+  (defun ks-timestamp (string)
+    (erc-insert-timestamp-left string)
+    (let ((datestamp (erc-format-timestamp
+                      (current-time) erc-datestamp-format)))
+      (unless (or (string= datestamp erc-last-datestamp)
+                  (= (point-max) (point-min)))
+        (erc-insert-timestamp-left datestamp)
+        (setq erc-last-datestamp datestamp))))
+  :custom
+  (erc-insert-timestamp-function #'ks-timestamp)
+  (erc-timestamp-only-if-changed-flag t)
+  (erc-timestamp-format "[%H:%M] ")
+  (erc-datestamp-format " === [%Y-%m-%d %a] ===\n") ; mandatory ascii art
+  )
+
+;; (use-package erc-fill
+;;   :straight nil
+;;   :preface
+;;   ;; set erc-fill-column based on buffer size
+;;   (make-variable-buffer-local 'erc-fill-column)
+;;   (defun my/erc-fill-by-window-width ()
+;;     "Adjust fill for every ERC window to match its width."
+;;     (walk-windows
+;;      (lambda (w)
+;;        (let ((buffer (window-buffer w)))
+;;          (when buffer
+;;            (set-buffer buffer)
+;;            (when (eq major-mode 'erc-mode)
+;;              (setq erc-fill-column (- (window-width w) 2))))))))
+;;   :custom
+;;   (erc-fill-function 'erc-fill-static)
+;;   (erc-fill-static-center 24)
+;;   ;; :hook
+;;   (window-configuration-change . #'my/erc-fill-by-window-width)
+;;   )
+
+;; (use-package erc-track
+;;   :straight nil
+;;   :custom
+;;   (erc-track-exclude-types '("JOIN" "NICK" "PART" "QUIT" "MODE"
+;;                              "324" "329" "332" "333" "353" "477"))
+;;   (erc-track-showcount +1)
+;;   (erc-track-use-faces t)
+;;   (erc-track-faces-priority-list '(erc-error-face
+;;                                    erc-current-nick-face
+;;                                    erc-keyword-face
+;;                                    erc-nick-msg-face
+;;                                    erc-direct-msg-face
+;;                                    erc-dangerous-host-face
+;;                                    erc-notice-face
+;;                                    erc-prompt-face))
+;;   (erc-track-priority-faces-only 'all)
+;;   :config
+;;   (erc-track-minor-mode +1)
+;;   (erc-track-mode +1))
+
+;; (use-package erc-log
+;;   :straight nil
+;;   :custom
+;;   (erc-log-channels-directory (expand-file-name "erc/logs/"
+;;                                                 user-emacs-directory))
+;;   (erc-save-buffer-on-part t)
+;;   :init
+;;   (if (not (file-exists-p erc-log-channels-directory))
+;;       (mkdir erc-log-channels-directory t))
+;;   :config
+;;   (erc-log-enable))
+
+;; (use-package erc-view-log
+;;   :config
+;;   (add-to-list 'auto-mode-alist
+;;                `(,(format "%s/.*\\.log"
+;;                           (regexp-quote
+;;                            (expand-file-name erc-log-channels-directory)))
+;;                  . erc-view-log-mode)))
+
+;; (use-package erc-spelling
+;;   :straight nil
+;;   :init (erc-spelling-mode t))
+
+;; (use-package erc-autoaway
+;;   :straight nil
+;;   :config
+;;   (add-to-list 'erc-modules 'autoaway))
+
+;; (use-package erc-desktop-notifications
+;;   :straight nil
+;;   :config
+;;   (add-to-list 'erc-modules 'notifications))
+
+;; (use-package erc-image
+;;   :config
+;;   (add-to-list 'erc-modules 'image))
+
+;; (use-package erc-tweet
+;;   :config
+;;   (add-to-list 'erc-modules 'tweet))
+
+;; (use-package erc-youtube
+;;   :config
+;;   (add-to-list 'erc-modules 'youtube))
+
+;; (use-package erc-colorize
+;;   :disabled t
+;;   :no-require t
+;;   :straight nil
+;;   :config
+;;   (add-to-list 'erc-modules 'colorize))
+
+;; (use-package erc-crypt
+;;   :disabled t
+;;   :straight nil)
+
+;; (use-package erc-truncate
+;;   :straight nil
+;;   :custom
+;;   (erc-max-buffer-size 50000)
+;;   (erc-truncate-buffer-on-save t)
+;;   :config
+;;   (defun erc-cmd-CLEAR ()
+;;     "Clears the current buffer"
+;;     (erc-truncate-buffer-to-size 0))
+
+;;   (defun erc-cmd-CLEARALL ()
+;;     "Clears all ERC buffers"
+;;     (setq erc-modified-channels-alist '())
+;;     (mapc (lambda (buffer)
+;;             (erc-truncate-buffer-to-size 0 (get-buffer buffer)))
+;;           (erc-all-buffer-names)))
+
+;;   :hook
+;;   (erc-insert-post . #'erc-truncate-buffer))
+
+;; (use-package erc-goodies
+;;   :straight nil
+;;   :config
+;;   (add-to-list 'erc-modules 'smiley)
+;;   (add-to-list 'erc-modules 'move-to-prompt)
+;;   (add-to-list 'erc-modules 'keep-place)
+;;   (add-to-list 'erc-modules 'irccontrols))
+
+;; (use-package erc-speedbar
+;;   :disabled t)
+
+;; ;; TODO: mark emacs frame as urgent
+;; ;; (add-hook 'erc-server-PRIVMSG-functions (lambda (proc parsed) (x-urgent) nil))
+;; ;; (add-hook 'erc-text-matched-hook (lambda (match-type nickuserhost msg) (x-urgent) nil))
+
+;; ;; urgency hint for Emacs frame
+;; (defun x-urgency-hint (frame arg &optional source)
+;;   "Set the x-urgency hint for the FRAME to ARG:
+;; - If arg is nil, unset the urgency.
+;; - If arg is any other value, set the urgency from SOURCE."
+;;   (let* ((wm-hints (append (x-window-property
+;;                             "WM_HINTS" frame "WM_HINTS"
+;;                             source nil t) nil))
+;;          (flags (car wm-hints)))
+;;                                         ; (message flags)
+;;     (setcar wm-hints
+;;             (if arg
+;;                 (logior flags #x00000100)
+;;               (logand flags #x1ffffeff)))
+;;     (x-change-window-property "WM_HINTS" wm-hints frame "WM_HINTS" 32 t)))
+
+;; (defun x-urgent (&optional arg)
+;;   "Mark the current Emacs frame as requiring urgent attention.
+;; With a prefix argument ARG which does not equal a boolean value
+;; of nil, remove the urgency flag (which might or might not change
+;; display, depending on the window manager)."
+;;   (interactive "P")
+;;   (let (frame (car (car (cdr (current-frame-configuration)))))
+;;     (x-urgency-hint frame (not arg))))
+
+;; (defun start-irc ()
+;;   "Connect to IRC."
+;;   (interactive)
+;;   (load "~/.emacs.d/.erc-auth")
+;;   (when (y-or-n-p "Do you want to start IRC? ")
+;;     (start-irc-with-auth))
+;;   (sr-speedbar-open)
+;;   (erc-speedbar-browser))
+
+;; (defun filter-server-buffers ()
+;;   (delq nil
+;;         (mapcar
+;;          (lambda (x) (and (erc-server-buffer-p x) x))
+;;          (buffer-list))))
+
+;; (defun stop-irc ()
+;;   "Disconnects from all irc servers."
+;;   (interactive)
+;;   (dolist (buffer (filter-server-buffers))
+;;     (message "Server buffer: %s" (buffer-name buffer))
+;;     (with-current-buffer buffer
+;;       (erc-quit-server "Asta la vista"))))
 
 ;;;_ , eshell
 
@@ -7080,8 +7291,8 @@ append it to ENTRY."
   (advice-add #'corfu--insert :before #'dima-corfu-prescient-remember)
 
   (add-to-list 'completion-styles 'prescient)
-  (setq corfu-sort-function #'prescient-completion-sort)
-  (setq corfu-sort-override-function #'prescient-completion-sort))
+  (setq corfu-sort-function #'prescient-sort)
+  (setq corfu-sort-override-function #'prescient-sort))
 
 (use-package prism
   :disabled t
@@ -7650,6 +7861,10 @@ means save all with no questions."
 
 ;;;_ , selected
 
+(use-package serenade-mode
+  :straight (serenade-mode :type git :host github
+                           :repo "justin-roche/serenade-mode"))
+
 (use-package selected
   :diminish selected-minor-mode
   :bind (:map selected-keymap
@@ -7662,8 +7877,6 @@ means save all with no questions."
               ("s" . sort-lines))
   :config
   (selected-global-mode +1))
-
-(use-package serenade-mode)
 
 ;;;_ , session
 
