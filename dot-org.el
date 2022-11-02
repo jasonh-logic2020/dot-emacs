@@ -1500,6 +1500,15 @@ prepended to the element after the #+HEADER: tag."
   :commands (org-prettify-source-block-mode)
   :hook (org-mode . (lambda () (org-prettify-source-block-mode +1))))
 
+(use-package org-rainbow-tags
+  :straight (:host github :repo "KaratasFurkan/org-rainbow-tags")
+  :custom
+  (org-rainbow-tags-face-attributes
+   ;; Default is '(:foreground color :weight 'bold)
+   '(:foreground color :inverse-video t :box t :weight 'bold))
+  :hook
+  (org-mode . org-rainbow-tags-mode))
+
 (use-package org-rich-yank
   :defer 5
   :bind (:map org-mode-map
