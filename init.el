@@ -6136,6 +6136,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :mode ("\\.md\\'" . markdown-mode)
   :defer t)
 
+(use-package mastodon
+  :config
+  (mastodon-discover))
+
 ;;;_ , meghanada
 
 (use-package meghanada
