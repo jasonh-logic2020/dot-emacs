@@ -1366,7 +1366,7 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
   (insert (format "%s (%s): " user-initials
                   (format-time-string "%Y-%m-%d" (current-time)))))
 
-(bind-key "C-c n" 'insert-user-timestamp)
+(bind-key "C-c i n" 'insert-user-timestamp)
 (bind-key "C-c o" 'customize-option)
 (bind-key "C-c O" 'customize-group)
 (bind-key "C-c F" #'customize-face)
@@ -2933,9 +2933,6 @@ Install the doc if it's not installed."
     ;; Lookup the symbol at point
     (devdocs-lookup nil (thing-at-point 'symbol t))))
 
-(use-package denote)                    ;TODO
-
-
 ;;;_ , diff-mode
 
 (use-package diff-mode
@@ -4088,51 +4085,51 @@ FORM => (eval FORM)."
 ;;   (erc-track-minor-mode +1)
 ;;   (erc-track-mode +1))
 
-;; (use-package erc-log
-;;   :straight nil
-;;   :custom
-;;   (erc-log-channels-directory (expand-file-name "erc/logs/"
-;;                                                 user-emacs-directory))
-;;   (erc-save-buffer-on-part t)
-;;   :init
-;;   (if (not (file-exists-p erc-log-channels-directory))
-;;       (mkdir erc-log-channels-directory t))
-;;   :config
-;;   (erc-log-enable))
+(use-package erc-log
+  :straight nil
+  :custom
+  (erc-log-channels-directory (expand-file-name "erc/logs"
+                                                user-emacs-directory))
+  (erc-save-buffer-on-part t)
+  :init
+  (if (not (file-exists-p erc-log-channels-directory))
+      (mkdir erc-log-channels-directory t))
+  :config
+  (erc-log-enable))
 
-;; (use-package erc-view-log
-;;   :config
-;;   (add-to-list 'auto-mode-alist
-;;                `(,(format "%s/.*\\.log"
-;;                           (regexp-quote
-;;                            (expand-file-name erc-log-channels-directory)))
-;;                  . erc-view-log-mode)))
+(use-package erc-view-log
+  :config
+  (add-to-list 'auto-mode-alist
+               `(,(format "%s/.*\\.log"
+                          (regexp-quote
+                           (expand-file-name erc-log-channels-directory)))
+                 . erc-view-log-mode)))
 
-;; (use-package erc-spelling
-;;   :straight nil
-;;   :init (erc-spelling-mode t))
+(use-package erc-spelling
+  :straight nil
+  :init (erc-spelling-mode t))
 
 ;; (use-package erc-autoaway
 ;;   :straight nil
 ;;   :config
 ;;   (add-to-list 'erc-modules 'autoaway))
 
-;; (use-package erc-desktop-notifications
-;;   :straight nil
-;;   :config
-;;   (add-to-list 'erc-modules 'notifications))
+(use-package erc-desktop-notifications
+  :straight nil
+  :config
+  (add-to-list 'erc-modules 'notifications))
 
-;; (use-package erc-image
-;;   :config
-;;   (add-to-list 'erc-modules 'image))
+(use-package erc-image
+  :config
+  (add-to-list 'erc-modules 'image))
 
-;; (use-package erc-tweet
-;;   :config
-;;   (add-to-list 'erc-modules 'tweet))
+(use-package erc-tweet
+  :config
+  (add-to-list 'erc-modules 'tweet))
 
-;; (use-package erc-youtube
-;;   :config
-;;   (add-to-list 'erc-modules 'youtube))
+(use-package erc-youtube
+  :config
+  (add-to-list 'erc-modules 'youtube))
 
 ;; (use-package erc-colorize
 ;;   :disabled t
@@ -4145,65 +4142,65 @@ FORM => (eval FORM)."
 ;;   :disabled t
 ;;   :straight nil)
 
-;; (use-package erc-truncate
-;;   :straight nil
-;;   :custom
-;;   (erc-max-buffer-size 50000)
-;;   (erc-truncate-buffer-on-save t)
-;;   :config
-;;   (defun erc-cmd-CLEAR ()
-;;     "Clears the current buffer"
-;;     (erc-truncate-buffer-to-size 0))
+(use-package erc-truncate
+  :straight nil
+  :custom
+  (erc-max-buffer-size 50000)
+  (erc-truncate-buffer-on-save t)
+  :config
+  (defun erc-cmd-CLEAR ()
+    "Clears the current buffer"
+    (erc-truncate-buffer-to-size 0))
 
-;;   (defun erc-cmd-CLEARALL ()
-;;     "Clears all ERC buffers"
-;;     (setq erc-modified-channels-alist '())
-;;     (mapc (lambda (buffer)
-;;             (erc-truncate-buffer-to-size 0 (get-buffer buffer)))
-;;           (erc-all-buffer-names)))
+  (defun erc-cmd-CLEARALL ()
+    "Clears all ERC buffers"
+    (setq erc-modified-channels-alist '())
+    (mapc (lambda (buffer)
+            (erc-truncate-buffer-to-size 0 (get-buffer buffer)))
+          (erc-all-buffer-names)))
 
-;;   :hook
-;;   (erc-insert-post . #'erc-truncate-buffer))
+  :hook
+  (erc-insert-post . #'erc-truncate-buffer))
 
-;; (use-package erc-goodies
-;;   :straight nil
-;;   :config
-;;   (add-to-list 'erc-modules 'smiley)
-;;   (add-to-list 'erc-modules 'move-to-prompt)
-;;   (add-to-list 'erc-modules 'keep-place)
-;;   (add-to-list 'erc-modules 'irccontrols))
+(use-package erc-goodies
+  :straight nil
+  :config
+  (add-to-list 'erc-modules 'smiley)
+  (add-to-list 'erc-modules 'move-to-prompt)
+  (add-to-list 'erc-modules 'keep-place)
+  (add-to-list 'erc-modules 'irccontrols))
 
-;; (use-package erc-speedbar
-;;   :disabled t)
+(use-package erc-speedbar
+  :disabled t)
 
-;; ;; TODO: mark emacs frame as urgent
-;; ;; (add-hook 'erc-server-PRIVMSG-functions (lambda (proc parsed) (x-urgent) nil))
-;; ;; (add-hook 'erc-text-matched-hook (lambda (match-type nickuserhost msg) (x-urgent) nil))
+;; TODO: mark emacs frame as urgent
+;; (add-hook 'erc-server-PRIVMSG-functions (lambda (proc parsed) (x-urgent) nil))
+;; (add-hook 'erc-text-matched-hook (lambda (match-type nickuserhost msg) (x-urgent) nil))
 
-;; ;; urgency hint for Emacs frame
-;; (defun x-urgency-hint (frame arg &optional source)
-;;   "Set the x-urgency hint for the FRAME to ARG:
-;; - If arg is nil, unset the urgency.
-;; - If arg is any other value, set the urgency from SOURCE."
-;;   (let* ((wm-hints (append (x-window-property
-;;                             "WM_HINTS" frame "WM_HINTS"
-;;                             source nil t) nil))
-;;          (flags (car wm-hints)))
-;;                                         ; (message flags)
-;;     (setcar wm-hints
-;;             (if arg
-;;                 (logior flags #x00000100)
-;;               (logand flags #x1ffffeff)))
-;;     (x-change-window-property "WM_HINTS" wm-hints frame "WM_HINTS" 32 t)))
+;; urgency hint for Emacs frame
+(defun x-urgency-hint (frame arg &optional source)
+  "Set the x-urgency hint for the FRAME to ARG:
+- If arg is nil, unset the urgency.
+- If arg is any other value, set the urgency from SOURCE."
+  (let* ((wm-hints (append (x-window-property
+                            "WM_HINTS" frame "WM_HINTS"
+                            source nil t) nil))
+         (flags (car wm-hints)))
+; (message flags)
+    (setcar wm-hints
+            (if arg
+                (logior flags #x00000100)
+              (logand flags #x1ffffeff)))
+    (x-change-window-property "WM_HINTS" wm-hints frame "WM_HINTS" 32 t)))
 
-;; (defun x-urgent (&optional arg)
-;;   "Mark the current Emacs frame as requiring urgent attention.
-;; With a prefix argument ARG which does not equal a boolean value
-;; of nil, remove the urgency flag (which might or might not change
-;; display, depending on the window manager)."
-;;   (interactive "P")
-;;   (let (frame (car (car (cdr (current-frame-configuration)))))
-;;     (x-urgency-hint frame (not arg))))
+(defun x-urgent (&optional arg)
+  "Mark the current Emacs frame as requiring urgent attention.
+With a prefix argument ARG which does not equal a boolean value
+of nil, remove the urgency flag (which might or might not change
+display, depending on the window manager)."
+  (interactive "P")
+  (let (frame (car (car (cdr (current-frame-configuration)))))
+    (x-urgency-hint frame (not arg))))
 
 ;; (defun start-irc ()
 ;;   "Connect to IRC."
