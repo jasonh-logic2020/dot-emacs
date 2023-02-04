@@ -6814,7 +6814,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :custom
   (completion-category-defaults nil)
   (completion-category-overrides '((file (styles . (partial-completion)))))
-  :config
+  :init
+  (add-to-list 'completion-styles 'substring)
   (add-to-list 'completion-styles 'orderless))
 
 ;;;_ , org-mode
@@ -8644,35 +8645,35 @@ means save all with no questions."
   ;; Tidy shadowed file names
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
-(use-package vertico-quick
-  :after vertico
-  :straight nil
-  :preface
-  (load-file (expand-file-name
-              "straight/repos/vertico/extensions/vertico-quick.el"
-              straight-base-dir ))
-  :bind (
-         :map vertico-map
-         ("M-q" . vertico-quick-insert)
-         ("C-q" . vertico-quick-exit))
-  :init
-  (progn
-    (setq vertico-quick1 "arstdhn")
-    (setq vertico-quick2 "oie")))
+;; (use-package vertico-quick
+;;   :after vertico
+;;   :straight nil
+;;   :preface
+;;   (load-file (expand-file-name
+;;               "straight/repos/vertico/extensions/vertico-quick.el"
+;;               straight-base-dir ))
+;;   :bind (
+;;          :map vertico-map
+;;          ("M-q" . vertico-quick-insert)
+;;          ("C-q" . vertico-quick-exit))
+;;   :init
+;;   (progn
+;;     (setq vertico-quick1 "arstdhn")
+;;     (setq vertico-quick2 "oie")))
 
-(use-package vertico-multiform
-  :after vertico
-  :straight nil
-  :preface
-  (load-file (expand-file-name
-              "straight/repos/vertico/extensions/vertico-multiform.el"
-              straight-base-dir ))
-  :config
-  (vertico-multiform-mode +1)
+;; (use-package vertico-multiform
+;;   :after vertico
+;;   :straight nil
+;;   :preface
+;;   (load-file (expand-file-name
+;;               "straight/repos/vertico/extensions/vertico-multiform.el"
+;;               straight-base-dir ))
+;;   :config
+;;   (vertico-multiform-mode +1)
 
-  (setq vertico-multiform-commands
-        '(;; show grep results in a dedicated buffer:
-          (consult-ripgrep buffer))))
+;;   (setq vertico-multiform-commands
+;;         '(;; show grep results in a dedicated buffer:
+;;           (consult-ripgrep buffer))))
 
 (use-package vterm)
 
