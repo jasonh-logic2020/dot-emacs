@@ -2156,6 +2156,7 @@ If region is active, apply to active region instead."
         (semantic-load-enable-primary-exuberent-ctags-support)))))
 
 (use-package centered-cursor-mode
+  :disabled t                           ; preferred scroll-margins
   :config
   (global-centered-cursor-mode +1))
 
@@ -3860,7 +3861,6 @@ Install the doc if it's not installed."
 
   (ensure-user-dir "erc/logs")
   :config
-  (company-mode -1)
   (erc-spelling-mode +1)
 
   (setq erc-header-line-format nil
@@ -3885,6 +3885,7 @@ Install the doc if it's not installed."
   (bind-key "C-r" 'isearch-backward erc-mode-map)
   (erc-track-minor-mode 1)
   (erc-track-mode 1)
+  (erc-truncate-mode +1)
 
   (setq erc-track-exclude-types '("JOIN" "NICK" "PART" "QUIT" "MODE"
                                   "324" "329" "332" "333" "353" "477")
@@ -3907,7 +3908,6 @@ Install the doc if it's not installed."
     (goto-char (point-max)))
 
   (bind-key "C-c b" 'switch-to-bitlbee erc-mode-map)
-
 
   (defun erc-cmd-CLEAR ()
     "Clears the current buffer"
@@ -4142,27 +4142,29 @@ FORM => (eval FORM)."
 ;;   :disabled t
 ;;   :straight nil)
 
-(use-package erc-truncate
-  :no-require t
-  :straight nil
-  :functions erc-truncate
-  :custom
-  (erc-max-buffer-size 500000)
-  (erc-truncate-buffer-on-save t)
-  :config
-  (defun erc-cmd-CLEAR ()
-    "Clears the current buffer"
-    (erc-truncate-buffer-to-size 0))
+;; (use-package erc-truncate
+;;   :no-require t
+;;   :straight nil
+;;   ;; :functions erc-truncate-buffer-on-save
+;;   :custom
+;;   (erc-max-buffer-size 500000)
+;;   (erc-truncate-buffer-on-save t)
+;;   :init
+;;   (erc-truncate-mode +1)
+;;   :config
+;;   (defun erc-cmd-CLEAR ()
+;;     "Clears the current buffer"
+;;     (erc-truncate-buffer-to-size 0))
 
-  (defun erc-cmd-CLEARALL ()
-    "Clears all ERC buffers"
-    (setq erc-modified-channels-alist '())
-    (mapc (lambda (buffer)
-            (erc-truncate-buffer-to-size 0 (get-buffer buffer)))
-          (erc-all-buffer-names)))
+;;   (defun erc-cmd-CLEARALL ()
+;;     "Clears all ERC buffers"
+;;     (setq erc-modified-channels-alist '())
+;;     (mapc (lambda (buffer)
+;;             (erc-truncate-buffer-to-size 0 (get-buffer buffer)))
+;;           (erc-all-buffer-names)))
 
-  :hook
-  (erc-insert-post . #'erc-truncate-buffer))
+;;   :hook
+;;   (erc-insert-post . #'erc-truncate-buffer))
 
 (use-package erc-goodies
   :straight nil
