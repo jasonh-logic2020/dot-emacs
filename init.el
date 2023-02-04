@@ -4143,9 +4143,11 @@ FORM => (eval FORM)."
 ;;   :straight nil)
 
 (use-package erc-truncate
+  :no-require t
   :straight nil
+  :functions erc-truncate
   :custom
-  (erc-max-buffer-size 50000)
+  (erc-max-buffer-size 500000)
   (erc-truncate-buffer-on-save t)
   :config
   (defun erc-cmd-CLEAR ()
@@ -6107,12 +6109,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
       (start-process "git-monitor" (current-buffer) "~/bin/git-monitor"))))
 
 (use-package magit-todos
-  :unless noninteractive
   :after magit)
 
 (use-package magit-topgit
   :after magit
-  ;; BULK-ENSURE :ensure t
   :defer t)
 
 (use-package magit-filenotify
