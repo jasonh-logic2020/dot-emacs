@@ -3005,6 +3005,8 @@ Install the doc if it's not installed."
   ;; (fset 'asynch-play-media-using-last-command
   ;;       [?& up return])
 
+  (setq dired-shell-command-history '("mpv --fs --volume=50 --osd-bar-align-y=1 *"))
+
   (defun dired-do-repeat-shell-command (&optional arg file-list)
     (interactive
      (let ((files (dired-get-marked-files t current-prefix-arg)))
