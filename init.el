@@ -44,6 +44,10 @@
 ;; (defconst common-elpa-directory user-emacs-directory)
 ;; (defconst common-emacs-directory user-emacs-directory)
 
+(defvar dot-org)
+(defvar dot-gnus)
+(defvar org-settings)
+
 (setq custom-file (convert-standard-filename
                    (expand-file-name "settings.el" user-emacs-directory))
       dot-org (convert-standard-filename
@@ -175,7 +179,7 @@
 (defun hoagie-rename-and-select-occur-buffer ()
   "Renames the current buffer to *Occur: [term] [buffer]*.
 Meant to be added to `occur-hook'."
-  (cl-destructuring-bind (search-term _ (buffer-name &rest _))
+  (destructuring-bind (search-term _ (buffer-name &rest _))
       occur-revert-arguments
     (pop-to-buffer
      (rename-buffer (format "*Occur: %s %s*" search-term buffer-name) t))))
@@ -238,37 +242,39 @@ Meant to be added to `occur-hook'."
  major-mode             'org-mode) ; Org-mode as default mode
 
 (setq
- echo-keystrokes              0.5  ; minibuffer echo delay (default 1 sec)
+ echo-keystrokes              0.5 ; minibuffer echo delay (default 1 sec)
  auth-sources '("~/.authinfo.gpg" "~/.authinfo") ; set auth store
- auth-source-debug              t  ; always debug due to constant decay
- initial-major-mode     'org-mode  ; orgmode please
- scroll-step                    1  ; How many lines to scroll at once
- scroll-conservatively      10000  ; Max lines to scroll to recenter point
+ auth-source-debug              t ; always debug due to constant decay
+ initial-major-mode     'org-mode ; orgmode please
+ scroll-step                    1 ; How many lines to scroll at once
+ scroll-conservatively      10000 ; Max lines to scroll to recenter point
  scroll-preserve-screen-position t ; Max lines to scroll to recenter point
- auto-window-vscroll            t  ; Adjust scroll for tall glyphs
- epg-pinentry-mode      'loopback  ; ask in emacs
- auto-revert-verbose          nil  ; Be quiet about reverts
- disabled-command-function    nil  ; Enable disabled commands
- display-time-24hr-format       t  ; 24 hour time format
- eshell-hist-ignoredups         t  ; Ignore duplicate history
- eshell-history-size         1000  ; Lengthen Eshell history
- inhibit-startup-screen         t  ; No startup screen
- inhibit-startup-message        t  ; No startup message
- password-cache-expiry        nil  ; Cache TRAMP passwords forever
+ search-whitespace-regexp   ".*?" ; regex for whitespace in search term
+ auto-window-vscroll            t      ; Adjust scroll for tall glyphs
+ epg-pinentry-mode      'loopback      ; ask in emacs
+ auto-revert-verbose          nil      ; Be quiet about reverts
+ disabled-command-function    nil      ; Enable disabled commands
+ display-time-24hr-format       t      ; 24 hour time format
+ eshell-hist-ignoredups         t      ; Ignore duplicate history
+ eshell-history-size         1000      ; Lengthen Eshell history
+ inhibit-startup-screen         t      ; No startup screen
+ inhibit-startup-message        t      ; No startup message
+ password-cache-expiry        nil      ; Cache TRAMP passwords forever
  sentence-end-double-space    nil
  save-place-file "~/.emacs.d/saved-point-places"
- delete-old-versions            t  ; Delete without asking
- kept-new-versions              6  ; Number of versions to keep
- kept-old-versions              2  ; Number of old versions
- version-control                t  ; Keep versions of every file
- confirm-kill-processes       nil  ; kill processes without asking
- show-paren-delay               0  ; Don't delay the paren update
- enable-recursive-minibuffers   t  ; Enable minibuffer recursion
+ delete-old-versions            t      ; Delete without asking
+ kept-new-versions              6      ; Number of versions to keep
+ kept-old-versions              2      ; Number of old versions
+ version-control                t      ; Keep versions of every file
+ confirm-kill-processes       nil      ; kill processes without asking
+ show-paren-delay               0      ; Don't delay the paren update
+ enable-recursive-minibuffers   t      ; Enable minibuffer recursion
  minibuffer-prompt-properties    '(read-only t
                                         ; don’t allow the cursor
                                         ; in the minibuffer prompt
                                              cursor-intangible-mode t
-                                             face minibuffer-prompt))
+                                             face minibuffer-prompt)
+ native-comp-async-report-warnings-errors nil)
 
 (column-number-mode             1) ; Show column number
 (electric-quote-mode            1) ; Easier “quote” typing
@@ -2687,58 +2693,63 @@ If region is active, apply to active region instead."
   (embark-collect-mode . consult-preview-at-point-mode))
 
 
+;; Example configuration for Consult
 (use-package consult
   ;; Replace bindings. Lazily loaded due by `use-package'.
-  :bind (;; C-c bindings (mode-specific-map)
+  :bind (;; C-c bindings in `mode-specific-map'
+         ("C-c M-x" . consult-mode-command)
          ("C-c h" . consult-history)
-         ("C-c m" . consult-mode-command)
-         ("C-c b" . consult-bookmark)
          ("C-c k" . consult-kmacro)
-         ;; C-x bindings (ctl-x-map)
-         ("C-x M-:" . consult-complex-command) ;; orig. repeat-complex-command
-         ([remap switch-to-buffer] . consult-buffer)
-         ("C-x b" . consult-buffer) ;; orig. switch-to-buffer
+         ("C-c m" . consult-man)
+         ("C-c i" . consult-info)
+         ([remap Info-search] . consult-info)
+         ;; C-x bindings in `ctl-x-map'
+         ("C-x M-:" . consult-complex-command)     ;; orig. repeat-complex-command
+         ("C-x b" . consult-buffer)                ;; orig. switch-to-buffer
          ("C-x 4 b" . consult-buffer-other-window) ;; orig. switch-to-buffer-other-window
-         ("C-x 5 b" . consult-buffer-other-frame) ;; orig. switch-to-buffer-other-frame
+         ("C-x 5 b" . consult-buffer-other-frame)  ;; orig. switch-to-buffer-other-frame
+         ("C-x r b" . consult-bookmark)            ;; orig. bookmark-jump
+         ("C-x p b" . consult-project-buffer)      ;; orig. project-switch-to-buffer
          ;; Custom M-# bindings for fast register access
          ("M-#" . consult-register-load)
-         ("M-'" . consult-register-store) ;; orig. abbrev-prefix-mark (unrelated)
+         ("M-'" . consult-register-store)          ;; orig. abbrev-prefix-mark (unrelated)
          ("C-M-#" . consult-register)
          ;; Other custom bindings
-         ("M-y" . consult-yank-pop)     ;; orig. yank-pop
-         ("<help> a" . consult-apropos) ;; orig. apropos-command
-         ;; M-g bindings (goto-map)
+         ("M-y" . consult-yank-pop)                ;; orig. yank-pop
+         ;; M-g bindings in `goto-map'
          ("M-g e" . consult-compile-error)
-         ("M-g f" . consult-flymake) ;; Alternative: consult-flycheck
-         ("M-g g" . consult-goto-line)   ;; orig. goto-line
-         ("M-g M-g" . consult-goto-line) ;; orig. goto-line
-         ("M-g o" . consult-outline) ;; Alternative: consult-org-heading
+         ("M-g f" . consult-flymake)               ;; Alternative: consult-flycheck
+         ("M-g g" . consult-goto-line)             ;; orig. goto-line
+         ("M-g M-g" . consult-goto-line)           ;; orig. goto-line
+         ("M-g o" . consult-outline)               ;; Alternative: consult-org-heading
          ("M-g m" . consult-mark)
          ("M-g k" . consult-global-mark)
          ("M-g i" . consult-imenu)
          ("M-g I" . consult-imenu-multi)
-         ;; M-s bindings (search-map)
-         ("M-s f" . consult-find)
-         ("M-s F" . consult-locate)
+         ;; M-s bindings in `search-map'
+         ("M-s d" . consult-find)
+         ("M-s D" . consult-locate)
          ("M-s g" . consult-grep)
          ("M-s G" . consult-git-grep)
          ("M-s r" . consult-ripgrep)
          ("M-s l" . consult-line)
          ("M-s L" . consult-line-multi)
-         ("M-s m" . consult-multi-occur)
          ("M-s k" . consult-keep-lines)
          ("M-s u" . consult-focus-lines)
          ;; Isearch integration
-         ("M-s e" . consult-isearch)
+         ("M-s e" . consult-isearch-history)
          :map isearch-mode-map
-         ("M-e" . consult-isearch)   ;; orig. isearch-edit-string
-         ("M-s e" . consult-isearch) ;; orig. isearch-edit-string
-         ("M-s l" . consult-line) ;; needed by consult-line to detect isearch
-         ("M-s L" . consult-line-multi)) ;; needed by consult-line to detect isearch
+         ("M-e" . consult-isearch-history)         ;; orig. isearch-edit-string
+         ("M-s e" . consult-isearch-history)       ;; orig. isearch-edit-string
+         ("M-s l" . consult-line)                  ;; needed by consult-line to detect isearch
+         ("M-s L" . consult-line-multi)            ;; needed by consult-line to detect isearch
+         ;; Minibuffer history
+         :map minibuffer-local-map
+         ("M-s" . consult-history)                 ;; orig. next-matching-history-element
+         ("M-r" . consult-history))                ;; orig. previous-matching-history-element
 
-  ;; Enable automatic preview at point in the *Completions* buffer.
-  ;; This is relevant when you use the default completion UI,
-  ;; and not necessary for Vertico, Selectrum, etc.
+  ;; Enable automatic preview at point in the *Completions* buffer. This is
+  ;; relevant when you use the default completion UI.
   :hook (completion-list-mode . consult-preview-at-point-mode)
 
   ;; The :init configuration is always executed (Not lazy)
@@ -2747,7 +2758,7 @@ If region is active, apply to active region instead."
   ;; Optionally configure the register formatting. This improves the register
   ;; preview for `consult-register', `consult-register-load',
   ;; `consult-register-store' and the Emacs built-ins.
-  (setq register-preview-delay 0
+  (setq register-preview-delay 0.5
         register-preview-function #'consult-register-format)
 
   ;; Optionally tweak the register preview window.
@@ -2760,51 +2771,45 @@ If region is active, apply to active region instead."
 
   ;; Configure other variables and modes in the :config section,
   ;; after lazily loading the package.
-  :custom
-  (consult-buffer-sources '(consult--source-hidden-buffer
-                            consult--source-buffer consult--source-recent-file
-                            consult--source-bookmark))
-  ;; removed consult--source-project-buffer consult--source-project-recent-file
-
   :config
 
   ;; Optionally configure preview. The default value
   ;; is 'any, such that any key triggers the preview.
   ;; (setq consult-preview-key 'any)
-  ;; (setq consult-preview-key (kbd "M-."))
-  ;; (setq consult-preview-key (list (kbd "<S-down>") (kbd "<S-up>")))
+  ;; (setq consult-preview-key "M-.")
+  ;; (setq consult-preview-key '("S-<down>" "S-<up>"))
   ;; For some commands and buffer sources it is useful to configure the
   ;; :preview-key on a per-command basis using the `consult-customize' macro.
   (consult-customize
-   consult-theme
-   :preview-key '(:debounce 0.2 any)
+   consult-theme :preview-key '(:debounce 0.2 any)
    consult-ripgrep consult-git-grep consult-grep
    consult-bookmark consult-recent-file consult-xref
-   consult--source-recent-file consult--source-project-recent-file consult--source-bookmark
-   :preview-key (kbd "M-."))
+   consult--source-bookmark consult--source-file-register
+   consult--source-recent-file consult--source-project-recent-file
+   ;; :preview-key "M-."
+   :preview-key '(:debounce 0.4 any))
 
   ;; Optionally configure the narrowing key.
   ;; Both < and C-+ work reasonably well.
-  (setq consult-narrow-key "<") ;; (kbd "C-+")
+  (setq consult-narrow-key "<") ;; "C-+"
 
   ;; Optionally make narrowing help available in the minibuffer.
   ;; You may want to use `embark-prefix-help-command' or which-key instead.
   ;; (define-key consult-narrow-map (vconcat consult-narrow-key "?") #'consult-narrow-help)
 
-  ;; Optionally configure a function which returns the project root directory.
-  ;; There are multiple reasonable alternatives to chose from.
-;;;; 1. project.el (project-roots)
-  (setq consult-project-root-function
-        (lambda ()
-          (when-let (project (project-current))
-            (car (project-roots project)))))
-;;;; 2. projectile.el (projectile-project-root)
+  ;; By default `consult-project-function' uses `project-root' from project.el.
+  ;; Optionally configure a different project root function.
+  ;;;; 1. project.el (the default)
+  ;; (setq consult-project-function #'consult--default-project--function)
+  ;;;; 2. vc.el (vc-root-dir)
+  ;; (setq consult-project-function (lambda (_) (vc-root-dir)))
+  ;;;; 3. locate-dominating-file
+  ;; (setq consult-project-function (lambda (_) (locate-dominating-file "." ".git")))
+  ;;;; 4. projectile.el (projectile-project-root)
   ;; (autoload 'projectile-project-root "projectile")
-  ;; (setq consult-project-root-function #'projectile-project-root)
-;;;; 3. vc.el (vc-root-dir)
-  ;; (setq consult-project-root-function #'vc-root-dir)
-;;;; 4. locate-dominating-file
-  ;; (setq consult-project-root-function (lambda () (locate-dominating-file "." ".git")))
+  ;; (setq consult-project-function (lambda (_) (projectile-project-root)))
+  ;;;; 5. No project support
+  ;; (setq consult-project-function nil)
   )
 
 (use-package consult-dir
@@ -4553,8 +4558,8 @@ display, depending on the window manager)."
 
 (use-package flyspell
   :diminish "📚"
-  :bind (("C-c i b" . flyspell-buffer)
-         ("C-c i f" . flyspell-mode))
+  ;; :bind (("C-c i b" . flyspell-buffer)
+  ;;        ("C-c i f" . flyspell-mode))
   :commands flyspell-mode
   :init (progn
           ;; (add-hook 'prog-mode-hook #'flyspell-prog-mode)
@@ -7865,6 +7870,7 @@ means save all with no questions."
 ;;;_ , selected
 
 (use-package serenade-mode
+  :disabled t
   :straight (serenade-mode :type git :host github
                            :repo "justin-roche/serenade-mode"))
 
@@ -8676,7 +8682,8 @@ means save all with no questions."
 ;;         '(;; show grep results in a dedicated buffer:
 ;;           (consult-ripgrep buffer))))
 
-(use-package vterm)
+(use-package vterm
+  :hook (vterm-mode . (lambda () (disable-mouse-mode -1))))
 
 ;;;_ , w3m
 
