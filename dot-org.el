@@ -15,6 +15,15 @@
 
 (message "starting dot-org")
 
+(message "pre length %s" (length load-path))
+
+(setq load-path (cl-remove-if
+                 #'(lambda (x)
+                     (cl-search "/lisp/org/" x))
+                 load-path))
+
+(message "post length %s" (length load-path))
+
 (eval-when-compile
   (setplist 'string-to-multibyte
             (use-package-plist-delete
@@ -22,9 +31,8 @@
 
 (setq org-roam-v2-ack t)
 
-(require 'org-agenda)
-
 (use-package org-modern
+  :after org
   :unless noninteractive
   :hook (org-mode . (lambda () (org-modern-mode +1)))
   :hook (org-agenda-finalize . #'org-modern-agenda))

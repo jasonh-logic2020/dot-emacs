@@ -2550,29 +2550,17 @@ If region is active, apply to active region instead."
   :init
   (global-corfu-mode +1))
 
-(use-package corfu-doc
-  :straight (:host github
-                   :repo "galeo/corfu-doc"
-                   :branch "main")
-  :when (display-graphic-p)
-  :bind ( :map corfu-map
-          ("M-p" . corfu-doc-scroll-down)
-          ("M-n" . corfu-doc-scroll-up))
-  :hook (corfu-mode . corfu-doc-mode)
-  :custom
-  (corfu-doc-delay 2)
-  (corfu-doc-max-height 20)
-  (corfu-doc-max-width 84))
-
 (use-package popon
   :straight (:type git
-                   :repo "https://codeberg.org/akib/emacs-popon.git"
+                   :host codeberg
+                   :repo "akib/emacs-popon"
                    :branch "master")
   :unless (display-graphic-p))
 
 (use-package corfu-terminal
   :straight (:type git
-                   :repo "https://codeberg.org/akib/emacs-corfu-terminal.git"
+                   :host codeberg
+                   :repo "akib/emacs-corfu-terminal"
                    :branch "master")
   :requires popon
   :unless (display-graphic-p)
@@ -3853,9 +3841,10 @@ Install the doc if it's not installed."
   (engine-mode t))
 
 (use-package erc
+  :disabled t
   :preface
   (require 'erc)
-  (require 'erc-sound)
+  ;; (require 'erc-sound)
   (erc-sound-enable)
   :init
   (use-package erc-bitlbee-twitter-decorate
@@ -6827,6 +6816,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;;_ , org-mode
 
 (use-package my-dot-org
+  :disabled t
   :straight nil
   :preface
   (load dot-org)

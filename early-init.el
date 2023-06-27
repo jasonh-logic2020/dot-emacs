@@ -51,6 +51,17 @@ raxod502/straight.el/develop/install.el"
 
 (setq use-package-verbose t)
 
+(message "pre length %s" (length load-path))
+
+(setq load-path (cl-remove-if
+                 #'(lambda (x)
+                     (cl-search "/lisp/org/" x))
+                 load-path))
+
+(message "post length %s" (length load-path))
+
+(add-to-list 'load-path "/var/shared-elpa/build/org" t)
+
 (use-package bind-key)
 ;; (use-package no-littering)
 (use-package use-package-ensure-system-package)
