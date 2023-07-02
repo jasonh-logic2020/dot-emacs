@@ -276,6 +276,7 @@ Meant to be added to `occur-hook'."
                                              face minibuffer-prompt)
  native-comp-async-report-warnings-errors nil)
 
+(auto-insert-mode               1) ; Insert templates in new files
 (column-number-mode             1) ; Show column number
 (electric-quote-mode            1) ; Easier “quote” typing
 (fset 'yes-or-no-p      'y-or-n-p) ; Make "yes/no" prompts "y/n"
@@ -291,6 +292,8 @@ Meant to be added to `occur-hook'."
 (save-place-mode                1) ; Remember per-file positions
 
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+(load dot-org)
 
 (if window-system
     (add-hook 'after-init-hook #'toggle-frame-maximized))
@@ -1874,6 +1877,13 @@ If region is active, apply to active region instead."
   :hook ((dired-mode . auto-revert-mode)
          (after-init . global-auto-revert-mode)))
 
+(use-package autoinsert
+  :straight nil
+  :defer t
+  :bind (("C-c i a" . auto-insert))
+  :config
+  (auto-insert-mode +1))
+
 ;;;_ , avy
 
 (use-package avy
@@ -2861,6 +2871,10 @@ If region is active, apply to active region instead."
 
 (use-package deft
   :commands deft
+  :custom
+  (deft-directory "~/doc/notes")
+  (deft-text-mode 'org-mode)
+  (deft-use-filename-as-title t)
   :config
   (progn
     (setq deft-default-extension "org")
@@ -4660,6 +4674,7 @@ display, depending on the window manager)."
 ;;         gnus-home-directory "~/Messages/Gnus/"))
 
 (use-package all-the-icons-gnus
+  :disabled t
   :defer t
   :after dot-gnus
   :config
@@ -6291,236 +6306,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
   (add-hook 'mu4e-main-mode-hook 'mu4e-front-keys))
 
-;; (progn
-;;   ;; (load-file mu4e-context-file)
-
-;;   (defconst mu4e-gen-dotofflineimaprc-glue-file
-;;     (concat (file-name-as-directory mu4e-gen-dotofflineimaprc-directory)
-;;             "generated_offlineimap_glue.py")
-;;     "Location of generated glue file.")
-
-;;   (mu4e-gen-dotofflineimaprc-generate-glue-file mu4e-gen-dotofflineimaprc-glue-file)
-
-;;   (defconst mu4e-gen-dotofflineimaprc-file
-;;     (concat (file-name-as-directory mu4e-gen-dotofflineimaprc-directory)
-;;             ".generated")
-;;     "Location of generated rc file.")
-
-;;   (mu4e-gen-dotofflineimaprc-generate-file mu4e-gen-dotofflineimaprc-file)
-
-;;   ;; (require 'bbdb-loaddefs)
-;;   (require 'starttls)
-;;   (require 'org-mu4e)
-
-;;   ;; (defun mu4e-message-maildir-matches (msg rx)
-;;   ;;   (when rx
-;;   ;;     (if (listp rx)
-;;   ;;         ;; If rx is a list, try each one for a match
-;;   ;;         (or (mu4e-message-maildir-matches msg (car rx))
-;;   ;;             (mu4e-message-maildir-matches msg (cdr rx)))
-;;   ;;       ;; Not a list, check rx
-;;   ;;       (string-match rx (mu4e-message-field msg :maildir)))))
-
-;;   (defun mu4e-find-context-from-mail-address (address)
-;;     "Given canonical email ADDRESS in 'User Name <acount@domain.tld>'
-;;        form, return name of context or nil."
-;;     (message "Finding context from mail address %s" address)
-;;     (cdr (assoc address
-;;                 (cl-mapcar
-;;                  #'(lambda (x) (cons (concat
-;;                                  (alist-get 'user-full-name
-;;                                             (mu4e-context-vars x))
-;;                                  " <"
-;;                                  (alist-get 'user-mail-address
-;;                                             (mu4e-context-vars x))
-;;                                  ">")
-
-;;                                 (mu4e-context-name x))  )
-;;                  mu4e-contexts))))
-
-;;   (defun choose-msmtp-account ()
-;;     (if (message-mail-p)
-;;         (save-excursion
-;;           (let*
-;;               ((from-addr (save-restriction (message-narrow-to-headers)
-;;                                             (message-fetch-field "from")))
-;;                (account (mu4e-find-context-from-mail-address from-addr)
-;;                         ))
-;;             (message "Chose %s" account)
-;;             (setq message-sendmail-extra-arguments (list '"-a" account))))))
-
-;;   ;; Arrange to view messages in either the default browser or EWW
-;;   (add-to-list 'mu4e-view-actions
-;;                '("ViewInBrowser" . mu4e-action-view-in-browser) t)
-;;   (add-to-list 'mu4e-view-actions '("Eww view" . jcs-view-in-eww) t)
-
-;;   ;; From Ben Maughan: Get some Org functionality in compose buffer
-;;   (add-hook 'message-mode-hook 'turn-on-orgtbl)
-;;   (add-hook 'message-mode-hook 'turn-on-orgstruct++)
-
-;;   ;; (setq mu4e-headers-fields
-;;   ;;       '( (:date          .  25)    ;; alternatively, use :human-date
-;;   ;;          75:        (:flags         .   6)
-;;   ;;          76:        (:from          .  22)
-;;   ;;          77:        (:subject       .  nil)))
-;;   (setq mu4e-maildir "~/Maildir")
-;;   (setq org-mu4e-link-query-in-headers-mode nil)
-;;   (setq mu4e-compose-format-flowed t)
-;;   (setq mu4e-update-interval 300)
-;;   (setq mu4e-view-show-images t)
-;;   (setq mu4e-html2text-command "w3m -dump -T text/html")
-;;   (setq mu4e-headers-include-related t)
-;;   (setq mu4e-attachment-dir  "~/Downloads")
-;;   (setq mu4e-headers-date-format "%Y-%m-%d %H:%M")
-;;   (setq mu4e-view-show-addresses 't)
-;;   (setq message-kill-buffer-on-exit t)
-;;   ;; This prevents saving the email to the Sent folder since gmail will do
-;;   ;; this for us on their end.
-;;   (setq mu4e-sent-messages-behavior 'delete)
-;;   (setq message-kill-buffer-on-exit t)
-;;   ;; Use imagemagick, if available.
-;;   (when (fboundp 'imagemagick-register-types)
-;;     (imagemagick-register-types))
-
-;;   ;; Sometimes html email is just not readable in a text based client, this
-;;   ;; lets me open the email in my browser.
-;;   (add-to-list 'mu4e-view-actions
-;;                '("View in browser" . mu4e-action-view-in-browser) t)
-
-;;   ;; (add-hook
-;;   ;;  'mu4e-mark-execute-pre-hook
-;;   ;;  (lambda (mark msg)
-;;   ;;    (cond
-;;   ;;     ((member mark
-;;   ;;              '(refile trash)) (mu4e-action-retag-message msg "-\\Inbox"))
-;;   ;;     ((equal mark 'flag) (mu4e-action-retag-message msg "\\Starred"))
-;;   ;;     ((equal mark 'unflag) (mu4e-action-retag-message msg "-\\Starred")))))
-
-;;   ;; Configure sending mail.
-;;   (setq message-send-mail-function 'message-send-mail-with-sendmail
-;;         sendmail-program (executable-find "msmtp"))
-
-;;   ;; Use the correct account context when sending mail based on the from
-;;   ;; header.
-;;   (setq message-sendmail-envelope-from 'header)
-;;   (add-hook 'message-send-mail-hook 'choose-msmtp-account)
-
-;;   (setq message-send-mail-function 'message-send-mail-with-sendmail
-;;         sendmail-program "msmtp"
-;;         )
-
-;;   ;; Use the correct account context when sending mail based on the from header.
-;;   (setq message-sendmail-envelope-from 'header)
-;;   (add-hook 'message-send-mail-hook 'choose-msmtp-account)
-
-;;   (setq mu4e-get-mail-command
-;;         (mapconcat #'identity
-;;                    (list "offlineimap"
-;;                          (when mu4e-gen-dotofflineimaprc-glue-file
-;;                            (concat "-c "
-;;                                    mu4e-gen-dotofflineimaprc-glue-file)))
-;;                    " ")
-
-;;         mu4e-attachment-dir (ensure-directory "~/Downloads")
-;;         mu4e-context-policy 'pick-first
-
-;;         mu4e-change-filenames-when-moving t
-;;         mu4e-compose-dont-reply-to-self t
-;;         message-kill-buffer-on-exit t
-;;         mu4e-action-tag-headers "X-Keywords"
-
-;;         mu4e-view-show-addresses t)
-
-;;   ;; (setq starttls-use-gnutls t)
-
-;;   ;; (require 'smtpmail)
-
-;;   ;; (setq send-mail-function            'smtpmail-send-it
-;;   ;;       message-send-mail-function    'smtpmail-send-it
-;;   ;;       smtpmail-auth-credentials     (expand-file-name "~/.authinfo.gpg")
-;;   ;;       smtpmail-stream-type          'tls
-;;   ;;       smtpmail-smtp-server          "smtp.gmail.com"
-;;   ;;       smtpmail-smtp-service         465)
-
-;;   (setq  mu4e-good-filter
-;;          (concat " AND NOT "
-;;                  (string-join
-;;                   (cl-mapcar
-;;                    #'(lambda (x) (concat "'m:"
-;;                                     (alist-get 'mu4e-trash-folder
-;;                                                (mu4e-context-vars x))
-;;                                     "'"))
-;;                    mu4e-contexts)
-;;                   " OR ")
-;;                  " ")
-
-;;          mu4e-inbox-filter-base
-;;          (concat " "
-;;                  (string-join
-;;                   (cl-mapcar
-;;                    #'(lambda (x) (concat "'m:"
-;;                                     (alist-get 'mu4e-inbox-folder
-;;                                                (mu4e-context-vars x))
-;;                                     "'"))
-;;                    mu4e-contexts)
-;;                   " OR ")
-;;                  " ")
-
-;;          mu4e-unread-filter
-;;          " ( flag:unread AND NOT flag:flagged AND NOT flag:trashed ) "
-
-;;          mu4e-unread-flagged-filter
-;;          " ( flag:unread AND flag:flagged AND NOT flag:trashed ) "
-
-;;          mu4e-bookmarks
-;;          (append (list
-;;                   (list (concat "flag:unread AND NOT flag:trashed AND "
-;;                                 mu4e-inbox-filter-base)
-;;                         "Unread [i]NBOX messages" ?i)
-
-;;                   (list (concat "flag:flagged AND NOT flag:trashed AND "
-;;                                 mu4e-inbox-filter-base)
-;;                         "[f]lagged INBOX messages" ?f)
-
-;;                   (list (concat mu4e-unread-filter
-;;                                 mu4e-good-filter)
-;;                         "Unread messages" ?a)
-
-;;                   (list (concat mu4e-unread-flagged-filter
-;;                                 mu4e-good-filter)
-;;                         "Unread-flagged messages" ?A)
-;;                   )
-;;                  (mapcar (lambda (x)
-;;                            (cons (concat
-;;                                   (car x)
-;;                                   mu4e-good-filter) (cdr x)))
-
-;;                          '(("flag:unread AND NOT flag:trashed"
-;;                             "Unread messages" ?u)
-
-;;                            ("date:1h..now"
-;;                             "Last hours messages" ?h)
-;;                            ("date:24h..now"
-;;                             "Today's messages" ?d)
-;;                            ("date:today..now"
-;;                             "Today's messages" ?t)
-;;                            ("date:7d..now"
-;;                             "Last 7 days" ?w)
-;;                            ("mime:*pdf"
-;;                             "Messages with PDF" 112)
-;;                            ("mime:*vcs"
-;;                             "Messages with VCS" 113)
-;;                            )))
-
-;;          bbdb-mail-user-agent (quote mu4e-user-agent)
-;;          mu4e-view-mode-hook (quote (visual-line-mode))
-;;          mu4e-compose-complete-addresses nil
-;;          bbdb-mua-pop-up t
-;;          bbdb-mua-pop-up-window-size 5
-;;          )
-
-
-;;   )
 
 
 (use-package mu4e-alert
@@ -6819,14 +6604,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :disabled t
   :straight nil
   :preface
-  (load dot-org)
-  :commands my-org-startup
-  :bind* (("M-C"   . jump-to-org-agenda)
-          ("M-m"   . org-smart-capture)
-          ("M-M"   . org-inline-note)
-          ("C-c a" . org-agenda)
-          ("C-c S" . org-store-link)
-          ("C-c l" . org-insert-link)))
+  (load dot-org))
 
 ;; (key-chord-define-global
 ;;  "hh"
@@ -6840,7 +6618,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;  )
 
 ;; org prettify
-
+(use-package org-indent
+  :after org
+  :straight nil
+  :unless noninteractive
+  :hook (org-mode . #'org-indent-mode))
 
 ;;;_ , outline
 
@@ -6883,9 +6665,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (interactive)
     (unless (derived-mode-p 'package-menu-mode)
       (user-error "The current buffer is not a Package Menu"))
-    (when (el-patch-swap (and package-menu-async package--downloads-in-progress)
-                         (and package-menu-async package--downloads-in-progress
-                              (seq-difference package--downloads-in-progress '(paradox--data))))
+    (when (el-patch-swap
+            (and package-menu-async package--downloads-in-progress)
+            (and package-menu-async package--downloads-in-progress
+                 (seq-difference package--downloads-in-progress
+                                 '(paradox--data))))
       (user-error "Package refresh is already in progress, please wait..."))
     (setq package-menu--old-archive-contents package-archive-contents)
     (setq package-menu--new-package-list nil)
@@ -7531,84 +7315,7 @@ means save all with no questions."
 
 ;;;_ , puppet-mode
 
-(use-package puppet-mode
-  :config
-  (progn
-    ;; (with-eval-after-load 'align
-    ;;  (push '(ruby-arrow
-    ;;          (regexp   . "\\(\\s-*\\)=>\\(\\s-*\\)")
-    ;;          (group    . (1 2))
-    ;;          (modes    . '(ruby-mode puppet-mode)))
-    ;;        'align-rules-list))
-
-    ;; (defvar puppet-anchor-point nil)
-
-    ;; (defun puppet-set-anchor ()
-    ;;   (interactive)
-    ;;   (setq puppet-anchor-point (point-marker))
-    ;;   (message "puppet-mode anchor set at %s"
-    ;;            (marker-position puppet-anchor-point)))
-
-    ;; (defun puppet-resource-beginning ()
-    ;;   (save-excursion
-    ;;     (and (re-search-backward
-    ;;           "^\\s-*\\(\\S-+\\)\\s-+{\\s-+\\([^:]+\\):" nil t)
-    ;;          (list (match-beginning 0)
-    ;;                (match-string 1) (match-string 2)))))
-
-    ;; (defun puppet-resource-end ()
-    ;;   (save-excursion
-    ;;     (and (re-search-forward "^\\s-*}" nil t)
-    ;;          (match-end 0))))
-
-    ;; (defun puppet-create-require ()
-    ;;   (interactive)
-    ;;   (require 'align)
-    ;;   (if (null puppet-anchor-point)
-    ;;       (error "Anchor point has not been set")
-    ;;     (destructuring-bind (anchored-start resource name)
-    ;;         (save-excursion
-    ;;           (goto-char puppet-anchor-point)
-    ;;           (puppet-resource-beginning))
-    ;;       (save-excursion
-    ;;         (let ((beginning (car (puppet-resource-beginning)))
-    ;;               (end (puppet-resource-end)))
-    ;;           (goto-char end)
-    ;;           (backward-char)
-    ;;           (let ((current-requires
-    ;;                  (when (re-search-backward
-    ;;                         "^\\s-*require\\s-*=>\\s-*" beginning t)
-    ;;                    (let ((start (match-beginning 0))
-    ;;                          (beg (match-end 0)))
-    ;;                      (if (looking-at "\\[")
-    ;;                          (forward-sexp))
-    ;;                      (re-search-forward "\\([,;]\\)?[ \t]*\n")
-    ;;                      (prog1
-    ;;                          (buffer-substring-no-properties
-    ;;                           beg (match-beginning 0))
-    ;;                        (delete-region start (point)))))))
-    ;;             (save-excursion
-    ;;               (skip-chars-backward " \t\n\r")
-    ;;               (when (looking-back ";")
-    ;;                 (delete-backward-char 1)
-    ;;                 (insert ?,)))
-    ;;             (insert "  require => ")
-    ;;             (if current-requires
-    ;;                 (insert "[ " current-requires ", "))
-    ;;             (insert (capitalize (substring resource 0 1))
-    ;;                     (substring resource 1) "[" name "]")
-    ;;             (if current-requires
-    ;;                 (insert " ]"))
-    ;;             (insert ";\n")
-    ;;             (mark-paragraph)
-    ;;             (align-code (region-beginning) (region-end))))))))
-
-    ;; (define-key puppet-mode-map [(control ?x) ? ] 'puppet-set-anchor)
-    ;; (define-key puppet-mode-map [(control ?x) space] 'puppet-set-anchor)
-    ;; (define-key puppet-mode-map [(control ?c) (control ?r)] 'puppet-create-require)
-
-    (bind-key "C-x SPC" 'puppet-set-anchor puppet-mode-map)
-    (bind-key "C-c C-r" 'puppet-create-require puppet-mode-map)))
+(use-package puppet-mode)
 
 ;;;_ , python-mode
 
@@ -8153,90 +7860,6 @@ means save all with no questions."
    (expand-file-name "slime-history.eld"
                      (ensure-user-dir "slime/")) t)
   (slime-startup-animation nil))
-
-
-;; (use-package slime
-;;   ;; BULK-ENSURE :ensure t
-;;   :defer t
-;;   :commands (sbcl slime)
-;;   :init
-;;   (add-hook
-;;    'slime-load-hook
-;;    #'(lambda ()
-;;        (slime-setup
-;;         '(slime-asdf
-;;           slime-autodoc
-;;           slime-banner
-;;           slime-c-p-c
-;;           slime-company
-;;           slime-editing-commands
-;;           slime-fancy-inspector
-;;           slime-fancy
-;;           slime-fuzzy
-;;           slime-highlight-edits
-;;           slime-parse
-;;           slime-presentation-streams
-;;           slime-presentations
-;;           slime-references
-;;           slime-repl
-;;           slime-sbcl-exts
-;;           slime-package-fu
-;;           slime-fontifying-fu
-;;           slime-mdot-fu
-;;           slime-scratch
-;;           slime-tramp
-;;           ;; slime-enclosing-context
-;;           ;; slime-typeout-frame
-;;           slime-xref-browser))
-
-;;        (define-key slime-repl-mode-map [(control return)] 'other-window)
-
-;;        (define-key slime-mode-map [return] 'paredit-newline)
-;;        (define-key slime-mode-map [(control ?h) ?F] 'info-lookup-symbol)))
-
-;;   :config
-;;   (progn
-;;     (use-package slime-company
-;;       ;; BULK-ENSURE :ensure t
-;;       )
-;;     (eval-when-compile
-;;       (defvar slime-repl-mode-map))
-
-;;     (setq slime-net-coding-system 'utf-8-unix)
-
-;;     (setq slime-lisp-implementations
-;;           '((sbcl
-;;              ("sbcl" "--core"
-;;               "/Users/johnw/Library/Lisp/sbcl.core-with-slime-X86-64")
-;;              :init
-;;              (lambda (port-file _)
-;;                (format "(swank:start-server %S)\n" port-file)))
-;;             (ecl ("ecl" "-load" "/Users/johnw/Library/Lisp/init.lisp"))
-;;             (clisp ("clisp" "-i" "/Users/johnw/Library/Lisp/lwinit.lisp"))))
-
-;;     (setq slime-default-lisp 'sbcl)
-;;     (setq slime-complete-symbol*-fancy t)
-;;     (setq slime-complete-symbol-function 'slime-fuzzy-complete-symbol)
-
-;;     (defun sbcl (&optional arg)
-;;       (interactive "P")
-;;       (let ((slime-default-lisp (if arg 'sbcl64 'sbcl))
-;;             (current-prefix-arg nil))
-;;         (slime)))
-;;     (defun clisp () (interactive) (let ((slime-default-lisp 'clisp)) (slime)))
-;;     (defun ecl () (interactive) (let ((slime-default-lisp 'ecl)) (slime)))
-
-;;     (defun start-slime ()
-;;       (interactive)
-;;       (unless (slime-connected-p)
-;;         (save-excursion (slime))))
-
-;;     ;; (add-hook 'slime-mode-hook 'start-slime)
-;;     (add-hook 'slime-load-hook #'(lambda () (require 'slime-fancy)))
-;;     (add-hook 'inferior-lisp-mode-hook #'(lambda () (inferior-slime-mode t)))
-
-;;     ))
-
 
 ;;;_ , smart-backspace
 

@@ -15,6 +15,7 @@
 
 (message "starting dot-org")
 
+
 (message "pre length %s" (length load-path))
 
 (setq load-path (cl-remove-if
@@ -31,49 +32,20 @@
 
 (setq org-roam-v2-ack t)
 
-(use-package org-modern
-  :after org
-  :unless noninteractive
-  :hook (org-mode . (lambda () (org-modern-mode +1)))
-  :hook (org-agenda-finalize . #'org-modern-agenda))
-
 (use-package org
-  :bind (("M-C"   . jump-to-org-agenda)
+  :bind (;; ("M-C"   . jump-to-org-agenda)
          ;; ("C-c o c" . org-capture)
 ;;; overloaded
-         ("M-M"   . org-inline-note)
-         ("C-c a" . org-agenda)
-         ("C-c C-h" . org-babel-remove-result)
+         ;; ("M-M"   . org-inline-note)
+         ;; ("C-c a" . org-agenda)
+         ;; ("C-c C-h" . org-babel-remove-result)
          ("C-c S" . org-store-link)
          ;; ("C-c o l" . org-insert-link)
          )
   :init
-  ;; (add-to-list 'auto-insert-alist
-  ;;              '(("\\.org\\'" . "Org mode")
-  ;;                . ["snippet.org" autoinsert-yas-expand]))
+  (debug-on-variable-change org-modules)
 
-  :custom
-  (org-src-window-setup 'current-window)
-  (org-use-speed-commands t)
-  (org-src-fontify-natively t)           ;; better looking source code
-  (org-return-follows-link t)            ;; make RET follow links
-  (org-list-allow-alphabetical t)        ;; allow alphabetical list
-  (org-hide-emphasis-markers t)          ;; hide markers
-  (org-pretty-entities t)                ;; make latex look good
-  (org-fontify-quote-and-verse-blocks t) ;; make quotes stand out
-  (org-table-export-default-format "orgtbl-to-csv") ;; export for
-  ;; org-tables to csv
-  (org-ellipsis "↷")               ;; nicer elipses "↴" "▼"
-  (org-confirm-babel-evaluate nil) ;; evaluate src block without confirmation
-  (org-startup-indented t)         ;; start in indent mode
-  ;; org-src-tab-acts-natively t ;; indent for src code natively
-  ;; org-src-preserve-indentation nil
-  ;; org-edit-src-content-indentation t
-  (org-imenu-depth 8)
-  (org-src-window-setup 'plain)
-  (imenu-auto-rescan t)
-  (org-plantuml-jar-path (expand-file-name "/usr/share/java/plantuml.jar"))
-
+  ;;agenda  (require 'org-agenda)
   :config
   (defface org-dont-underline-indents '((t :underline nil))
     "Avoid underlining of indentation.")
@@ -86,7 +58,9 @@
   (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
   (add-hook 'org-font-lock-set-keywords-hook
             #'org-dont-underline-indents 'append)
-
+  (add-to-list 'auto-insert-alist
+               '(("\\.org\\'" . "Org mode")
+                 . ["snippet.org" autoinsert-yas-expand]))
   ;; (progn
   ;;   ;; Set up blog for export as an Org-mode project.
   ;;   ;; (setq org-publish-project-alist
@@ -240,12 +214,12 @@
       (find-file journal-file)))
 
   (use-package org-pomodoro
+    :disabled t
     :commands org-pomodoro
     :init
     (progn
       (setq org-pomodoro-audio-player "/usr/bin/play")))
 
-  (add-hook 'org-agenda-finalize-hook 'org-timeline-insert-timeline :append)
 
   (defun my/remove-empty-drawer-on-clock-out ()
     (interactive)
@@ -262,47 +236,9 @@
       (insert "\n"))
     (call-interactively 'org-insert-link))
 
-  (defun org-fit-agenda-window ()
-    "Fit the window to the buffer size."
-    (and (memq org-agenda-window-setup '(reorganize-frame))
-         (fboundp 'fit-window-to-buffer)
-         (fit-window-to-buffer)))
-
-  (defun my-org-startup ()
-    "Start ’org-mode’."
-    (org-agenda-list)
-    (org-fit-agenda-window)
-    (org-agenda-to-appt)
-    (call-interactively #'org-resolve-clocks))
-
   (defadvice org-refile-get-location (before clear-refile-history activate)
     "Fit the Org Agenda to its buffer."
     (setq org-refile-history nil))
-
-  (defun jump-to-org-agenda ()
-    "Jump to ’org-agenda’."
-    (interactive)
-    (push-window-configuration)
-
-    (let ((recordings-dir "~/Dropbox/Apps/Dropvox"))
-      (ignore-errors
-        (if (directory-files recordings-dir nil "\\`[^.]")
-            (find-file recordings-dir))))
-
-    (let ((buf (get-buffer "*Org Agenda(a)*")))
-      (if buf
-          (let ((wind (get-buffer-window buf)))
-            (if wind
-                (when (called-interactively-p 'any)
-                  (select-window wind)
-                  (org-fit-window-to-buffer))
-              (if (called-interactively-p 'any)
-                  (progn
-                    (select-window (display-buffer buf t t))
-                    (org-fit-window-to-buffer))
-                (with-selected-window (display-buffer buf)
-                  (org-fit-window-to-buffer)))))
-        (call-interactively 'org-agenda-list))))
 
   (defun org-get-global-property (name)
     "Get property by NAME in current file."
@@ -310,70 +246,6 @@
       (goto-char (point-min))
       (and (re-search-forward (concat "#\\+PROPERTY: " name " \\(.*\\)") nil t)
            (match-string 1))))
-
-  (defun org-agenda-add-overlays (&optional line)
-    "Add overlays found in OVERLAY properties to agenda items (at LINE).
-Note that habitual items are excluded, as they already
-extensively use text properties to draw the habits graph.
-For example, for work tasks I like to use a subtle, yellow
-background color; for tasks involving other people, green; and
-for tasks concerning only myself, blue.  This way I know at a
-glance how different responsibilities are divided for any given
-day.
-To achieve this, I have the following in my todo file:
-  * Work
-    :PROPERTIES:
-    :CATEGORY: Work
-    :OVERLAY:  (face (:background \"#fdfdeb\"))
-    :END:
-  ** TODO Task
-  * Family
-    :PROPERTIES:
-    :CATEGORY: Personal
-    :OVERLAY:  (face (:background \"#e8f9e8\"))
-    :END:
-  ** TODO Task
-  * Personal
-    :PROPERTIES:
-    :CATEGORY: Personal
-    :OVERLAY:  (face (:background \"#e8eff9\"))
-    :END:
-  ** TODO Task
-The colors (which only work well for white backgrounds) are:
-  Yellow: #fdfdeb
-  Green:  #e8f9e8
-  Blue:   #e8eff9
-To use this function, add it to `org-agenda-finalize-hook':
-  (add-hook 'org-finalize-agenda-hook 'org-agenda-add-overlays)"
-    (let ((inhibit-read-only t) l c
-          (buffer-invisibility-spec '(org-link)))
-      (save-excursion
-        (goto-char (if line (point-at-bol) (point-min)))
-        (while (not (eobp))
-          (let ((org-marker (get-text-property (point) 'org-marker)))
-            (when (and org-marker
-                       (null (overlays-at (point)))
-                       (not (get-text-property (point) 'org-habit-p))
-                       (string-match "\\(sched\\|dead\\|todo\\)"
-                                     (get-text-property (point) 'type)))
-              (let ((overlays
-                     (or (org-entry-get org-marker "OVERLAY" t)
-                         (with-current-buffer (marker-buffer org-marker)
-                           (org-get-global-property "OVERLAY")))))
-                (when overlays
-                  (goto-char (line-end-position))
-                  (let ((rest (- (window-width) (current-column))))
-                    (if (> rest 0)
-                        (insert (make-string rest ? ))))
-                  (let ((ol (make-overlay (line-beginning-position)
-                                          (line-end-position)))
-                        (proplist (read overlays)))
-                    (while proplist
-                      (overlay-put ol (car proplist) (cadr proplist))
-                      (setq proplist (cddr proplist))))))))
-          (forward-line)))))
-
-  (add-hook 'org-finalize-agenda-hook 'org-agenda-add-overlays)
 
   (defun org-todo-age-time (&optional pos)
     "Calculate time since CREATED property (at current or POS."
@@ -648,13 +520,13 @@ This can be 0 for immediate, or a floating point value.")
                   ?\n)
         (insert ":OUTPUT:\n"))))
 
-  (defun org-get-message-link (&optional title)
-    (let (message-id subject)
-      (with-current-buffer gnus-original-article-buffer
-        (setq message-id (substring (message-field-value "message-id") 1 -1)
-              subject (or title (message-field-value "subject"))))
-      (org-make-link-string (concat "message://" message-id)
-                            (rfc2047-decode-string subject))))
+  ;; (defun org-get-message-link (&optional title)
+  ;;   (let (message-id subject)
+  ;;     (with-current-buffer gnus-original-article-buffer
+  ;;       (setq message-id (substring (message-field-value "message-id") 1 -1)
+  ;;             subject (or title (message-field-value "subject"))))
+  ;;     (org-make-link-string (concat "message://" message-id)
+  ;;                           (rfc2047-decode-string subject))))
 
   (defun org-insert-message-link (&optional arg)
     (interactive "P")
@@ -785,113 +657,701 @@ end tell" (match-string 1))))
                         (match-string 1)))
                     "][" e "]]")))))
 
-;;;_  . keybindings
-
-  (defvar org-mode-completion-keys
-    '((?d . "DONE")
-      (?g . "DELEGATED")
-      (?n . "NOTE")
-      (?r . "DEFERRED")
-      (?s . "STARTED")
-      (?t . "TODO")
-      (?e . "EPIC")
-      (?o . "STORY")
-      (?w . "WAITING")
-      (?x . "CANCELED")
-      (?y . "SOMEDAY")
-      ))
-
-  (eval-and-compile
-    (defvar org-todo-state-map nil)
-    (define-prefix-command 'org-todo-state-map))
-
-  (dolist (ckey org-mode-completion-keys)
-    (let* ((key (car ckey))
-           (label (cdr ckey))
-           (org-sym (intern (concat "my-org-todo-" (downcase label))))
-           (org-sym-no-logging
-            (intern (concat "my-org-todo-" (downcase label) "-no-logging")))
-           (org-agenda-sym
-            (intern (concat "my-org-agenda-todo-" (downcase label))))
-           (org-agenda-sym-no-logging
-            (intern (concat "my-org-agenda-todo-"
-                            (downcase label) "-no-logging"))))
-      (eval
-       `(progn
-          (defun ,org-sym ()
-            (interactive)
-            (org-todo ,label))
-          (bind-key (concat "C-c x " (char-to-string ,key)) ',org-sym
-                    org-mode-map)
-
-          (defun ,org-sym-no-logging ()
-            (interactive)
-            (let ((org-inhibit-logging t))
-              (org-todo ,label)))
-          (bind-key (concat "C-c x " (char-to-string  ,(upcase key)))
-                    ',org-sym-no-logging org-mode-map)
-
-          (defun ,org-agenda-sym ()
-            (interactive)
-            (let ((org-inhibit-logging
-                   (let ((style (org-entry-get
-                                 (get-text-property (point) 'org-marker)
-                                 "STYLE")))
-                     (and style (stringp style)
-                          (string= style "habit")))))
-              (org-agenda-todo ,label)))
-          (define-key org-todo-state-map [,key] ',org-agenda-sym)
-
-          (defun ,org-agenda-sym-no-logging ()
-            (interactive)
-            (let ((org-inhibit-logging t))
-              (org-agenda-todo ,label)))
-          (define-key org-todo-state-map [,(upcase key)]
-            ',org-agenda-sym-no-logging)))))
-
-  (bind-keys :map org-mode-map
-             ("C-c x l" . org-insert-dtp-link)
-             ("C-c x L" . org-set-dtp-link)
-             ("C-c x m" . org-insert-message-link)
-             ("C-c x M" . org-set-message-link)
-             ("C-c x u" . org-insert-url-link)
-             ("C-c x U" . org-set-url-link)
-             ("C-c x f" . org-insert-file-link)
-             ("C-c x F" . org-set-file-link)
-
-             ("C-c C-x @" . visible-mode)
-             ("C-c M-m"   . my-org-wrap-region)
-
-             ([return]                . org-return-indent)
-             ([(control return)]      . other-window)
-             ([(control meta return)] . org-insert-heading-after-current))
-
   (remove-hook 'kill-emacs-hook 'org-babel-remove-temporary-directory)
 
-;;;_  . org-agenda-mode
 
-  (defun my-org-publish-ical ()
+  (defun org-refile-heading-p ()
+    (let ((heading (org-get-heading)))
+      (not (string-match "Colophon" heading))))
+
+  (defun org-inline-note ()
     (interactive)
-    (async-shell-command "make -C ~/Documents/tasks"))
+    (switch-to-buffer-other-window "notes.org")
+    (goto-char (point-min))
+    (forward-line)
+    (goto-char (line-beginning-position))
+    (insert "* NOTE ")
+    (save-excursion
+      (insert (format "\n:PROPERTIES:\n:ID:       %s\n:CREATED:  %s\n:END:\n"
+                      (substring (shell-command-to-string "uuidgen") 0 -1)
+                      (format-time-string (org-time-stamp-format t t)))))
+    (save-excursion
+      (forward-line)
+      (org-cycle)))
 
-  (bind-keys :map org-agenda-mode-map
-             ("C-c C-x C-p" . my-org-publish-ical)
-             ("C-n" . next-line)
-             ("C-p" . previous-line)
-             ("M-n" . org-agenda-later)
-             ("M-p" . org-agenda-earlier)
-             (" "   . org-agenda-tree-to-indirect-buffer)
-             (">"   . org-agenda-filter-by-top-headline)
-             ("g"   . org-agenda-redo)
-             ("f"   . org-agenda-date-later)
-             ("b"   . org-agenda-date-earlier)
-             ("r"   . org-agenda-refile)
-             ("F"   . org-agenda-follow-mode)
-             ("q"   . delete-window)
-             ("x"   . org-todo-state-map)
-             ("z"   . pop-window-configuration))
+  :custom
+  (org-src-window-setup 'current-window)
+  (org-use-speed-commands t)
+  (org-src-fontify-natively t)           ;; better looking source code
+  (org-return-follows-link t)            ;; make RET follow links
+  (org-list-allow-alphabetical t)        ;; allow alphabetical list
+  (org-hide-emphasis-markers t)          ;; hide markers
+  (org-pretty-entities t)                ;; make latex look good
+  (org-fontify-quote-and-verse-blocks t) ;; make quotes stand out
+  (org-table-export-default-format "orgtbl-to-csv") ;; export for
+  ;; org-tables to csv
+  (org-ellipsis "↷")               ;; nicer elipses "↴" "▼"
+  (org-confirm-babel-evaluate nil) ;; evaluate src block without confirmation
+  (org-startup-indented t)         ;; start in indent mode
+  ;; org-src-tab-acts-natively t ;; indent for src code natively
+  ;; org-src-preserve-indentation nil
+  ;; org-edit-src-content-indentation t
+  (org-imenu-depth 8)
+  (org-src-window-setup 'plain)
+  (imenu-auto-rescan t)
+  (org-plantuml-jar-path (expand-file-name "/usr/share/java/plantuml.jar"))
+  (org-M-RET-may-split-line '((headline) (default . t)))
+  (org-adapt-indentation nil)
+  ;; (org-agenda-auto-exclude-function org-my-auto-exclude-function)
+  ;; (org-agenda-cXmp-user-defined org-compare-todo-age)
+  ;; (org-agenda-custom-commands
+  ;;  '(("h" "Current Hotlist" alltodo ""
+  ;;     ((org-agenda-overriding-header "Current Hotlist")
+  ;;      (org-agenda-skip-function
+  ;;       #'my-org-agenda-skip-all-siblings-but-first-hot))
+  ;;     )
+  ;;    ("H" "Hot Projects" tags "HOT&TODO=\"PROJECT\""
+  ;;     ((org-agenda-overriding-header "Hot Projects")))
+  ;;    ("T" "Non-Hot Projects" tags "-HOT&TODO=\"PROJECT\""
+  ;;     ((org-agenda-overriding-header "Non-Hot Projects")))
+  ;;    ("n" "Project Next Actions" alltodo ""
+  ;;     ((org-agenda-overriding-header "Project Next Actions")
+  ;;      (org-agenda-skip-function #'my-org-agenda-skip-all-siblings-but-first)))
+  ;;    ("P" "All Projects" tags "TODO=\"PROJECT\""
+  ;;     ((org-agenda-overriding-header "All Projects")))
+  ;;    ("A" "Priority #A tasks" agenda ""
+  ;;     ((org-agenda-ndays 1)
+  ;;      (org-agenda-overriding-header "Today's priority #A tasks: ")
+  ;;      (org-agenda-skip-function
+  ;;       '(org-agenda-skip-entry-if 'notregexp "\\=.*\\[#A\\]"))))
+  ;;    ("b" "Priority #A and #B tasks" agenda ""
+  ;;     ((org-agenda-ndays 1)
+  ;;      (org-agenda-overriding-header "Today's priority #A and #B tasks: ")
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'regexp "\\=.*\\[#C\\]"))))
+  ;;    ("r" "Uncategorized items" tags "CATEGORY=\"Inbox\"&LEVEL=2"
+  ;;     ((org-agenda-overriding-header "Uncategorized items")))
+  ;;    ("W" "Waiting/delegated tasks" tags "W-TODO=\"DONE\"|TODO={WAITING\\|DELEGATED}"
+  ;;     ((org-agenda-overriding-header "Waiting/delegated tasks:")
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'scheduled))
+  ;;      (org-agenda-sorting-strategy
+  ;;       (todo-state-up priority-down category-up))))
+  ;;    ("D" "Deadlined tasks" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT}"
+  ;;     ((org-agenda-overriding-header "Deadlined tasks: ")
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'notdeadline))
+  ;;      (org-agenda-sorting-strategy
+  ;;       (category-up))))
+  ;;    ("S" "Scheduled tasks" tags "TODO<>\"\"&TODO<>{APPT\\|DONE\\|CANCELED\\|NOTE\\|PROJECT}&STYLE<>\"habit\""
+  ;;     ((org-agenda-overriding-header "Scheduled tasks: ")
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'notscheduled))
+  ;;      (org-agenda-sorting-strategy
+  ;;       (category-up))))
+  ;;    ("d" "Unscheduled open source tasks (by date)" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT}"
+  ;;     ((org-agenda-overriding-header "Unscheduled Open Source tasks (by date): ")
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp 'regexp "\\* \\(DEFERRED\\|SOMEDAY\\)"))
+  ;;      (org-agenda-sorting-strategy
+  ;;       (user-defined-up))
+  ;;      (org-agenda-prefix-format "%-11c%5(org-todo-age) ")
+  ;;      (org-agenda-files
+  ;;       ("~/doc/tasks/OSS.org"))))
+  ;;    ("o" "Unscheduled open source tasks (by project)" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT}"
+  ;;     ((org-agenda-overriding-header "Unscheduled Open Source tasks (by project): ")
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp 'regexp "\\* \\(DEFERRED\\|SOMEDAY\\)"))
+  ;;      (org-agenda-sorting-strategy
+  ;;       (category-up))
+  ;;      (org-agenda-prefix-format "%-11c%5(org-todo-age) ")
+  ;;      (org-agenda-files
+  ;;       ("~/doc/tasks/OSS.org"))))
+  ;;    ("u" "Unscheduled tasks" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT\\|DEFERRED\\|SOMEDAY}"
+  ;;     ((org-agenda-overriding-header "Unscheduled tasks: ")
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
+  ;;      (org-agenda-sorting-strategy
+  ;;       (user-defined-up))
+  ;;      (org-agenda-prefix-format "%-11c%5(org-todo-age) ")
+  ;;      (org-agenda-files
+  ;;       ("~/doc/tasks/todo.org" "~/doc/tasks/Bahai.org"))))
+  ;;    ("U" "Deferred tasks" tags "TODO=\"DEFERRED\""
+  ;;     ((org-agenda-overriding-header "Deferred tasks:")
+  ;;      (org-agenda-sorting-strategy
+  ;;       (user-defined-up))
+  ;;      (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+  ;;    ("Y" "Someday tasks" tags "TODO=\"SOMEDAY\""
+  ;;     ((org-agenda-overriding-header "Someday tasks:")
+  ;;      (org-agenda-sorting-strategy
+  ;;       (user-defined-up))
+  ;;      (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+  ;;    ("w" "Unscheduled work-related tasks" tags "TODO<>\"\"&TODO<>{DONE\\|DEFERRED\\|CANCELED\\|NOTE\\|PROJECT}"
+  ;;     ((org-agenda-overriding-header "Unscheduled work-related tasks")
+  ;;      (org-agenda-files
+  ;;       ("~/dfinity/docs/dfinity.org"))
+  ;;      (org-agenda-sorting-strategy
+  ;;       (category-up user-defined-up))
+  ;;      (org-agenda-skip-function
+  ;;       (org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
+  ;;      (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+  ;;    ("c" "Appointment Calendar" agenda ""
+  ;;     ((org-agenda-overriding-header "Appointment Calendar")
+  ;;      (org-agenda-sorting-strategy
+  ;;       (time-up))
+  ;;      (org-agenda-span 14)
+  ;;      (org-agenda-ndays 14)
+  ;;      (org-agenda-regexp-filter-preset
+  ;;       ("+APPT"))))))
+  ;; (org-agenda-deadline-leaders '("!D!: " "D%02d: "))
+  ;; (org-agenda-default-appointment-duration 60)
+  ;; (org-agenda-files
+  ;;  '("~/doc/tasks/todo.org" "~/doc/tasks/habits.org" "~/dfinity/docs/dfinity.org" "~/doc/tasks/Bahai.org" "~/doc/tasks/OSS.org"))
+  ;; (org-agenda-fontify-priorities t)
+  ;; (org-agenda-include-diary t)
+  ;; (org-agenda-inhibit-startup t)
+  ;; (org-agenda-log-mode-items '(closed clock state))
+  ;; (org-agenda-ndays 1)
+  ;; (org-agenda-persistent-filter t)
+  ;; (org-agenda-prefix-format
+  ;;  '((agenda . "  %-11c%?-12t% s")
+  ;;    (timeline . "  % s")
+  ;;    (todo . "  %-11c%5(org-todo-age) ")
+  ;;    (tags . "  %-11c")))
+  ;; (org-agenda-scheduled-leaders '("" "S%d: "))
+  ;; (org-agenda-scheduled-relative-text "S%d: ")
+  ;; (org-agenda-scheduled-text "")
+  ;; (org-agenda-show-all-dates t)
+  ;; (org-agenda-skip-deadline-if-done t)
+  ;; (org-agenda-skip-scheduled-if-deadline-is-shown t)
+  ;; (org-agenda-skip-scheduled-if-done t)
+  ;; (org-agenda-skip-unavailable-files t)
+  ;; (org-agenda-sorting-strategy
+  ;;  '((agenda habit-down time-up todo-state-up priority-down)
+  ;;    (todo priority-down category-keep)
+  ;;    (tags priority-down category-keep)
+  ;;    (search category-keep)))
+  ;; (org-agenda-start-on-weekday nil)
+  ;; (org-agenda-tags-column -100)
+  ;; (org-agenda-tags-todo-honor-ignore-options t)
+  ;; (org-agenda-text-search-extra-files '('agenda-archives
+  ;;                                       "~/doc/tasks/notes.org"))
+  ;; (org-agenda-todo-ignore-scheduled 'past)
+  ;; (org-agenda-use-time-grid nil)
+  ;; (org-agenda-window-frame-fractions '(0.5 . 0.75))
 
-  (unbind-key "M-m" org-agenda-keymap)
+  (org-archive-location "TODO-archive::")
+  (org-archive-save-context-info '(time category itags))
+  (org-attach-file-list-property nil)
+  (org-attach-method 'mv)
+  (org-attach-store-link-p 'attached)
+  (org-author-transforms '(("^Howard Reubenstein$" . "Howard")))
+  (org-beamer-frame-default-options "fragile")
+  (org-capture-templates
+   '(("a" "Add Task" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* TODO %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("n" "Note" entry
+      (file "~/doc/tasks/notes.org")
+      "* NOTE %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("c" "Calendar" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* APPT %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("t" "Add Task" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* TODO %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("p" "Protocol" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* NOTE %?
+#+BEGIN_QUOTE
+%i
+#+END_QUOTE
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:URL:      %c
+:END:")
+     ("L" "Protocol Link" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* NOTE %?
+[[%:link][%:description]]
+#+BEGIN_QUOTE
+%i
+#+END_QUOTE
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:URL:      %c
+:END:")
+     ("j" "Journal entry" entry
+      (file+datetree "~/dfinity/docs/dfinity.org")
+      "* %?")))
+  (org-clock-clocked-in-display nil)
+  (org-clock-idle-time 10)
+  (org-clock-in-resume t)
+  (org-clock-in-switch-to-state "STARTED")
+  (org-clock-into-drawer "LOGBOOK")
+  (org-clock-mode-line-total 'current)
+  (org-clock-out-remove-zero-time-clocks t)
+  (org-clock-out-switch-to-state nil)
+  (org-clock-persist t)
+  (org-clock-persist-file "~/.emacs.d/data/org-clock-save.el")
+  (org-clock-resolve-expert t)
+  (org-completion-use-ido t)
+  (org-confirm-babel-evaluate nil)
+  (org-confirm-elisp-link-function nil)
+  (org-confirm-shell-link-function nil)
+  (org-crypt-disable-auto-save t)
+  (org-crypt-key "0xAB37611BDDE48EBD")
+  (org-cycle-global-at-bob t)
+  (org-deadline-warning-days 14)
+  (org-default-notes-file "~/doc/tasks/todo.org")
+  (org-depend-tag-blocked nil)
+  (org-directory "~/doc/tasks/")
+  (org-ditaa-jar-path "~/.nix-profile/lib/ditaa.jar")
+  (org-drawers '("PROPERTIES" "CLOCK" "LOGBOOK" "OUT"))
+  (org-edit-src-content-indentation 0)
+  (org-enforce-todo-dependencies t)
+  (org-export-babel-evaluate nil)
+  (org-export-latex-classes
+   '(("article" "\\documentclass[11pt]{article}"
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+      ("\\paragraph{%s}" . "\\paragraph*{%s}")
+      ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+     ("linalg" "\\documentclass{article}
+\\usepackage{linalgjh}
+[DEFAULT-PACKAGES]
+[EXTRA]
+[PACKAGES]"
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+      ("\\paragraph{%s}" . "\\paragraph*{%s}")
+      ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+     ("report" "\\documentclass[11pt]{report}"
+      ("\\part{%s}" . "\\part*{%s}")
+      ("\\chapter{%s}" . "\\chapter*{%s}")
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))
+     ("book" "\\documentclass[11pt]{book}"
+      ("\\part{%s}" . "\\part*{%s}")
+      ("\\chapter{%s}" . "\\chapter*{%s}")
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))
+     ("beamer" "\\documentclass{beamer}" org-beamer-sectioning)))
+  (org-extend-today-until 4)
+  (org-fast-tag-selection-single-key 'expert)
+  (org-fontify-done-headline t)
+  (org-fontify-quote-and-verse-blocks t)
+  (org-fontify-whole-heading-line t)
+  (org-footnote-section nil)
+  (org-hide-emphasis-markers t)
+  (org-hide-leading-stars t)
+  (org-icalendar-combined-agenda-file "~/doc/tasks/org.ics")
+  (org-icalendar-timezone "America/Los_Angeles")
+  (org-id-locations-file "~/.emacs.d/data/org-id-locations")
+  (org-image-actual-width nil)
+  (org-imenu-depth 4)
+  (org-insert-heading-respect-content t)
+  (org-irc-link-to-logs t t)
+  (org-latex-default-packages-alist
+   '(("T1" "fontenc" t)
+     ("" "fixltx2e" nil)
+     ("" "graphicx" t)
+     ("" "longtable" nil)
+     ("" "float" nil)
+     ("" "wrapfig" nil)
+     ("" "rotating" nil)
+     ("normalem" "ulem" t)
+     ("" "amsmath" t)
+     ("" "textcomp" t)
+     ("" "marvosym" t)
+     ("" "wasysym" t)
+     ("" "amssymb" t)
+     ("" "hyperref" nil)
+     "\\tolerance=1000"))
+  (org-latex-listings 'minted)
+  (org-latex-minted-options
+   '(("fontsize" "\\footnotesize")
+     ("linenos" "true")
+     ("xleftmargin" "0em")))
+  (org-latex-pdf-process
+   '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+  (org-mime-preserve-breaks nil)
+  (org-mobile-directory "~/Dropbox/Apps/MobileOrg")
+  (org-mobile-files '("~/doc/tasks/todo.org"))
+  (org-mobile-files-exclude-regexp "\\(TODO\\(-.*\\)?\\)\\'")
+  (org-mobile-inbox-for-pull "~/doc/tasks/from-mobile.org")
+  (org-mode-hook
+   (org-babel-result-hide-spec org-babel-hide-all-hashes abbrev-mode))
+  (org-modules ())
+  (org-pretty-entities t)
+  (org-priority-faces
+   '((65 :foreground "White" :weight bold)
+     (66 . "White")
+     (67 :foreground "dark gray" :slant italic)))
+  (org-refile-target-verify-function 'org-refile-heading-p)
+  (org-refile-targets '((org-agenda-files :todo . "PROJECT")))
+  (org-return-follows-link t)
+  (org-reverse-note-order t)
+  (org-smart-capture-use-lastname t)
+  (org-src-fontify-natively t)
+  (org-src-tab-acts-natively t)
+  (org-stuck-projects '("TODO=\"PROJECT\"" ("TODO" "DEFERRED") nil ""))
+  (org-subject-transforms
+   '(("\\`\\(Re\\|Fwd\\): " . "")
+     ("\\`{ledger} " . "")
+     ("([Ww]as: .+)\\'" . "")
+     ("\\`\\[[a-z-]+\\] " . "")
+     ("\\`bug#\\([0-9]+\\):" . "[[x-debbugs-gnu:\\1][#\\1]]")))
+  (org-tags-column -97)
+  (org-time-clocksum-use-fractional t)
+  (org-todo-keyword-faces
+   '(("TODO" :foreground "medium blue" :weight bold)
+     ("EPIC" :foreground "deep sky blue" :weight bold)
+     ("STORY" :foreground "royal blue" :weight bold)
+     ("RECUR" :foreground "cornflowerblue" :weight bold)
+     ("APPT" :foreground "medium blue" :weight bold)
+     ("NOTE" :foreground "brown" :weight bold)
+     ("STARTED" :foreground "dark orange" :weight bold)
+     ("WAITING" :foreground "red" :weight bold)
+     ("DELEGATED" :foreground "dark violet" :weight bold)
+     ("DEFERRED" :foreground "dark blue" :weight bold)
+     ("SOMEDAY" :foreground "dark blue" :weight bold)
+     ("PROJECT" :foreground "#088e8e" :weight bold)))
+  (org-todo-repeat-to-state "TODO")
+  (org-use-property-inheritance '("AREA"))
+  (org-use-speed-commands t)
+  (org-use-tag-inheritance nil)
+  (org-x-backends '(ox-org ox-redmine))
+  (org-x-redmine-title-prefix-function org-x-redmine-title-prefix)
+  (org-x-redmine-title-prefix-match-function org-x-redmine-title-prefix-match)
+  )
+
+(use-package org-agenda
+  :straight nil
+  :commands org-agenda-list
+  :bind* (("M-C"   . jump-to-org-agenda)
+          ("C-c a" . org-agenda))
+  :bind (:map
+         org-agenda-mode-map
+         (" "   . org-agenda-tree-to-indirect-buffer)
+         (">"   . org-agenda-filter-by-top-headline)
+         ("C-n" . next-line)
+         ("C-p" . previous-line)
+         ("F"   . org-agenda-follow-mode)
+         ("M-m")
+         ("M-n" . org-agenda-later)
+         ("M-p" . org-agenda-earlier)
+         ("b"   . org-agenda-date-earlier)
+         ("f"   . org-agenda-date-later)
+         ("g"   . org-agenda-redo)
+         ("q"   . bury-buffer)
+         ("x"   . org-agenda-todo)
+         ("w"   . org-agenda-refile)
+         ("z"   . pop-window-configuration))
+  :custom
+  (org-agenda-auto-exclude-function 'org-my-auto-exclude-function)
+  (org-agenda-cmp-user-defined 'org-compare-todo-age)
+  (org-agenda-compact-blocks t)
+  (org-agenda-custom-commands
+   '(("h" "Current Hotlist" alltodo ""
+      ((org-agenda-overriding-header "Current Hotlist")
+       (org-agenda-skip-function #'my-org-agenda-skip-all-siblings-but-first-hot)))
+     ("H" "Hot Projects" tags "HOT&TODO=\"PROJECT\""
+      ((org-agenda-overriding-header "Hot Projects")))
+     ("T" "Non-Hot Projects" tags "-HOT&TODO=\"PROJECT\""
+      ((org-agenda-overriding-header "Non-Hot Projects")))
+     ("n" "Project Next Actions" alltodo ""
+      ((org-agenda-overriding-header "Project Next Actions")
+       (org-agenda-skip-function #'my-org-agenda-skip-all-siblings-but-first)))
+     ("P" "All Projects" tags "TODO=\"PROJECT\""
+      ((org-agenda-overriding-header "All Projects")))
+     ("A" "Priority #A tasks" agenda ""
+      ((org-agenda-ndays 1)
+       (org-agenda-overriding-header "Today's priority #A tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'notregexp "\\=.*\\[#A\\]"))))
+     ("b" "Priority #A and #B tasks" agenda ""
+      ((org-agenda-ndays 1)
+       (org-agenda-overriding-header "Today's priority #A and #B tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'regexp "\\=.*\\[#C\\]"))))
+     ("r" "Uncategorized items" tags "CATEGORY=\"Inbox\"&LEVEL=2"
+      ((org-agenda-overriding-header "Uncategorized items")))
+     ("W" "Waiting/delegated tasks" tags "W-TODO=\"DONE\"|TODO={WAITING\\|DELEGATED}"
+      ((org-agenda-overriding-header "Waiting/delegated tasks:")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled))
+       (org-agenda-sorting-strategy
+        '(todo-state-up priority-down category-up))))
+     ("D" "Deadlined tasks" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT}"
+      ((org-agenda-overriding-header "Deadlined tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'notdeadline))
+       (org-agenda-sorting-strategy
+        '(category-up))))
+     ("S" "Scheduled tasks" tags "TODO<>\"\"&TODO<>{APPT\\|DONE\\|CANCELED\\|NOTE\\|PROJECT}&STYLE<>\"habit\""
+      ((org-agenda-overriding-header "Scheduled tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'notscheduled))
+       (org-agenda-sorting-strategy
+        '(category-up))))
+     ("o" "Unscheduled open source tasks (by project)" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT\\|CATEGORY}"
+      ((org-agenda-overriding-header "Unscheduled Open Source tasks (by project): ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp 'regexp "\\* \\(DEFERRED\\|SOMEDAY\\)"))
+       (org-agenda-sorting-strategy
+        '(category-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")
+       (org-agenda-files
+        '("~/doc/org/OSS.org"))))
+     ("u" "Unscheduled tasks" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT\\|CATEGORY\\|DEFERRED\\|SOMEDAY}"
+      ((org-agenda-overriding-header "Unscheduled tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
+       (org-agenda-sorting-strategy
+        '(user-defined-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")
+       (org-agenda-files
+        '("~/doc/org/todo.org"))))
+     ("U" "Deferred tasks" tags "TODO=\"DEFERRED\""
+      ((org-agenda-overriding-header "Deferred tasks:")
+       (org-agenda-sorting-strategy
+        '(user-defined-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+     ("Y" "Someday tasks" tags "TODO=\"SOMEDAY\""
+      ((org-agenda-overriding-header "Someday tasks:")
+       (org-agenda-sorting-strategy
+        '(user-defined-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+     ("w" "Unscheduled work-related tasks" tags "TODO<>\"\"&TODO<>{DONE\\|DEFERRED\\|CANCELED\\|NOTE\\|PROJECT\\|CATEGORY}"
+      ((org-agenda-overriding-header "Unscheduled work-related tasks")
+       (org-agenda-files
+        '("~/kadena/docs/kadena.org"))
+       (org-agenda-sorting-strategy
+        '(category-up user-defined-up))
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+     ("c" "Appointment Calendar" agenda ""
+      ((org-agenda-overriding-header "Appointment Calendar")
+       (org-agenda-sorting-strategy
+        '(time-up))
+       (org-agenda-span 14)
+       (org-agenda-ndays 14)
+       (org-agenda-regexp-filter-preset
+        '("+APPT"))))
+     ("N" "Notes" tags "TODO=\"NOTE\""
+      ((org-agenda-overriding-header "Notes")))))
+  (org-agenda-deadline-leaders '("!D!: " "D%02d: " "D-%02d:"))
+  (org-agenda-default-appointment-duration 60)
+  (org-agenda-files
+   '("~/doc/org/todo.org"
+     "~/doc/org/habits.org"
+     "~/kadena/docs/kadena.org"
+     "~/doc/org/OSS.org"))
+  (org-agenda-fontify-priorities t)
+  (org-agenda-include-diary t)
+  (org-agenda-inhibit-startup t)
+  (org-agenda-log-mode-items '(closed clock state))
+  (org-agenda-ndays 1)
+  (org-agenda-persistent-filter t)
+  (org-agenda-prefix-format
+   '((agenda . "  %-11c%?-12t% s")
+     (timeline . "  % s")
+     (todo . "  %-11c%5(org-todo-age) ")
+     (tags . "  %-11c")))
+  (org-agenda-scheduled-leaders '("" "S%d: "))
+  (org-agenda-scheduled-relative-text "S%d: ")
+  (org-agenda-scheduled-text "")
+  (org-agenda-show-all-dates t)
+  (org-agenda-show-outline-path nil)
+  (org-agenda-skip-deadline-if-done t)
+  (org-agenda-skip-scheduled-if-deadline-is-shown t)
+  (org-agenda-skip-scheduled-if-done t)
+  (org-agenda-skip-unavailable-files t)
+  (org-agenda-sorting-strategy
+   '((agenda habit-down time-up todo-state-up priority-down)
+     (todo priority-down category-keep)
+     (tags priority-down category-keep)
+     (search category-keep)))
+  (org-agenda-span 'day)
+  (org-agenda-start-on-weekday nil)
+  (org-agenda-tags-column -100)
+  (org-agenda-tags-todo-honor-ignore-options t)
+  (org-agenda-text-search-extra-files '(agenda-archives))
+  (org-agenda-todo-ignore-scheduled 'past)
+  (org-agenda-use-time-grid nil)
+  (org-agenda-window-frame-fractions '(0.5 . 0.75))
+  :custom-face
+  (org-agenda-clocking ((t (:background "red2"))))
+  (org-agenda-done ((t (:foreground "ForestGreen"))))
+  :preface
+  (defun org-fit-agenda-window ()
+    "Fit the window to the buffer size."
+    (and (memq org-agenda-window-setup '(reorganize-frame))
+         (fboundp 'fit-window-to-buffer)
+         (fit-window-to-buffer)))
+
+  (defun jump-to-org-agenda ()
+    (interactive)
+    (push-window-configuration)
+    (cl-flet ((prep-window
+               (wind)
+               (with-selected-window wind
+                 (org-fit-window-to-buffer wind)
+                 (ignore-errors
+                   (window-resize
+                    wind
+                    (- 100 (window-width wind)) t)))))
+      (let ((buf (or (get-buffer "*Org Agenda*")
+                     (get-buffer "*Org Agenda(a)*"))))
+        (if buf
+            (let ((win (get-buffer-window buf)))
+              (if win
+                  (when (called-interactively-p 'any)
+                    (funcall #'prep-window win))
+                (if (called-interactively-p 'any)
+                    (funcall #'prep-window (display-buffer buf t t))
+                  (funcall #'prep-window (display-buffer buf)))))
+          (call-interactively 'org-agenda-list)
+          (funcall #'prep-window (selected-window))))))
+
+  (defun my-org-agenda-should-skip-p ()
+    "Skip all but the first non-done entry."
+    (let (should-skip-entry)
+      (unless (org-current-is-todo)
+        (setq should-skip-entry t))
+      (when (or (org-get-scheduled-time (point))
+                (org-get-deadline-time (point)))
+        (setq should-skip-entry t))
+      (when (/= (point)
+                (save-excursion
+                  (org-goto-first-child)
+                  (point)))
+        (setq should-skip-entry t))
+      (save-excursion
+        (while (and (not should-skip-entry) (org-goto-sibling t))
+          (when (and (org-current-is-todo)
+                     (not (org-get-scheduled-time (point)))
+                     (not (org-get-deadline-time (point))))
+            (setq should-skip-entry t))))
+      should-skip-entry))
+
+  (defun my-org-agenda-skip-all-siblings-but-first ()
+    "Skip all but the first non-done entry."
+    (when (my-org-agenda-should-skip-p)
+      (or (outline-next-heading)
+          (goto-char (point-max)))))
+
+  (defun my-org-current-tags (depth)
+    (save-excursion
+      (ignore-errors
+        (let (should-skip)
+          (while (and (> depth 0)
+                      (not should-skip)
+                      (prog1
+                          (setq depth (1- depth))
+                        (not (org-up-element))))
+            (if (looking-at "^\*+\\s-+")
+                (setq should-skip (org-get-tags))))
+          should-skip))))
+
+  (defun my-org-agenda-skip-all-siblings-but-first-hot ()
+    "Skip all but the first non-done entry."
+    (when (or (my-org-agenda-should-skip-p)
+              (not (member "HOT" (my-org-current-tags 1))))
+      (or (outline-next-heading)
+          (goto-char (point-max)))))
+
+  (defun org-agenda-add-overlays (&optional line)
+    "Add overlays found in OVERLAY properties to agenda items.
+Note that habitual items are excluded, as they already
+extensively use text properties to draw the habits graph.
+
+For example, for work tasks I like to use a subtle, yellow
+background color; for tasks involving other people, green; and
+for tasks concerning only myself, blue.  This way I know at a
+glance how different responsibilities are divided for any given
+day.
+
+To achieve this, I have the following in my todo file:
+
+  ,* Work
+  :PROPERTIES:
+  :CATEGORY: Work
+  :OVERLAY:  (face (:background \"#fdfdeb\"))
+  :END:
+  ,** TODO Task
+  ,* Family
+  :PROPERTIES:
+  :CATEGORY: Personal
+  :OVERLAY:  (face (:background \"#e8f9e8\"))
+  :END:
+  ,** TODO Task
+  ,* Personal
+  :PROPERTIES:
+  :CATEGORY: Personal
+  :OVERLAY:  (face (:background \"#e8eff9\"))
+  :END:
+  ,** TODO Task
+
+The colors (which only work well for white backgrounds) are:
+
+  Yellow: #fdfdeb
+  Green:  #e8f9e8
+  Blue:   #e8eff9
+
+To use this function, add it to `org-agenda-finalize-hook':
+
+  (add-hook 'org-finalize-agenda-hook 'org-agenda-add-overlays)"
+    (let ((inhibit-read-only t)
+          (buffer-invisibility-spec '(org-link)))
+      (save-excursion
+        (goto-char (if line (line-beginning-position) (point-min)))
+        (while (not (eobp))
+          (let ((org-marker (get-text-property (point) 'org-marker)))
+            (when (and org-marker
+                       (null (overlays-at (point)))
+                       (not (get-text-property (point) 'org-habit-p))
+                       (get-text-property (point) 'type)
+                       (string-match "\\(sched\\|dead\\|todo\\)"
+                                     (get-text-property (point) 'type)))
+              (let ((overlays
+                     (or (org-entry-get org-marker "OVERLAY" t)
+                         (with-current-buffer (marker-buffer org-marker)
+                           (org-get-global-property "OVERLAY")))))
+                (when overlays
+                  (goto-char (line-end-position))
+                  (let ((rest (- (window-width) (current-column))))
+                    (if (> rest 0)
+                        (insert (make-string rest ? ))))
+                  (let ((ol (make-overlay (line-beginning-position)
+                                          (line-end-position)))
+                        (proplist (read overlays)))
+                    (while proplist
+                      (overlay-put ol (car proplist) (cadr proplist))
+                      (setq proplist (cddr proplist))))))))
+          (forward-line)))))
+  :config
+  (add-hook 'org-agenda-finalize-hook 'org-agenda-add-overlays)
 
   (defadvice org-agenda-redo (after fit-windows-for-agenda-redo activate)
     "Fit the Org Agenda to its buffer."
@@ -905,7 +1365,7 @@ end tell" (match-string 1))))
               "~/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents"
               t "[0-9].*\\.txt\\'" nil))))
       (when notes
-        (with-current-buffer (find-file-noselect "~/Documents/tasks/todo.org")
+        (with-current-buffer (find-file-noselect "~/doc/org/todo.org")
           (save-excursion
             (goto-char (point-min))
             (re-search-forward "^\\* Inbox$")
@@ -927,8 +1387,6 @@ end tell" (match-string 1))))
                    (insert ?\n))
                  (let ((uuid (substring (shell-command-to-string "uuidgen") 0 -1))
                        (file (file-name-nondirectory note)))
-                   (insert (format (concat ":PROPERTIES:\n:ID:       %s\n"
-                                           ":CREATED:  ") uuid))
                    (string-match
                     (concat "\\`\\([0-9]\\{4\\}\\)"
                             "-\\([0-9]\\{2\\}\\)"
@@ -937,89 +1395,38 @@ end tell" (match-string 1))))
                             "-\\([0-9]\\{2\\}\\)"
                             "-\\([0-9]\\{2\\}\\)"
                             "\\.txt\\'") file)
-                   (let ((year (string-to-number (match-string 1 file)))
-                         (mon (string-to-number (match-string 2 file)))
-                         (day (string-to-number (match-string 3 file)))
-                         (hour (string-to-number (match-string 4 file)))
-                         (min (string-to-number (match-string 5 file)))
-                         (sec (string-to-number (match-string 6 file))))
-                     (insert (format "[%04d-%02d-%02d %s %02d:%02d]\n:END:\n"
-                                     year mon day
-                                     (calendar-day-name (list mon day year) t)
-                                     hour min))))
+                   (let* ((year (string-to-number (match-string 1 file)))
+                          (mon (string-to-number (match-string 2 file)))
+                          (day (string-to-number (match-string 3 file)))
+                          (hour (string-to-number (match-string 4 file)))
+                          (min (string-to-number (match-string 5 file)))
+                          (sec (string-to-number (match-string 6 file)))
+                          (date (format "%04d-%02d-%02d %s"
+                                        year mon day
+                                        (calendar-day-name (list mon day year) t))))
+                     (insert (format (concat ;; "SCHEDULED: <%s>\n"
+                                      ":PROPERTIES:\n"
+                                      ":ID:       %s\n"
+                                      ":CREATED:  ")
+                                     uuid))
+                     (insert (format "[%s %02d:%02d]\n:END:\n" date hour min))))
                  (buffer-string)))
               (delete-file note t)))
           (when (buffer-modified-p)
             (save-buffer)))))
     ad-do-it
     (org-fit-agenda-window))
+  )
 
-  (defun org-refile-heading-p ()
-    (let ((heading (org-get-heading)))
-      (not (string-match "Colophon" heading))))
-
-  (defun org-inline-note ()
-    (interactive)
-    (switch-to-buffer-other-window "notes.org")
-    (goto-char (point-min))
-    (forward-line)
-    (goto-char (line-beginning-position))
-    (insert "* NOTE ")
-    (save-excursion
-      (insert (format "\n:PROPERTIES:\n:ID:       %s\n:CREATED:  %s\n:END:\n"
-                      (substring (shell-command-to-string "uuidgen") 0 -1)
-                      (format-time-string (org-time-stamp-format t t)))))
-    (save-excursion
-      (forward-line)
-      (org-cycle)))
-
-  (defadvice org-archive-subtree (before set-billcode-before-archiving activate)
-    "Before archiving a task, set its BILLCODE and TASKCODE."
-    (let ((billcode (org-entry-get (point) "BILLCODE" t))
-          (taskcode (org-entry-get (point) "TASKCODE" t))
-          (project  (org-entry-get (point) "PROJECT" t)))
-      (if billcode (org-entry-put (point) "BILLCODE" billcode))
-      (if taskcode (org-entry-put (point) "TASKCODE" taskcode))
-      (if project (org-entry-put (point) "PROJECT" project))))
-
-  (font-lock-add-keywords
-   'org-mode
-   '(("^ *\\(-\\) "
-      (0 (ignore (compose-region (match-beginning 1) (match-end 1) "•"))))))
-
-  (defun org-begin-template (arg)
-    "Make a source block template at point. With ARG, prepend a blank NAME."
-    (interactive "P")
-    (if (org-at-table-p)
-        (call-interactively 'org-table-rotate-recalc-marks)
-      (let* ((choices '(("Source" . "SRC")
-                        ("Example" . "EXAMPLE")
-                        ("Quote" . "QUOTE")
-                        ("Verse" . "VERSE")
-                        ("Center" . "CENTER")
-                        ("LaTex" . "LaTeX")
-                        ("HTML" . "HTML")
-                        ("Ascii" . "ASCII")))
-             (choice (cdr (assoc (completing-read "Source block type: "
-                                                  choices) choices))))
-        (cond
-         ((region-active-p)
-          (let ((start (region-beginning))
-                (end (region-end)))
-            (goto-char end)
-            (insert "#+END_" choice "\n")
-            (goto-char start)
-            (when arg
-              (insert "#+NAME: \n"))
-            (insert "#+BEGIN_" choice "\n")))
-         (t
-          (when arg
-            (insert "#+NAME: \n"))
-          (insert "#+BEGIN_" choice " ")
-          (save-excursion (insert "\n\n#+END_" choice))
-          )))))
-
-  (bind-key [remap org-insert-structure-template] 'org-begin-template))
+(use-package org-modern
+  :after org
+  :hook ((org-mode . #'org-modern-mode)
+         (org-agenda-finalize . #'org-modern-agenda)
+         (org-modern-mode . (lambda ()
+                              "Adapt `org-modern-mode'."
+                              ;; Disable Prettify Symbols mode
+                              (setq prettify-symbols-alist nil)
+                              (prettify-symbols-mode -1)))))
 
 (use-package org-tag-beautify
   :disabled t
@@ -1030,8 +1437,8 @@ end tell" (match-string 1))))
 ;; ;;;_ , org-projectile
 
 (use-package org-structure-hydra
-  :disabled t                           ;;in favor of company-org-block
   :after org hydra
+  :straight nil
   :commands (my/org-insert-structure)
   :bind (:map org-mode-map ("<" . 'my/org-insert-structure))
   :preface
@@ -1140,12 +1547,6 @@ prepended to the element after the #+HEADER: tag."
         '("~/Documents/tasks/todo.org"
           "~/Documents/tasks/Bahai.org"
           "~/Documents/tasks/BAE.org")))
-
-(defun org-release () "8.2.11")
-(defun org-git-version () "8.2.11")
-
-(unbind-key "C-," org-mode-map)
-(unbind-key "C-'" org-mode-map)
 
 (defconst my-org-soft-red    "#fcebeb")
 (defconst my-org-soft-orange "#fcf5eb")
@@ -1280,7 +1681,19 @@ prepended to the element after the #+HEADER: tag."
                (cfw:cal-create-source "Dark Orange"))
          :view 'two-weeks)
         (setq-local org-agenda-files org-agenda-files))))
-
+  :custom
+  (cfw:read-date-command
+   (lambda nil
+     (interactive)
+     (let
+         ((xs
+           (decode-time
+            (org-time-string-to-time
+             (org-read-date)))))
+       (list
+        (nth 4 xs)
+        (nth 3 xs)
+        (nth 5 xs)))))
   :config
   (require 'calfw-cal)
   (use-package calfw-org
@@ -1295,9 +1708,6 @@ prepended to the element after the #+HEADER: tag."
         cfw:fchar-top-junction     ?┯
         cfw:fchar-top-left-corner  ?┏
         cfw:fchar-top-right-corner ?┓))
-
-(use-package helm-org-rifle
-  :bind ("A-M-r" . helm-org-rifle))
 
 (use-package ob-diagrams)
 
@@ -1332,6 +1742,8 @@ prepended to the element after the #+HEADER: tag."
 (use-package org-gcal
   :disabled t
   :commands org-gcal-sync
+  :custom
+  (org-gcal-dir "~/.emacs.d/data/org-gcal/")
   :config
   (setq org-gcal-client-id
         (lookup-password "org-caldav-user.google.com" "jwiegley" 80)
@@ -1402,10 +1814,10 @@ prepended to the element after the #+HEADER: tag."
            "\\* Articles"))))
 
 (use-package org-indent
+  :after org
   :straight nil
   :unless noninteractive
-  :after org
-  :hook (org-mode . (lambda () (org-indent-mode +1))))
+  :hook (org-mode . #'org-indent-mode))
 
 (use-package org-prettify-source-block
   :disabled t  ;; in favor of org-modern
@@ -1508,6 +1920,22 @@ prepended to the element after the #+HEADER: tag."
   :commands (org-prettify-source-block-mode)
   :hook (org-mode . (lambda () (org-prettify-source-block-mode +1))))
 
+(use-package org-habit
+  :straight nil
+  :after org-agenda
+  :custom
+  (org-habit-preceding-days 42)
+  (org-habit-today-glyph 45)
+  :custom-face
+  (org-habit-alert-face ((((background light)) (:background "#f5f946"))))
+  (org-habit-alert-future-face ((((background light)) (:background "#fafca9"))))
+  (org-habit-clear-face ((((background light)) (:background "#8270f9"))))
+  (org-habit-clear-future-face ((((background light)) (:background "#d6e4fc"))))
+  (org-habit-overdue-face ((((background light)) (:background "#f9372d"))))
+  (org-habit-overdue-future-face ((((background light)) (:background "#fc9590"))))
+  (org-habit-ready-face ((((background light)) (:background "#4df946"))))
+  (org-habit-ready-future-face ((((background light)) (:background "#acfca9")))))
+
 (use-package org-rainbow-tags
   :straight (:host github :repo "KaratasFurkan/org-rainbow-tags")
   :custom
@@ -1557,7 +1985,23 @@ prepended to the element after the #+HEADER: tag."
   :bind (("C-c M-t" . org-treescope)))
 
 (use-package org-velocity
-  :bind ("C-, C-." . org-velocity))
+  :bind ("C-, C-." . org-velocity)
+  :custom
+  '(org-velocity-always-use-bucket t)
+  '(org-velocity-bucket "~/doc/tasks/notes.org")
+  '(org-velocity-capture-templates
+    '(("v" "Velocity" entry
+       (file "~/doc/tasks/notes.org")
+       "* NOTE %:search
+%i%?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)))
+  (org-velocity-exit-on-match nil)
+  (org-velocity-force-new t)
+  (org-velocity-search-method 'regexp)
+  (org-velocity-use-completion t)
+  )
 
 (use-package org-web-tools
   :bind (("C-, C-y" . my-org-insert-url)
@@ -1726,11 +2170,6 @@ prepended to the element after the #+HEADER: tag."
                ("C-c n g" . org-roam-show-graph))
               :map org-mode-map
               (("C-c n i" . org-roam-insert))))
-
-(use-package company-org-roam
-  :after org-roam company
-  :config
-  (push 'company-org-roam company-backends))
 
 (use-package yankpad
   :defer 10
