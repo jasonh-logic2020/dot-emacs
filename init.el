@@ -44,26 +44,55 @@
 ;; (defconst common-elpa-directory user-emacs-directory)
 ;; (defconst common-emacs-directory user-emacs-directory)
 
-(defvar dot-org)
+(defun report-time-since-load (&optional suffix)
+  (message "Loading init...done (%.3fs)%s"
+           (float-time (time-subtract (current-time) emacs-start-time))
+           suffix))
+
+(add-hook 'after-init-hook
+          #'(lambda () (report-time-since-load " [after-init]"))
+          t)
+
+(eval-and-compile
+  (defsubst emacs-path (path)
+    (expand-file-name path user-emacs-directory)))
+
+(eval-when-compile
+  (dolist (sym '(cl-flet lisp-complete-symbol))
+    (setplist sym (use-package-plist-delete
+                   (symbol-plist sym) 'byte-obsolete-info))))
+
+(defconst user-number (- (user-uid) 1000))
+
+(add-hook 'after-init-hook #'garbage-collect t)
+
 (defvar dot-gnus)
 (defvar org-settings)
 
 (setq custom-file (convert-standard-filename
                    (expand-file-name "settings.el" user-emacs-directory))
-      dot-org (convert-standard-filename
-               (expand-file-name "dot-org.el" user-emacs-directory))
       dot-gnus (convert-standard-filename
                 (expand-file-name "dot-gnus.el" user-emacs-directory))
       org-settings (convert-standard-filename
                     (expand-file-name "org-settings.el" user-emacs-directory)))
 
-(load custom-file)
+(set-frame-font "Liberation Mono 8" nil t)
 
-;; (when (window-system)
-;;   (set-face-attribute 'default nil
-;;                       :height 70
-;;                       :width 'extra-condensed
-;;                       :family "DejaVu Sans Mono"))
+(use-package modus-themes
+  :init
+  (progn
+    (setq modus-themes-bold-constructs t)
+    (setq modus-themes-org-blocks 'greyscale)
+    (setq modus-themes-italic-constructs t)
+
+    (setq modus-themes-headings
+          '((1 . (1.6))
+            (2 . (background 1.5))
+            (3 . (background bold 1.2))
+            (4 . (1.1))
+            (t . ())))
+
+    (load-theme 'modus-vivendi t)))
 
 (eval-and-compile
 
@@ -140,7 +169,6 @@
 
   (defun lookup-password (host user port)
     (require 'auth-source)
-    (require 'auth-source-pass)
     (let ((auth (auth-source-search :host host :user user :port port)))
       (if auth
           (let ((secretf (plist-get (car auth) :secret)))
@@ -236,10 +264,216 @@ Meant to be added to `occur-hook'."
 
 ;; (epa-file-enable)
 
+(use-package epg
+  :defer t
+  :custom
+  (epg-pinentry-mode   'loopback)      ; ask in emacs
+  )
+
 (setq-default
  line-spacing                   1       ; prevent :box redraws
  indent-tabs-mode             nil       ; Use spaces for indentation
  major-mode             'org-mode) ; Org-mode as default mode
+
+(use-package emacs
+  :straight nil
+  :bind* ("<C-return>" . other-window)
+  :custom
+  ;; C source code
+  (auto-hscroll-mode            'current-line)
+  (auto-save-interval           64)
+  (auto-save-timeout            2)
+  (enable-recursive-minibuffers t)
+  (fill-column                  78)
+  (history-delete-duplicates    t)
+  (history-length               200)
+  (load-prefer-newer            t)
+  (menu-bar-mode                nil)
+  (message-log-max              16384)
+  (redisplay-dont-pause         t)
+  (tool-bar-mode                nil)
+  (undo-limit                   800000)
+  (user-full-name               (or (getenv "USERNAME")
+                                    (getenv "USER")))
+  (visible-bell                 t)
+  (x-stretch-cursor             t)
+
+  (frame-title-format
+   '(:eval
+     (concat
+      (if buffer-file-name default-directory "%b")
+      "    "
+      (number-to-string
+       (cdr
+        (assq 'width
+              (frame-parameters))))
+      "x"
+      (number-to-string
+       (cdr
+        (assq 'height
+              (frame-parameters)))))))
+
+  (completion-ignored-extensions
+   '(".a"
+     ".aux"
+     ".bbl"
+     ".bin"
+     ".blg"
+     ".class"
+     ".cp"
+     ".cps"
+     ".elc"
+     ".fmt"
+     ".fn"
+     ".fns"
+     ".git/"
+     ".glo"
+     ".glob"
+     ".gmo"
+     ".hg/"
+     ".idx"
+     ".ky"
+     ".kys"
+     ".la"
+     ".lib"
+     ".ln"
+     ".lo"
+     ".lof"
+     ".lot"
+     ".mem"
+     ".mo"
+     ".o"
+     ".pg"
+     ".pgs"
+     ".pyc"
+     ".pyo"
+     ".so"
+     ".tfm"
+     ".toc"
+     ".tp"
+     ".tps"
+     ".v.d"
+     ".vio"
+     ".vo" ".vok" ".vos"
+     ".vr"
+     ".vrs"
+     "~"))
+
+  ;; startup.el
+  (auto-save-list-file-prefix (user-data "auto-save-list/.saves-"))
+  (inhibit-startup-echo-area-message t)
+  (inhibit-startup-screen t)
+  (initial-buffer-choice t)
+  (initial-major-mode 'fundamental-mode)
+  (initial-scratch-message "")
+  (user-mail-address "johnw@newartisans.com")
+
+  ;; advice.el
+  (ad-redefinition-action 'accept)
+
+  ;; files.el
+  (auto-save-file-name-transforms '(("\\`/[^/]*:.*" "/tmp" t)))
+  (backup-directory-alist '(("." . "~/.local/share/emacs/backups")))
+  (delete-old-versions t)
+  (directory-abbrev-alist
+   '(("\\`/org" . "/Users/johnw/doc/org")))
+  (directory-free-space-args "-kh")
+  (large-file-warning-threshold nil)
+  (save-abbrevs 'silently)
+  (trash-directory "~/.Trash")
+  (version-control t)
+
+  ;; simple.el
+  (backward-delete-char-untabify-method 'untabify)
+  (column-number-mode t)
+  (indent-tabs-mode nil)
+  (kill-do-not-save-duplicates t)
+  (kill-ring-max 500)
+  (kill-whole-line t)
+  (line-number-mode t)
+  (mail-user-agent 'gnus-user-agent)
+  (next-line-add-newlines nil)
+  (save-interprogram-paste-before-kill t)
+
+  ;; bytecomp.el
+  (byte-compile-verbose nil)
+
+  ;; (custom-buffer-done-function 'kill-buffer)
+  ;; (default-major-mode 'text-mode)
+
+  ;; prog-mode.el
+  (prettify-symbols-unprettify-at-point 'right-edge)
+
+  ;; scroll-bar.el
+  (scroll-bar-mode nil)
+
+  ;; paragraphs.el
+  (sentence-end-double-space nil)
+
+  ;; paren.el
+  (show-paren-delay 0)
+
+  ;; window.el
+  (same-window-buffer-names
+   '("*eshell*"
+     "*shell*"
+     "*mail*"
+     "*inferior-lisp*"
+     "*ielm*"
+     "*scheme*"))
+  (switch-to-buffer-preserve-window-point t)
+
+  ;; warnings.el
+  (warning-minimum-log-level :error)
+
+  ;; frame.el
+  (window-divider-default-bottom-width 1)
+  (window-divider-default-places 'bottom-only)
+
+  ;; nsm.el
+  (nsm-settings-file (user-data "network-security.data"))
+
+  :custom-face
+  ;; (cursor ((t (:background "hotpink"))))
+  ;; (highlight ((t (:background "blue4"))))
+  ;; (minibuffer-prompt ((t (:foreground "grey80"))))
+  ;; (mode-line-inactive ((t (:background "grey50"))))
+  ;; (nobreak-space ((t nil)))
+  ;; (variable-pitch ((t (:height 1.2 :family "Bookerly"))))
+
+  :init
+  (setq disabled-command-function nil) ;; enable all commands
+
+  :config
+  (add-hook 'after-save-hook
+            #'executable-make-buffer-file-executable-if-script-p)
+
+  (define-key input-decode-map [?\C-m] [C-m])
+
+  ;; Setup keymaps that are bound into by many declarations below.
+
+  (eval-and-compile
+    (mapc #'(lambda (entry)
+              (define-prefix-command (cdr entry))
+              (bind-key (car entry) (cdr entry)))
+          '(("C-,"   . my-ctrl-comma-map)
+            ("<C-m>" . my-ctrl-m-map)
+            ("C-h e" . my-ctrl-h-e-map)
+            ("C-h x" . my-ctrl-h-x-map)
+            ("C-c b" . my-ctrl-c-b-map)
+            ("C-c e" . my-ctrl-c-e-map)
+            ("C-c i" . my-ctrl-c-i-map)
+            ("C-c m" . my-ctrl-c-m-map)
+            ("C-c n" . my-ctrl-c-n-map)
+            ("C-c t" . my-ctrl-c-t-map)
+            ("C-c w" . my-ctrl-c-w-map)
+            ("C-c y" . my-ctrl-c-y-map)
+            ("C-c H" . my-ctrl-c-H-map)
+            ("C-c N" . my-ctrl-c-N-map)
+            ("C-c (" . my-ctrl-c-open-paren-map)
+            ("C-c -" . my-ctrl-c-minus-map)
+            ("C-c =" . my-ctrl-c-equals-map)
+            ("C-c ." . my-ctrl-c-dot-map)))))
 
 (setq
  echo-keystrokes              0.5 ; minibuffer echo delay (default 1 sec)
@@ -250,16 +484,15 @@ Meant to be added to `occur-hook'."
  scroll-conservatively      10000 ; Max lines to scroll to recenter point
  scroll-preserve-screen-position t ; Max lines to scroll to recenter point
  search-whitespace-regexp   ".*?" ; regex for whitespace in search term
- auto-window-vscroll            t      ; Adjust scroll for tall glyphs
- epg-pinentry-mode      'loopback      ; ask in emacs
- auto-revert-verbose          nil      ; Be quiet about reverts
- disabled-command-function    nil      ; Enable disabled commands
- display-time-24hr-format       t      ; 24 hour time format
- eshell-hist-ignoredups         t      ; Ignore duplicate history
- eshell-history-size         1000      ; Lengthen Eshell history
- inhibit-startup-screen         t      ; No startup screen
- inhibit-startup-message        t      ; No startup message
- password-cache-expiry        nil      ; Cache TRAMP passwords forever
+ auto-window-vscroll            t ; Adjust scroll for tall glyphs
+ auto-revert-verbose          nil ; Be quiet about reverts
+ disabled-command-function    nil ; Enable disabled commands
+ display-time-24hr-format       t ; 24 hour time format
+ eshell-hist-ignoredups         t ; Ignore duplicate history
+ eshell-history-size         1000 ; Lengthen Eshell history
+ inhibit-startup-screen         t ; No startup screen
+ inhibit-startup-message        t ; No startup message
+ password-cache-expiry        nil ; Cache TRAMP passwords forever
  sentence-end-double-space    nil
  save-place-file "~/.emacs.d/saved-point-places"
  delete-old-versions            t      ; Delete without asking
@@ -293,7 +526,2314 @@ Meant to be added to `occur-hook'."
 
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
-(load dot-org)
+;; (load dot-org)
+(message "starting dot-org")
+
+;; (add-to-list 'load-path "/var/sharedelpa/stra;; ight/build/org")
+
+;; (load "/var/sharedelpa/straight/build/org/org.el")
+;; (require 'org)
+
+(use-package org
+  :mode ("\\.org" . org-mode)
+  :bind (;; ("M-C"   . jump-to-org-agenda)
+         ;; ("C-c o c" . org-capture)
+;;; overloaded
+         ;; ("M-M"   . org-inline-note)
+         ;; ("C-c a" . org-agenda)
+         ;; ("C-c C-h" . org-babel-remove-result)
+         ("C-c S" . org-store-link)
+         ;; ("C-c o l" . org-insert-link)
+         )
+
+  ;;agenda  (require 'org-agenda)
+  :config
+  (defface org-dont-underline-indents '((t :underline nil))
+    "Avoid underlining of indentation.")
+
+  (defun org-dont-underline-indents ()
+    "Remove underlining at indents."
+    (add-to-list 'org-font-lock-extra-keywords
+                 '("^[[:space:]]+" 0 'org-dont-underline-indents t) 'append))
+
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
+  (add-hook 'org-font-lock-set-keywords-hook
+            #'org-dont-underline-indents 'append)
+  (add-to-list 'auto-insert-alist
+               '(("\\.org\\'" . "Org mode")
+                 . ["snippet.org" autoinsert-yas-expand]))
+  ;; (progn
+  ;;   ;; Set up blog for export as an Org-mode project.
+  ;;   ;; (setq org-publish-project-alist
+  ;;   ;;       '(("blog"
+  ;;   ;;          :base-directory "~/.emacs.d/posts/"
+  ;;   ;;          :publishing-directory "~/src/blog/_posts/"
+  ;;   ;;          :base-extension "org"
+  ;;   ;;          :sub-superscript ""
+  ;;   ;;          :toc nil
+  ;;   ;;          :publishing-function org-html-publish-to-html
+  ;;   ;;          :html-extension "html"
+  ;;   ;;          :body-only t)))
+
+  (org-display-inline-images t t)
+
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (shell . t)))
+
+  (defadvice org-babel-execute-src-block (around load-language nil activate)
+    "Load language if needed"
+    (let ((language (org-element-property :language (org-element-at-point))))
+      (unless (cdr (assoc (intern language) org-babel-load-languages))
+        (add-to-list 'org-babel-load-languages (cons (intern language) t))
+        (org-babel-do-load-languages 'org-babel-load-languages
+                                     org-babel-load-languages))
+      ad-do-it))
+
+  ;;   ;; (org-babel-do-load-languages
+  ;;   ;;  'org-babel-load-languages
+  ;;   ;;  '((awk . t)
+  ;;   ;;    (C . t)
+  ;;   ;;    (calc . t)
+  ;;   ;;    (clojure . t)
+  ;;   ;;    (css . t)
+  ;;   ;;    (gnuplot . t)
+  ;;   ;;    (emacs-lisp . t)
+  ;;   ;;    (haskell . t)
+  ;;   ;;    (java . t)
+  ;;   ;;    (js . t)
+  ;;   ;;    (latex . t)
+  ;;   ;;    (makefile . t)
+  ;;   ;;    (org . t)
+  ;;   ;;    (perl . t)
+  ;;   ;;    (python . t)
+  ;;   ;;    (ruby . t)
+  ;;   ;;    (scala . t)
+  ;;   ;;    (sed . t)
+  ;;   ;;    (sh . t)
+  ;;   ;;    (shell . t)
+  ;;   ;;    (sql . t)
+  ;;   ;;    (ditaa . t)))
+
+  ;;   ;;   (setq org-default-notes-file
+  ;;   ;;         (concat (expand-file-name "notes.org" projectile-project-name)))
+
+  ;;   (defun org-meta-return-around (org-fun &rest args)
+  ;;     "Run `ober-eval-in-repl' if in source code block,
+  ;;   `ober-eval-block-in-repl' if at header,
+  ;;   and `org-meta-return' otherwise."
+  ;;     (if (org-in-block-p '("src"))
+  ;;         (let* ((point (point))
+  ;;                (element (org-element-at-point))
+  ;;                (area (org-src--contents-area element))
+  ;;                (beg (copy-marker (nth 0 area))))
+  ;;           (if (< point beg)
+  ;;               (ober-eval-block-in-repl)
+  ;;             (ober-eval-in-repl)))
+  ;;       (apply org-fun args)))
+  ;;   (advice-add 'org-meta-return :around #'org-meta-return-around)
+
+  ;;   (defadvice org-edit-src-code (around set-buffer-file-name activate compile)
+  ;;     (let ((file-name (buffer-file-name)))
+  ;;       ad-do-it
+  ;;       (setq buffer-file-name file-name)))
+
+  ;;   (setq org-use-fast-todo-selection t)
+  ;;   (setq org-treat-S-cursor-todo-selection-as-state-change nil)
+  ;;   (setq org-todo-state-tags-triggers
+  ;;         (quote (("CANCELLED" ("CANCELLED" . t))
+  ;;                 ("WAITING" ("WAITING" . t))
+  ;;                 ("HOLD" ("WAITING") ("HOLD" . t))
+  ;;                 (done ("WAITING") ("HOLD"))
+  ;;                 ("TODO" ("WAITING") ("CANCELLED") ("HOLD"))
+  ;;                 ("NEXT" ("WAITING") ("CANCELLED") ("HOLD"))
+  ;;                 ("DONE" ("WAITING") ("CANCELLED") ("HOLD")))))
+
+  ;;   (if (string-match "\\.elc\\'" load-file-name)
+  ;;       (add-hook 'after-init-hook
+  ;;                 #'(lambda ()
+  ;;                     (org-agenda-list)
+  ;;                     (org-fit-agenda-window)
+  ;;                     (org-resolve-clocks))) t))
+
+  ;; org journal
+
+  (defhydra hydra-org (:color blue :timeout 12 :columns 4)
+    "Org commands"
+    ("i" (lambda () (interactive) (org-clock-in '(4))) "Clock in")
+    ("o" org-clock-out "Clock out")
+    ("q" org-clock-cancel "Cancel a clock")
+    ("<f10>" org-clock-in-last "Clock in the last task")
+    ("j" (lambda () (interactive) (org-clock-goto '(4))) "Go to a clock")
+    ("m" make-this-message-into-an-org-todo-item "Flag and capture this message"))
+  (global-set-key (kbd "<f10>") 'hydra-org/body)
+
+  (defun get-journal-file-today ()
+    "Return filename for today's journal entry."
+    (let ((daily-name (format-time-string "%Y%m%d")))
+      (expand-file-name (concat org-journal-dir daily-name))))
+
+  (defun journal-file-today ()
+    "Create and load a journal file based on today's date."
+    (interactive)
+    (find-file (get-journal-file-today)))
+
+  (defun get-journal-file-yesterday ()
+    "Return filename for yesterday's journal entry."
+    (let ((daily-name
+           (format-time-string "%Y%m%d"
+                               (time-subtract
+                                (current-time) (days-to-time 1)))))
+      (expand-file-name (concat org-journal-dir daily-name))))
+
+  (defun journal-file-yesterday ()
+    "Creates and load a file based on yesterday's date."
+    (interactive)
+    (find-file (get-journal-file-yesterday)))
+
+  (defun journal-last-year-file ()
+    "Returns the string corresponding to the journal entry that
+    happened 'last year' at this same time (meaning on the same day
+    of the week)."
+    (let* ((last-year-seconds (- (float-time) (* 365 24 60 60)))
+           (last-year (seconds-to-time last-year-seconds))
+           (last-year-dow (nth 6 (decode-time last-year)))
+           (this-year-dow (nth 6 (decode-time)))
+           (difference (if (> this-year-dow last-year-dow)
+                           (- this-year-dow last-year-dow)
+                         (- last-year-dow this-year-dow)))
+           (target-date-seconds (+ last-year-seconds (* difference 24 60 60)))
+           (target-date (seconds-to-time target-date-seconds)))
+      (format-time-string "%Y%m%d" target-date)))
+
+  (defun journal-last-year ()
+    "Loads last year's journal entry, which is not necessary the
+    same day of the month, but will be the same day of the week."
+    (interactive)
+    (let ((journal-file (concat org-journal-dir (journal-last-year-file))))
+      (find-file journal-file)))
+
+  (use-package org-pomodoro
+    :disabled t
+    :commands org-pomodoro
+    :init
+    (progn
+      (setq org-pomodoro-audio-player "/usr/bin/play")))
+
+
+  (defun my/remove-empty-drawer-on-clock-out ()
+    (interactive)
+    (save-excursion
+      (beginning-of-line 0)
+      (org-remove-empty-drawer-at "LOGBOOK" (point))))
+
+  (add-hook 'org-clock-out-hook 'my/remove-empty-drawer-on-clock-out 'append)
+
+  (defun my/org-insert-link ()
+    (interactive)
+    (when (org-in-regexp org-bracket-link-regexp 1)
+      (goto-char (match-end 0))
+      (insert "\n"))
+    (call-interactively 'org-insert-link))
+
+  (defadvice org-refile-get-location (before clear-refile-history activate)
+    "Fit the Org Agenda to its buffer."
+    (setq org-refile-history nil))
+
+  (defun org-get-global-property (name)
+    "Get property by NAME in current file."
+    (save-excursion
+      (goto-char (point-min))
+      (and (re-search-forward (concat "#\\+PROPERTY: " name " \\(.*\\)") nil t)
+           (match-string 1))))
+
+  (defun org-todo-age-time (&optional pos)
+    "Calculate time since CREATED property (at current or POS."
+    (let ((stamp (org-entry-get (or pos (point)) "CREATED" t)))
+      (when stamp
+        (time-subtract (current-time)
+                       (org-time-string-to-time
+                        (org-entry-get (or pos (point)) "CREATED" t))))))
+
+  (defun org-todo-age (&optional pos)
+    "Human-friendly age of item at point (or POS)."
+    (let ((days (time-to-number-of-days (org-todo-age-time pos))))
+      (cond
+       ((< days 1)   "today")
+       ((< days 7)   (format "%dd" days))
+       ((< days 30)  (format "%.1fw" (/ days 7.0)))
+       ((< days 358) (format "%.1fM" (/ days 30.0)))
+       (t            (format "%.1fY" (/ days 365.0))))))
+
+  (defun org-compare-todo-age (a b)
+    "Compare ages of A and B: -1, 0 (equal), 1."
+    (let ((time-a (org-todo-age-time (get-text-property 0 'org-hd-marker a)))
+          (time-b (org-todo-age-time (get-text-property 0 'org-hd-marker b))))
+      (if (time-less-p time-a time-b)
+          -1
+        (if (equal time-a time-b)
+            0
+          1))))
+
+  ;; (defun org-my-message-open (message-id)
+  ;;   "MESSAGE-ID."
+  ;;   (if (get-buffer "*Group*")
+  ;;       (gnus-goto-article
+  ;;        (gnus-string-remove-all-properties (substring message-id 2)))
+  ;;     (error "Gnus is not running")))
+
+  ;; (add-to-list 'org-link-protocols (list "message" 'org-my-message-open nil))
+
+  (defun save-org-mode-files ()
+    "Save all org files."
+    (dolist (buf (buffer-list))
+      (with-current-buffer buf
+        (when (eq major-mode 'org-mode)
+          (if (and (buffer-modified-p) (buffer-file-name))
+              (save-buffer))))))
+
+  (run-with-idle-timer 25 t 'save-org-mode-files)
+
+  (defun my-org-push-mobile ()
+    (interactive)
+    (with-current-buffer (find-file-noselect "~/Documents/tasks/todo.org")
+      (org-mobile-push)))
+
+  (eval-when-compile
+    (defvar org-clock-current-task)
+    (defvar org-mobile-directory)
+    (defvar org-mobile-capture-file))
+
+  (defun quickping (host)
+    (= 0 (call-process "ping" nil nil nil "-c1" "-W50" "-q" host)))
+
+  (defun org-my-auto-exclude-function (tag)
+    (and (cond
+          ((string= tag "call")
+           (let ((hour (nth 2 (decode-time))))
+             (or (< hour 8) (> hour 21))))
+          ((string= tag "errand")
+           (let ((hour (nth 2 (decode-time))))
+             (or (< hour 12) (> hour 17))))
+          ((or (string= tag "home") (string= tag "nasim"))
+           (with-temp-buffer
+             (call-process "ifconfig" nil t nil "en0" "inet")
+             (call-process "ifconfig" nil t nil "en1" "inet")
+             (call-process "ifconfig" nil t nil "bond0" "inet")
+             (goto-char (point-min))
+             (not (re-search-forward "inet 192\\.168\\.1\\." nil t))))
+          ((string= tag "net")
+           (not (quickping "imap.fastmail.com")))
+          ((string= tag "fun")
+           org-clock-current-task))
+         (concat "-" tag)))
+
+  (defun my-mobileorg-convert ()
+    (interactive)
+    (while (re-search-forward "^\\* " nil t)
+      (goto-char (match-beginning 0))
+      (insert ?*)
+      (forward-char 2)
+      (insert "TODO ")
+      (goto-char (line-beginning-position))
+      (forward-line)
+      (re-search-forward "^\\[")
+      (goto-char (match-beginning 0))
+      (let ((uuid
+             (save-excursion
+               (re-search-forward "^\\*\\* Note ID: \\(.+\\)")
+               (prog1
+                   (match-string 1)
+                 (delete-region (match-beginning 0)
+                                (match-end 0))))))
+        ;; (insert (format "SCHEDULED: %s\n:PROPERTIES:\n"
+        ;;                 (format-time-string (org-time-stamp-format))))
+        (insert ":PROPERTIES:\n")
+        (insert (format ":ID:       %s\n:CREATED:  " uuid)))
+      (forward-line)
+      (insert ":END:")))
+
+  (defun my-org-convert-incoming-items ()
+    (interactive)
+    (with-current-buffer
+        (find-file-noselect (expand-file-name org-mobile-capture-file
+                                              org-mobile-directory))
+      (goto-char (point-min))
+      (unless (eobp)
+        (my-mobileorg-convert)
+        (goto-char (point-max))
+        (if (bolp)
+            (delete-char -1))
+        (let ((tasks (buffer-string)))
+          (set-buffer-modified-p nil)
+          (kill-buffer (current-buffer))
+          (with-current-buffer (find-file-noselect "~/Documents/tasks/todo.org")
+            (save-excursion
+              (goto-char (point-min))
+              (re-search-forward "^\\* Inbox$")
+              (re-search-forward "^:END:")
+              (forward-line)
+              (goto-char (line-beginning-position))
+              (if (and tasks (> (length tasks) 0))
+                  (insert tasks ?\n))))))))
+
+  (defun my-org-mobile-pre-pull-function ()
+    (my-org-convert-incoming-items))
+
+  (add-hook 'org-mobile-pre-pull-hook 'my-org-mobile-pre-pull-function)
+
+  (defun org-my-state-after-clock-out (state)
+    (if (string= state "STARTED") "TODO" state))
+
+  (defvar org-my-archive-expiry-days 9
+    "The number of days after which a completed task should be auto-archived.
+This can be 0 for immediate, or a floating point value.")
+
+  (defconst org-my-ts-regexp
+    "[[<]\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} [^]>\r\n]*?\\)[]>]"
+    "Regular expression for fast inactive time stamp matching.")
+
+  (defun org-my-closing-time ()
+    (let* ((state-regexp
+            (concat "- State \"\\(?:" (regexp-opt org-done-keywords)
+                    "\\)\"\\s-*\\[\\([^]\n]+\\)\\]"))
+           (regexp (concat "\\(" state-regexp "\\|" org-my-ts-regexp "\\)"))
+           (end (save-excursion
+                  (outline-next-heading)
+                  (point)))
+           begin
+           end-time)
+      (goto-char (line-beginning-position))
+      (while (re-search-forward regexp end t)
+        (let ((moment (org-parse-time-string (match-string 1))))
+          (if (or (not end-time)
+                  (time-less-p (apply #'encode-time end-time)
+                               (apply #'encode-time moment)))
+              (setq end-time moment))))
+      (goto-char end)
+      end-time))
+
+  (defun org-archive-expired-tasks ()
+    (interactive)
+    (save-excursion
+      (goto-char (point-min))
+      (let ((done-regexp
+             (concat "^\\*\\* \\(" (regexp-opt org-done-keywords) "\\) ")))
+        (while (re-search-forward done-regexp nil t)
+          (if (>= (time-to-number-of-days
+                   (time-subtract (current-time)
+                                  (apply #'encode-time (org-my-closing-time))))
+                  org-my-archive-expiry-days)
+              (org-archive-subtree))))
+      (save-buffer)))
+
+  (defalias 'archive-expired-tasks 'org-archive-expired-tasks)
+
+  (defun org-archive-done-tasks ()
+    (interactive)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward "\* \\(DONE\\|CANCELED\\) " nil t)
+        (if (save-restriction
+              (save-excursion
+                (org-narrow-to-subtree)
+                (search-forward ":LOGBOOK:" nil t)))
+            (forward-line)
+          (org-archive-subtree)
+          (goto-char (line-beginning-position))))))
+
+  (defalias 'archive-done-tasks 'org-archive-done-tasks)
+
+  (defun org-get-inactive-time ()
+    (float-time (org-time-string-to-time
+                 (or (org-entry-get (point) "TIMESTAMP")
+                     (org-entry-get (point) "TIMESTAMP_IA")
+                     (debug)))))
+
+  (defun org-get-completed-time ()
+    (let ((begin (point)))
+      (save-excursion
+        (outline-next-heading)
+        (and (re-search-backward
+              (concat "\\(- State \"\\(DONE\\|DEFERRED\\|CANCELED\\)\""
+                      "\\s-+\\[\\(.+?\\)\\]\\|CLOSED: \\[\\(.+?\\)\\]\\)")
+              begin t)
+             (float-time (org-time-string-to-time (or (match-string 3)
+                                                      (match-string 4))))))))
+
+  (defun org-sort-done-tasks ()
+    (interactive)
+    (goto-char (point-min))
+    (org-sort-entries t ?F #'org-get-inactive-time #'<)
+    (goto-char (point-min))
+    (while (re-search-forward "
++" nil t)
+      (delete-region (match-beginning 0) (match-end 0))
+      (insert "
+"))
+    (let (after-save-hook)
+      (save-buffer))
+    (org-overview))
+
+  (defalias 'sort-done-tasks 'org-sort-done-tasks)
+
+  (defun org-sort-all ()
+    (interactive)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward "^\* " nil t)
+        (goto-char (match-beginning 0))
+        (condition-case err
+            (progn
+              ;; (org-sort-entries t ?a)
+              (org-sort-entries t ?p)
+              (org-sort-entries t ?o))
+          (error nil))
+        (forward-line))
+      (goto-char (point-min))
+      (while (re-search-forward "\* PROJECT " nil t)
+        (goto-char (line-beginning-position))
+        (ignore-errors
+          ;; (org-sort-entries t ?a)
+          (org-sort-entries t ?p)
+          (org-sort-entries t ?o))
+        (forward-line))))
+
+  (defun org-cleanup ()
+    (interactive)
+    (org-archive-expired-tasks)
+    (org-sort-all))
+
+  (defvar my-org-wrap-region-history nil)
+
+  (defun my-org-wrap-region (&optional arg)
+    (interactive "P")
+    (save-excursion
+      (goto-char (region-end))
+      (if arg
+          (insert "#+end_src\n")
+        (insert ":END:\n"))
+      (goto-char (region-beginning))
+      (if arg
+          (insert "#+begin_src "
+                  (read-string "Language: " nil 'my-org-wrap-region-history)
+                  ?\n)
+        (insert ":OUTPUT:\n"))))
+
+  ;; (defun org-get-message-link (&optional title)
+  ;;   (let (message-id subject)
+  ;;     (with-current-buffer gnus-original-article-buffer
+  ;;       (setq message-id (substring (message-field-value "message-id") 1 -1)
+  ;;             subject (or title (message-field-value "subject"))))
+  ;;     (org-make-link-string (concat "message://" message-id)
+  ;;                           (rfc2047-decode-string subject))))
+
+  (defun org-insert-message-link (&optional arg)
+    (interactive "P")
+    (insert (org-get-message-link (if arg "writes"))))
+
+  (defun org-set-message-link ()
+    "Set a property for the current headline."
+    (interactive)
+    (org-set-property "Message" (org-get-message-link)))
+
+  (defun org-get-message-sender ()
+    (let (message-id subject)
+      (with-current-buffer gnus-original-article-buffer
+        (message-field-value "from"))))
+
+  (defun org-set-message-sender ()
+    "Set a property for the current headline."
+    (interactive)
+    (org-set-property "Submitter" (org-get-message-sender)))
+
+  (defun org-get-safari-link ()
+    (let ((subject (substring (do-applescript
+                               (string-to-multibyte "tell application \"Safari\"
+        name of document of front window
+end tell")) 1 -1))
+          (url (substring (do-applescript
+                           (string-to-multibyte "tell application \"Safari\"
+        URL of document of front window
+end tell")) 1 -1)))
+      (org-make-link-string url subject)))
+
+  (defun org-get-chrome-link ()
+    (let ((subject (do-applescript
+                    (string-to-multibyte "tell application \"Google Chrome\"
+        title of active tab of front window
+end tell")))
+          (url (do-applescript
+                (string-to-multibyte "tell application \"Google Chrome\"
+        URL of active tab of front window
+end tell"))))
+      (org-make-link-string (substring url 1 -1) (substring subject 1 -1))))
+
+  (defun org-insert-url-link ()
+    (interactive)
+    (insert (org-get-safari-link)))
+
+  (defun org-set-url-link ()
+    "Set a property for the current headline."
+    (interactive)
+    (org-set-property "URL" (org-get-safari-link)))
+
+  (defun org-get-file-link ()
+    (let* ((subject (do-applescript "tell application \"Path Finder\"
+     set theItems to the selection
+     name of beginning of theItems
+end tell"))
+           (path (do-applescript "tell application \"Path Finder\"
+     set theItems to the selection
+     (POSIX path of beginning of theItems) as text
+end tell"))
+           (short-path
+            (replace-regexp-in-string abbreviated-home-dir "~/"
+                                      (substring path 1 -1))))
+      (org-make-link-string (concat "file:" short-path)
+                            (substring subject 1 -1))))
+
+  (defun org-insert-file-link ()
+    (interactive)
+    (insert (org-get-file-link)))
+
+  (defun org-set-file-link ()
+    "Set a property for the current headline."
+    (interactive)
+    (org-set-property "File" (org-get-file-link)))
+
+  (defun org-set-dtp-link ()
+    "Set a property for the current headline."
+    (interactive)
+    (org-set-property "Document" (org-get-dtp-link)))
+
+  (defun org-dtp-message-open ()
+    "Visit the message with the given MESSAGE-ID.
+This will use the command `open' with the message URL."
+    (interactive)
+    (re-search-backward "\\[\\[message://\\(.+?\\)\\]\\[")
+    (do-applescript
+     (format "tell application \"DEVONthink Pro\"
+        set searchResults to search \"%%3C%s%%3E\" within URLs
+        open window for record (get beginning of searchResults)
+end tell" (match-string 1))))
+
+  (add-hook 'org-log-buffer-setup-hook
+            (lambda ()
+              (setq fill-column (- fill-column 5))))
+
+  (defun org-message-reply ()
+    (interactive)
+    (let* ((org-marker (get-text-property (point) 'org-marker))
+           (author (org-entry-get (or org-marker (point)) "Author"))
+           (subject (if org-marker
+                        (with-current-buffer (marker-buffer org-marker)
+                          (goto-char org-marker)
+                          (nth 4 (org-heading-components)))
+                      (nth 4 (org-heading-components)))))
+      (setq subject (replace-regexp-in-string "\\`(.*?) " "" subject))
+      (compose-mail-other-window author (concat "Re: " subject)))) ;
+
+  ;;Allow hyphenated abbrev names. Unintentional comedy to follow
+  (abbrev-table-put org-mode-abbrev-table
+                    :regexp "\\_<\\(\\w+\\(-\\w+\\)*\\)?\\W*")
+
+  (defvar repos-build-roots '("~" "/var/shared-elpa/straight/repos"))
+  (defvar repos-project-markers '(".git"))
+
+  (defun org-make-repo-url-abbrevs ()
+    "Add abbrevs which expand to links for all local repositories."
+    (interactive)
+    (dolist (f (f-glob "~/*/.git"))
+      (let ((e (nth 1 (reverse (f-split f)))))
+        (define-abbrev org-mode-abbrev-table
+          e (concat "[["
+                    (save-match-data
+                      (with-temp-buffer
+                        (insert-file-contents (concat (file-name-as-directory f)
+                                                      "config"))
+                        (re-search-forward
+                         "^\\W*url\\s-*=\\s-*\\(.*\\)\\.git\\s-")
+                        (match-string 1)))
+                    "][" e "]]")))))
+
+  (remove-hook 'kill-emacs-hook 'org-babel-remove-temporary-directory)
+
+
+  (defun org-refile-heading-p ()
+    (let ((heading (org-get-heading)))
+      (not (string-match "Colophon" heading))))
+
+  (defun org-inline-note ()
+    (interactive)
+    (switch-to-buffer-other-window "notes.org")
+    (goto-char (point-min))
+    (forward-line)
+    (goto-char (line-beginning-position))
+    (insert "* NOTE ")
+    (save-excursion
+      (insert (format "\n:PROPERTIES:\n:ID:       %s\n:CREATED:  %s\n:END:\n"
+                      (substring (shell-command-to-string "uuidgen") 0 -1)
+                      (format-time-string (org-time-stamp-format t t)))))
+    (save-excursion
+      (forward-line)
+      (org-cycle)))
+
+  :custom
+  (org-src-window-setup 'current-window)
+  (org-use-speed-commands t)
+  (org-src-fontify-natively t)           ;; better looking source code
+  (org-return-follows-link t)            ;; make RET follow links
+  (org-list-allow-alphabetical t)        ;; allow alphabetical list
+  (org-hide-emphasis-markers t)          ;; hide markers
+  (org-pretty-entities t)                ;; make latex look good
+  (org-fontify-quote-and-verse-blocks t) ;; make quotes stand out
+  (org-table-export-default-format "orgtbl-to-csv") ;; export for
+  ;; org-tables to csv
+  (org-ellipsis "↷")               ;; nicer elipses "↴" "▼"
+  (org-confirm-babel-evaluate nil) ;; evaluate src block without confirmation
+  (org-src-tab-acts-natively t)    ;; indent for src code natively
+  (org-src-preserve-indentation nil)
+  (org-edit-src-content-indentation t)
+  (org-imenu-depth 8)
+  (org-src-window-setup 'plain)
+  (imenu-auto-rescan t)
+  (org-plantuml-jar-path (expand-file-name "/usr/share/java/plantuml.jar"))
+  (org-M-RET-may-split-line '((headline) (default . t)))
+  (org-adapt-indentation t)
+  (org-archive-location "TODO-archive::")
+  (org-archive-save-context-info '(time category itags))
+  (org-attach-file-list-property nil)
+  (org-attach-method 'mv)
+  (org-attach-store-link-p 'attached)
+  (org-author-transforms '(("^Howard Reubenstein$" . "Howard")))
+  (org-beamer-frame-default-options "fragile")
+  (org-capture-templates
+   '(("a" "Add Task" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* TODO %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("n" "Note" entry
+      (file "~/doc/tasks/notes.org")
+      "* NOTE %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("c" "Calendar" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* APPT %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("t" "Add Task" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* TODO %?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)
+     ("p" "Protocol" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* NOTE %?
+#+BEGIN_QUOTE
+%i
+#+END_QUOTE
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:URL:      %c
+:END:")
+     ("L" "Protocol Link" entry
+      (file+headline "~/doc/tasks/todo.org" "Inbox")
+      "* NOTE %?
+[[%:link][%:description]]
+#+BEGIN_QUOTE
+%i
+#+END_QUOTE
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:URL:      %c
+:END:")
+     ("j" "Journal entry" entry
+      (file+datetree "~/dfinity/docs/dfinity.org")
+      "* %?")))
+  (org-clock-clocked-in-display nil)
+  (org-clock-idle-time 10)
+  (org-clock-in-resume t)
+  (org-clock-in-switch-to-state "STARTED")
+  (org-clock-into-drawer "LOGBOOK")
+  (org-clock-mode-line-total 'current)
+  (org-clock-out-remove-zero-time-clocks t)
+  (org-clock-out-switch-to-state nil)
+  (org-clock-persist t)
+  (org-clock-persist-file "~/.emacs.d/data/org-clock-save.el")
+  (org-clock-resolve-expert t)
+  (org-completion-use-ido t)
+  (org-confirm-babel-evaluate nil)
+  (org-confirm-elisp-link-function nil)
+  (org-confirm-shell-link-function nil)
+  (org-crypt-disable-auto-save t)
+  (org-crypt-key "0xAB37611BDDE48EBD")
+  (org-cycle-global-at-bob t)
+  (org-deadline-warning-days 14)
+  (org-default-notes-file "~/doc/tasks/todo.org")
+  (org-depend-tag-blocked nil)
+  (org-directory "~/doc/tasks/")
+  (org-ditaa-jar-path "~/.nix-profile/lib/ditaa.jar")
+  (org-drawers '("PROPERTIES" "CLOCK" "LOGBOOK" "OUT"))
+  (org-edit-src-content-indentation 0)
+  (org-enforce-todo-dependencies t)
+  (org-export-babel-evaluate nil)
+  (org-export-latex-classes
+   '(("article" "\\documentclass[11pt]{article}"
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+      ("\\paragraph{%s}" . "\\paragraph*{%s}")
+      ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+     ("linalg" "\\documentclass{article}
+\\usepackage{linalgjh}
+[DEFAULT-PACKAGES]
+[EXTRA]
+[PACKAGES]"
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+      ("\\paragraph{%s}" . "\\paragraph*{%s}")
+      ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+     ("report" "\\documentclass[11pt]{report}"
+      ("\\part{%s}" . "\\part*{%s}")
+      ("\\chapter{%s}" . "\\chapter*{%s}")
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))
+     ("book" "\\documentclass[11pt]{book}"
+      ("\\part{%s}" . "\\part*{%s}")
+      ("\\chapter{%s}" . "\\chapter*{%s}")
+      ("\\section{%s}" . "\\section*{%s}")
+      ("\\subsection{%s}" . "\\subsection*{%s}")
+      ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))
+     ("beamer" "\\documentclass{beamer}" org-beamer-sectioning)))
+  (org-extend-today-until 4)
+  (org-fast-tag-selection-single-key 'expert)
+  (org-fontify-done-headline t)
+  (org-fontify-quote-and-verse-blocks t)
+  (org-fontify-whole-heading-line t)
+  (org-footnote-section nil)
+  (org-hide-emphasis-markers t)
+  (org-hide-leading-stars t)
+  (org-icalendar-combined-agenda-file "~/doc/tasks/org.ics")
+  (org-icalendar-timezone "America/Los_Angeles")
+  (org-id-locations-file "~/.emacs.d/data/org-id-locations")
+  (org-image-actual-width nil)
+  (org-imenu-depth 4)
+  (org-insert-heading-respect-content t)
+  (org-irc-link-to-logs t t)
+  (org-latex-default-packages-alist
+   '(("T1" "fontenc" t)
+     ("" "fixltx2e" nil)
+     ("" "graphicx" t)
+     ("" "longtable" nil)
+     ("" "float" nil)
+     ("" "wrapfig" nil)
+     ("" "rotating" nil)
+     ("normalem" "ulem" t)
+     ("" "amsmath" t)
+     ("" "textcomp" t)
+     ("" "marvosym" t)
+     ("" "wasysym" t)
+     ("" "amssymb" t)
+     ("" "hyperref" nil)
+     "\\tolerance=1000"))
+  (org-latex-listings 'minted)
+  (org-latex-minted-options
+   '(("fontsize" "\\footnotesize")
+     ("linenos" "true")
+     ("xleftmargin" "0em")))
+  (org-latex-pdf-process
+   '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+  (org-mime-preserve-breaks nil)
+  (org-mobile-directory "~/Dropbox/Apps/MobileOrg")
+  (org-mobile-files '("~/doc/tasks/todo.org"))
+  (org-mobile-files-exclude-regexp "\\(TODO\\(-.*\\)?\\)\\'")
+  (org-mobile-inbox-for-pull "~/doc/tasks/from-mobile.org")
+  (org-mode-hook
+   (org-babel-result-hide-spec org-babel-hide-all-hashes abbrev-mode))
+  (org-modules ())
+  (org-pretty-entities t)
+  (org-priority-faces
+   '((65 :foreground "White" :weight bold)
+     (66 . "White")
+     (67 :foreground "dark gray" :slant italic)))
+  (org-refile-target-verify-function 'org-refile-heading-p)
+  (org-refile-targets '((org-agenda-files :todo . "PROJECT")))
+  (org-return-follows-link t)
+  (org-reverse-note-order t)
+  (org-smart-capture-use-lastname t)
+  (org-startup-indented t)
+  (org-src-fontify-natively t)
+  (org-src-tab-acts-natively t)
+  (org-stuck-projects '("TODO=\"PROJECT\"" ("TODO" "DEFERRED") nil ""))
+  (org-subject-transforms
+   '(("\\`\\(Re\\|Fwd\\): " . "")
+     ("\\`{ledger} " . "")
+     ("([Ww]as: .+)\\'" . "")
+     ("\\`\\[[a-z-]+\\] " . "")
+     ("\\`bug#\\([0-9]+\\):" . "[[x-debbugs-gnu:\\1][#\\1]]")))
+  (org-tags-column -97)
+  (org-time-clocksum-use-fractional t)
+  (org-todo-keyword-faces
+   '(("TODO" :foreground "medium blue" :weight bold)
+     ("EPIC" :foreground "deep sky blue" :weight bold)
+     ("STORY" :foreground "royal blue" :weight bold)
+     ("RECUR" :foreground "cornflowerblue" :weight bold)
+     ("APPT" :foreground "medium blue" :weight bold)
+     ("NOTE" :foreground "brown" :weight bold)
+     ("STARTED" :foreground "dark orange" :weight bold)
+     ("WAITING" :foreground "red" :weight bold)
+     ("DELEGATED" :foreground "dark violet" :weight bold)
+     ("DEFERRED" :foreground "dark blue" :weight bold)
+     ("SOMEDAY" :foreground "dark blue" :weight bold)
+     ("PROJECT" :foreground "#088e8e" :weight bold)))
+  (org-todo-repeat-to-state "TODO")
+  (org-use-property-inheritance '("AREA"))
+  (org-use-speed-commands t)
+  (org-use-tag-inheritance nil)
+  (org-x-backends '(ox-org ox-redmine))
+  (org-x-redmine-title-prefix-function org-x-redmine-title-prefix)
+  (org-x-redmine-title-prefix-match-function org-x-redmine-title-prefix-match)
+  )
+
+(use-package org-agenda
+  :straight nil
+  :commands org-agenda-list
+  :bind* (("M-C"   . jump-to-org-agenda)
+          ("C-c a" . org-agenda))
+  :bind (:map
+         org-agenda-mode-map
+         (" "   . org-agenda-tree-to-indirect-buffer)
+         (">"   . org-agenda-filter-by-top-headline)
+         ("C-n" . next-line)
+         ("C-p" . previous-line)
+         ("F"   . org-agenda-follow-mode)
+         ("M-m")
+         ("M-n" . org-agenda-later)
+         ("M-p" . org-agenda-earlier)
+         ("b"   . org-agenda-date-earlier)
+         ("f"   . org-agenda-date-later)
+         ("g"   . org-agenda-redo)
+         ("q"   . bury-buffer)
+         ("x"   . org-agenda-todo)
+         ("w"   . org-agenda-refile)
+         ("z"   . pop-window-configuration))
+  :custom
+  (org-agenda-auto-exclude-function 'org-my-auto-exclude-function)
+  (org-agenda-cmp-user-defined 'org-compare-todo-age)
+  (org-agenda-compact-blocks t)
+  (org-agenda-custom-commands
+   '(("h" "Current Hotlist" alltodo ""
+      ((org-agenda-overriding-header "Current Hotlist")
+       (org-agenda-skip-function #'my-org-agenda-skip-all-siblings-but-first-hot)))
+     ("H" "Hot Projects" tags "HOT&TODO=\"PROJECT\""
+      ((org-agenda-overriding-header "Hot Projects")))
+     ("T" "Non-Hot Projects" tags "-HOT&TODO=\"PROJECT\""
+      ((org-agenda-overriding-header "Non-Hot Projects")))
+     ("n" "Project Next Actions" alltodo ""
+      ((org-agenda-overriding-header "Project Next Actions")
+       (org-agenda-skip-function #'my-org-agenda-skip-all-siblings-but-first)))
+     ("P" "All Projects" tags "TODO=\"PROJECT\""
+      ((org-agenda-overriding-header "All Projects")))
+     ("A" "Priority #A tasks" agenda ""
+      ((org-agenda-ndays 1)
+       (org-agenda-overriding-header "Today's priority #A tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'notregexp "\\=.*\\[#A\\]"))))
+     ("b" "Priority #A and #B tasks" agenda ""
+      ((org-agenda-ndays 1)
+       (org-agenda-overriding-header "Today's priority #A and #B tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'regexp "\\=.*\\[#C\\]"))))
+     ("r" "Uncategorized items" tags "CATEGORY=\"Inbox\"&LEVEL=2"
+      ((org-agenda-overriding-header "Uncategorized items")))
+     ("W" "Waiting/delegated tasks" tags "W-TODO=\"DONE\"|TODO={WAITING\\|DELEGATED}"
+      ((org-agenda-overriding-header "Waiting/delegated tasks:")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled))
+       (org-agenda-sorting-strategy
+        '(todo-state-up priority-down category-up))))
+     ("D" "Deadlined tasks" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT}"
+      ((org-agenda-overriding-header "Deadlined tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'notdeadline))
+       (org-agenda-sorting-strategy
+        '(category-up))))
+     ("S" "Scheduled tasks" tags "TODO<>\"\"&TODO<>{APPT\\|DONE\\|CANCELED\\|NOTE\\|PROJECT}&STYLE<>\"habit\""
+      ((org-agenda-overriding-header "Scheduled tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'notscheduled))
+       (org-agenda-sorting-strategy
+        '(category-up))))
+     ("o" "Unscheduled open source tasks (by project)" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT\\|CATEGORY}"
+      ((org-agenda-overriding-header "Unscheduled Open Source tasks (by project): ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp 'regexp "\\* \\(DEFERRED\\|SOMEDAY\\)"))
+       (org-agenda-sorting-strategy
+        '(category-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")
+       (org-agenda-files
+        '("~/doc/org/OSS.org"))))
+     ("u" "Unscheduled tasks" tags "TODO<>\"\"&TODO<>{DONE\\|CANCELED\\|NOTE\\|PROJECT\\|CATEGORY\\|DEFERRED\\|SOMEDAY}"
+      ((org-agenda-overriding-header "Unscheduled tasks: ")
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
+       (org-agenda-sorting-strategy
+        '(user-defined-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")
+       (org-agenda-files
+        '("~/doc/org/todo.org"))))
+     ("U" "Deferred tasks" tags "TODO=\"DEFERRED\""
+      ((org-agenda-overriding-header "Deferred tasks:")
+       (org-agenda-sorting-strategy
+        '(user-defined-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+     ("Y" "Someday tasks" tags "TODO=\"SOMEDAY\""
+      ((org-agenda-overriding-header "Someday tasks:")
+       (org-agenda-sorting-strategy
+        '(user-defined-up))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+     ("w" "Unscheduled work-related tasks" tags "TODO<>\"\"&TODO<>{DONE\\|DEFERRED\\|CANCELED\\|NOTE\\|PROJECT\\|CATEGORY}"
+      ((org-agenda-overriding-header "Unscheduled work-related tasks")
+       (org-agenda-files
+        '("~/kadena/docs/kadena.org"))
+       (org-agenda-sorting-strategy
+        '(category-up user-defined-up))
+       (org-agenda-skip-function
+        '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
+       (org-agenda-prefix-format "%-11c%5(org-todo-age) ")))
+     ("c" "Appointment Calendar" agenda ""
+      ((org-agenda-overriding-header "Appointment Calendar")
+       (org-agenda-sorting-strategy
+        '(time-up))
+       (org-agenda-span 14)
+       (org-agenda-ndays 14)
+       (org-agenda-regexp-filter-preset
+        '("+APPT"))))
+     ("N" "Notes" tags "TODO=\"NOTE\""
+      ((org-agenda-overriding-header "Notes")))))
+  (org-agenda-deadline-leaders '("!D!: " "D%02d: " "D-%02d:"))
+  (org-agenda-default-appointment-duration 60)
+  (org-agenda-files
+   '("~/doc/org/todo.org"
+     "~/doc/org/habits.org"
+     "~/kadena/docs/kadena.org"
+     "~/doc/org/OSS.org"))
+  (org-agenda-fontify-priorities t)
+  (org-agenda-include-diary t)
+  (org-agenda-inhibit-startup t)
+  (org-agenda-log-mode-items '(closed clock state))
+  (org-agenda-ndays 1)
+  (org-agenda-persistent-filter t)
+  (org-agenda-prefix-format
+   '((agenda . "  %-11c%?-12t% s")
+     (timeline . "  % s")
+     (todo . "  %-11c%5(org-todo-age) ")
+     (tags . "  %-11c")))
+  (org-agenda-scheduled-leaders '("" "S%d: "))
+  (org-agenda-scheduled-relative-text "S%d: ")
+  (org-agenda-scheduled-text "")
+  (org-agenda-show-all-dates t)
+  (org-agenda-show-outline-path nil)
+  (org-agenda-skip-deadline-if-done t)
+  (org-agenda-skip-scheduled-if-deadline-is-shown t)
+  (org-agenda-skip-scheduled-if-done t)
+  (org-agenda-skip-unavailable-files t)
+  (org-agenda-sorting-strategy
+   '((agenda habit-down time-up todo-state-up priority-down)
+     (todo priority-down category-keep)
+     (tags priority-down category-keep)
+     (search category-keep)))
+  (org-agenda-span 'day)
+  (org-agenda-start-on-weekday nil)
+  (org-agenda-tags-column -100)
+  (org-agenda-tags-todo-honor-ignore-options t)
+  (org-agenda-text-search-extra-files '(agenda-archives))
+  (org-agenda-todo-ignore-scheduled 'past)
+  (org-agenda-use-time-grid nil)
+  (org-agenda-window-frame-fractions '(0.5 . 0.75))
+  :custom-face
+  (org-agenda-clocking ((t (:background "red2"))))
+  (org-agenda-done ((t (:foreground "ForestGreen"))))
+  :preface
+  (defun org-fit-agenda-window ()
+    "Fit the window to the buffer size."
+    (and (memq org-agenda-window-setup '(reorganize-frame))
+         (fboundp 'fit-window-to-buffer)
+         (fit-window-to-buffer)))
+
+  (defun jump-to-org-agenda ()
+    (interactive)
+    (push-window-configuration)
+    (cl-flet ((prep-window
+               (wind)
+               (with-selected-window wind
+                 (org-fit-window-to-buffer wind)
+                 (ignore-errors
+                   (window-resize
+                    wind
+                    (- 100 (window-width wind)) t)))))
+      (let ((buf (or (get-buffer "*Org Agenda*")
+                     (get-buffer "*Org Agenda(a)*"))))
+        (if buf
+            (let ((win (get-buffer-window buf)))
+              (if win
+                  (when (called-interactively-p 'any)
+                    (funcall #'prep-window win))
+                (if (called-interactively-p 'any)
+                    (funcall #'prep-window (display-buffer buf t t))
+                  (funcall #'prep-window (display-buffer buf)))))
+          (call-interactively 'org-agenda-list)
+          (funcall #'prep-window (selected-window))))))
+
+  (defun my-org-agenda-should-skip-p ()
+    "Skip all but the first non-done entry."
+    (let (should-skip-entry)
+      (unless (org-current-is-todo)
+        (setq should-skip-entry t))
+      (when (or (org-get-scheduled-time (point))
+                (org-get-deadline-time (point)))
+        (setq should-skip-entry t))
+      (when (/= (point)
+                (save-excursion
+                  (org-goto-first-child)
+                  (point)))
+        (setq should-skip-entry t))
+      (save-excursion
+        (while (and (not should-skip-entry) (org-goto-sibling t))
+          (when (and (org-current-is-todo)
+                     (not (org-get-scheduled-time (point)))
+                     (not (org-get-deadline-time (point))))
+            (setq should-skip-entry t))))
+      should-skip-entry))
+
+  (defun my-org-agenda-skip-all-siblings-but-first ()
+    "Skip all but the first non-done entry."
+    (when (my-org-agenda-should-skip-p)
+      (or (outline-next-heading)
+          (goto-char (point-max)))))
+
+  (defun my-org-current-tags (depth)
+    (save-excursion
+      (ignore-errors
+        (let (should-skip)
+          (while (and (> depth 0)
+                      (not should-skip)
+                      (prog1
+                          (setq depth (1- depth))
+                        (not (org-up-element))))
+            (if (looking-at "^\*+\\s-+")
+                (setq should-skip (org-get-tags))))
+          should-skip))))
+
+  (defun my-org-agenda-skip-all-siblings-but-first-hot ()
+    "Skip all but the first non-done entry."
+    (when (or (my-org-agenda-should-skip-p)
+              (not (member "HOT" (my-org-current-tags 1))))
+      (or (outline-next-heading)
+          (goto-char (point-max)))))
+
+  (defun org-agenda-add-overlays (&optional line)
+    "Add overlays found in OVERLAY properties to agenda items.
+Note that habitual items are excluded, as they already
+extensively use text properties to draw the habits graph.
+
+For example, for work tasks I like to use a subtle, yellow
+background color; for tasks involving other people, green; and
+for tasks concerning only myself, blue.  This way I know at a
+glance how different responsibilities are divided for any given
+day.
+
+To achieve this, I have the following in my todo file:
+
+  ,* Work
+  :PROPERTIES:
+  :CATEGORY: Work
+  :OVERLAY:  (face (:background \"#fdfdeb\"))
+  :END:
+  ,** TODO Task
+  ,* Family
+  :PROPERTIES:
+  :CATEGORY: Personal
+  :OVERLAY:  (face (:background \"#e8f9e8\"))
+  :END:
+  ,** TODO Task
+  ,* Personal
+  :PROPERTIES:
+  :CATEGORY: Personal
+  :OVERLAY:  (face (:background \"#e8eff9\"))
+  :END:
+  ,** TODO Task
+
+The colors (which only work well for white backgrounds) are:
+
+  Yellow: #fdfdeb
+  Green:  #e8f9e8
+  Blue:   #e8eff9
+
+To use this function, add it to `org-agenda-finalize-hook':
+
+  (add-hook 'org-finalize-agenda-hook 'org-agenda-add-overlays)"
+    (let ((inhibit-read-only t)
+          (buffer-invisibility-spec '(org-link)))
+      (save-excursion
+        (goto-char (if line (line-beginning-position) (point-min)))
+        (while (not (eobp))
+          (let ((org-marker (get-text-property (point) 'org-marker)))
+            (when (and org-marker
+                       (null (overlays-at (point)))
+                       (not (get-text-property (point) 'org-habit-p))
+                       (get-text-property (point) 'type)
+                       (string-match "\\(sched\\|dead\\|todo\\)"
+                                     (get-text-property (point) 'type)))
+              (let ((overlays
+                     (or (org-entry-get org-marker "OVERLAY" t)
+                         (with-current-buffer (marker-buffer org-marker)
+                           (org-get-global-property "OVERLAY")))))
+                (when overlays
+                  (goto-char (line-end-position))
+                  (let ((rest (- (window-width) (current-column))))
+                    (if (> rest 0)
+                        (insert (make-string rest ? ))))
+                  (let ((ol (make-overlay (line-beginning-position)
+                                          (line-end-position)))
+                        (proplist (read overlays)))
+                    (while proplist
+                      (overlay-put ol (car proplist) (cadr proplist))
+                      (setq proplist (cddr proplist))))))))
+          (forward-line)))))
+  :config
+  (add-hook 'org-agenda-finalize-hook 'org-agenda-add-overlays)
+
+  (defadvice org-agenda-redo (after fit-windows-for-agenda-redo activate)
+    "Fit the Org Agenda to its buffer."
+    (org-fit-agenda-window))
+
+  (defadvice org-agenda (around fit-windows-for-agenda activate)
+    "Fit the Org Agenda to its buffer."
+    (let ((notes
+           (ignore-errors
+             (directory-files
+              "~/Library/Mobile Documents/iCloud~com~agiletortoise~Drafts5/Documents"
+              t "[0-9].*\\.txt\\'" nil))))
+      (when notes
+        (with-current-buffer (find-file-noselect "~/doc/org/todo.org")
+          (save-excursion
+            (goto-char (point-min))
+            (re-search-forward "^\\* Inbox$")
+            (re-search-forward "^:END:")
+            (forward-line 1)
+            (dolist (note notes)
+              (insert
+               "** TODO "
+               (with-temp-buffer
+                 (insert-file-contents note)
+                 (goto-char (point-min))
+                 (forward-line)
+                 (unless (bolp))
+                 (insert ?\n)
+                 ;; (insert (format "SCHEDULED: %s\n"
+                 ;;                 (format-time-string (org-time-stamp-format))))
+                 (goto-char (point-max))
+                 (unless (bolp)
+                   (insert ?\n))
+                 (let ((uuid (substring (shell-command-to-string "uuidgen") 0 -1))
+                       (file (file-name-nondirectory note)))
+                   (string-match
+                    (concat "\\`\\([0-9]\\{4\\}\\)"
+                            "-\\([0-9]\\{2\\}\\)"
+                            "-\\([0-9]\\{2\\}\\)"
+                            "-\\([0-9]\\{2\\}\\)"
+                            "-\\([0-9]\\{2\\}\\)"
+                            "-\\([0-9]\\{2\\}\\)"
+                            "\\.txt\\'") file)
+                   (let* ((year (string-to-number (match-string 1 file)))
+                          (mon (string-to-number (match-string 2 file)))
+                          (day (string-to-number (match-string 3 file)))
+                          (hour (string-to-number (match-string 4 file)))
+                          (min (string-to-number (match-string 5 file)))
+                          (sec (string-to-number (match-string 6 file)))
+                          (date (format "%04d-%02d-%02d %s"
+                                        year mon day
+                                        (calendar-day-name (list mon day year) t))))
+                     (insert (format (concat ;; "SCHEDULED: <%s>\n"
+                                      ":PROPERTIES:\n"
+                                      ":ID:       %s\n"
+                                      ":CREATED:  ")
+                                     uuid))
+                     (insert (format "[%s %02d:%02d]\n:END:\n" date hour min))))
+                 (buffer-string)))
+              (delete-file note t)))
+          (when (buffer-modified-p)
+            (save-buffer)))))
+    ad-do-it
+    (org-fit-agenda-window))
+  )
+
+(use-package org-modern
+  :defer t
+  :after '(org)
+  :hook ((org-mode . #'org-modern-mode)
+         (org-agenda-finalize . #'org-modern-agenda)
+         (org-modern-mode . (lambda ()
+                              "Adapt `org-modern-mode'."
+                              ;; Disable Prettify Symbols mode
+                              (setq prettify-symbols-alist nil)
+                              (prettify-symbols-mode -1)))))
+
+(use-package org-tag-beautify
+  :disabled t
+  :after org
+  :custom (org-tag-beautify-data-dir (ensure-user-dir "org-tag-beautify"))
+  :init (org-tag-beautify-mode +1))
+
+;; ;;;_ , org-projectile
+
+(use-package org-structure-hydra
+  :after '(org hydra)
+  :straight nil
+  :commands (my/org-insert-structure)
+  :bind (:map org-mode-map ("<" . 'my/org-insert-structure))
+  :preface
+  (defhydra hydra-org-template (:color blue :hint nil)
+    "
+ _c_enter  _q_uote     _e_macs-lisp    _L_aTeX:
+ _l_atex   _E_xample   _p_erl          _i_ndex:
+ _a_scii   _v_erse     _P_erl tangled  _I_NCLUDE:
+ _s_rc     _n_ote      plant_u_ml      _H_TML:
+ _h_tml    ^ ^         ^ ^             _A_SCII:
+"
+    ("s" (hot-expand "<s"))
+    ("E" (hot-expand "<e"))
+    ("q" (hot-expand "<q"))
+    ("v" (hot-expand "<v"))
+    ("n" (hot-expand "<not"))
+    ("c" (hot-expand "<c"))
+    ("l" (hot-expand "<l"))
+    ("h" (hot-expand "<h"))
+    ("a" (hot-expand "<a"))
+    ("L" (hot-expand "<L"))
+    ("i" (hot-expand "<i"))
+    ("e" (hot-expand "<s" "emacs-lisp"))
+    ("p" (hot-expand "<s" "perl"))
+    ("u" (hot-expand "<s" "plantuml :file CHANGE.png"))
+    ("P" (hot-expand "<s" "perl" ":results output :exports both :shebang \"#!/usr/bin/env perl\"\n"))
+    ("I" (hot-expand "<I"))
+    ("H" (hot-expand "<H"))
+    ("A" (hot-expand "<A"))
+    ("<" self-insert-command "ins")
+    ("o" nil "quit"))
+
+  (defun hot-expand (str &optional mod header)
+    "Expand org template.
+
+STR is a structure template string recognised by org like <s. MOD is a
+string with additional parameters to add the begin line of the
+structure element. HEADER string includes more parameters that are
+prepended to the element after the #+HEADER: tag."
+    (let (text)
+      (when (region-active-p)
+        (setq text (buffer-substring (region-beginning) (region-end)))
+        (delete-region (region-beginning) (region-end))
+        (deactivate-mark))
+      (when header (insert "#+HEADER: " header) (forward-line))
+      (insert str)
+      (org-try-structure-completion)
+      (when mod (insert mod) (forward-line))
+      (when text (insert text))))
+
+  (defun my/org-insert-structure ()
+    "Insert block when at beginning of line or region active."
+    (interactive)
+    (if (or (region-active-p) (looking-back "^"))
+        (hydra-org-template/body)
+      (self-insert-command 1)))
+
+  '(cl-pushnew
+    '("not" "#+BEGIN_NOTES\n?\n#+END_NOTES")
+    org-structure-template-alist))
+
+(use-package org-bullets
+  :unless noninteractive
+  :after '(org)
+  :commands org-bullets-mode
+  :hook (org-mode .
+                  (lambda ()
+                    (org-bullets-mode +1))))
+
+(use-package org-seek
+  :after org
+  :commands (org-seek-string org-seek-regexp org-seek-headlines))
+
+(use-package org-autolist
+  :after '(org))
+
+(use-package org-ref
+  :disabled t
+  :after org counsel-projectile
+  :after async
+  :config
+  (progn
+    (setq org-ref-bibliography-notes
+          (expand-file-name "notes.org" projectile-project-root)
+          org-ref-default-bibliography
+          (expand-file-name "references.bib" projectile-project-root)
+          org-ref-pdf-directory
+          (expand-file-name "bibtex-pdfs/" projectile-project-root))))
+
+(use-package org-board
+  :after '(org projectile)
+  :config
+  (progn
+    (setq as/org-board-capture-file
+          (expand-file-name "my-board.org" projectile-project-name))
+    (defun as/do-org-board-dl-hook ()
+      (when (equal (buffer-name)
+                   (concat "CAPTURE-" as/org-board-capture-file))
+        (org-board-archive)))
+
+    (add-hook 'org-capture-before-finalize-hook
+              'as/do-org-board-dl-hook)))
+
+(unless window-system
+  (setq org-agenda-files
+        '("~/Documents/tasks/todo.org"
+          "~/Documents/tasks/Bahai.org"
+          "~/Documents/tasks/BAE.org")))
+
+(defconst my-org-soft-red    "#fcebeb")
+(defconst my-org-soft-orange "#fcf5eb")
+(defconst my-org-soft-yellow "#fcfceb")
+(defconst my-org-soft-green  "#e9f9e8")
+(defconst my-org-soft-blue   "#e8eff9")
+(defconst my-org-soft-purple "#f3e8f9")
+
+;; (when nil
+;;   (custom-set-faces
+;;    '(variable-pitch ((t (:family "ETBembo")))))
+;;   ;; (custom-set-faces
+;;   ;;  '(org-document-title ((t (:foreground "#171717" :weight bold :height 1.5)))))
+;;   (custom-set-faces
+;;    '(org-document-title ((t (:foreground "#f7f7f7" :weight bold :height 1.5)))))
+;;   ;; (custom-set-faces
+;;   ;;  '(org-done ((t (:background "#E8E8E8" :foreground "#0E0E0E" :strike-through t :weight bold)))))
+;;   ;; (custom-set-faces
+;;   ;;  '(org-headline-done ((t (:foreground "#171717" :strike-through t)))))
+;;   ;; (custom-set-faces
+;;   ;;  '(org-level-1 ((t (:foreground "#090909" :weight bold :height 1.3)))))
+;;   ;; (custom-set-faces
+;;   ;;  '(org-level-2 ((t (:foreground "#090909" :weight normal :height 1.2)))))
+;;   ;; (custom-set-faces
+;;   ;;  '(org-level-3 ((t (:foreground "#090909" :weight normal :height 1.1)))))
+;;   (custom-set-faces
+;;    '(org-image-actual-width '(600)))
+;;   (custom-set-faces
+;;    '(org-block-begin-line ((t (:background "#fbf8ef")))))
+;;   (custom-set-faces
+;;    '(org-block-end-line ((t (:background "#fbf8ef")))))
+
+;;   (setq default-major-mode 'org-mode)
+
+;;   (add-hook 'org-mode-hook
+;;             '(lambda ()
+;;                (variable-pitch-mode 1) ;; All fonts with variable pitch.
+;;                (mapc
+;;                 (lambda (face) ;; Other fonts with fixed-pitch.
+;;                   (set-face-attribute face nil :inherit 'fixed-pitch))
+;;                 (list 'org-code
+;;                       'org-link
+;;                       'org-block
+;;                       'org-table
+;;                       'org-verbatim
+;;                       'org-block-begin-line
+;;                       'org-block-end-line
+;;                       'org-meta-line
+;;                       'org-document-info-keyword)))))
+
+(eval-and-compile
+  (require 'cal-julian)
+  (require 'diary-lib))
+
+(defun org-current-is-todo ()
+  (member (org-get-todo-state) '("TODO" "EPIC" "STORY" "STARTED")))
+
+(defun my-org-agenda-should-skip-p ()
+  "Skip all but the first non-done entry."
+  (let (should-skip-entry)
+    (unless (org-current-is-todo)
+      (setq should-skip-entry t))
+    (when (or (org-get-scheduled-time (point))
+              (org-get-deadline-time (point)))
+      (setq should-skip-entry t))
+    (when (/= (point)
+              (save-excursion
+                (org-goto-first-child)
+                (point)))
+      (setq should-skip-entry t))
+    (save-excursion
+      (while (and (not should-skip-entry) (org-goto-sibling t))
+        (when (and (org-current-is-todo)
+                   (not (org-get-scheduled-time (point)))
+                   (not (org-get-deadline-time (point))))
+          (setq should-skip-entry t))))
+    should-skip-entry))
+
+(defun my-org-agenda-skip-all-siblings-but-first ()
+  "Skip all but the first non-done entry."
+  (when (my-org-agenda-should-skip-p)
+    (or (outline-next-heading)
+        (goto-char (point-max)))))
+
+(defun my-org-current-tags (depth)
+  (save-excursion
+    (ignore-errors
+      (let (should-skip)
+        (while (and (> depth 0)
+                    (not should-skip)
+                    (prog1
+                        (setq depth (1- depth))
+                      (not (org-up-element))))
+          (if (looking-at "^\*+\\s-+")
+              (setq should-skip (org-get-local-tags))))
+        should-skip))))
+
+(defun my-org-agenda-skip-all-siblings-but-first-hot ()
+  "Skip all but the first non-done entry."
+  (when (or (my-org-agenda-should-skip-p)
+            (not (member "HOT" (my-org-current-tags 1))))
+    (or (outline-next-heading)
+        (goto-char (point-max)))))
+
+(use-package anki-editor
+  :commands anki-editor-submit)
+
+(use-package calfw
+  :bind (("C-c A" . my-calendar)
+         :map cfw:calendar-mode-map
+         ("M-n" . cfw:navi-next-month-command)
+         ("M-p" . cfw:navi-previous-month-command)
+         ("j"   . cfw:navi-goto-date-command)
+         ("g"   . cfw:refresh-calendar-buffer))
+  :commands cfw:open-calendar-buffer
+  :functions (cfw:open-calendar-buffer
+              cfw:refresh-calendar-buffer
+              cfw:org-create-source
+              cfw:cal-create-source)
+  :preface
+  (defun my-calendar ()
+    (interactive)
+    (let ((buf (get-buffer "*cfw-calendar*"))
+          (org-agenda-files
+           (cons "~/Documents/tasks/Nasim.org"
+                 org-agenda-files)))
+      (if buf
+          (pop-to-buffer buf nil)
+        (cfw:open-calendar-buffer
+         :contents-sources
+         (list (cfw:org-create-source "Dark Blue")
+               (cfw:cal-create-source "Dark Orange"))
+         :view 'two-weeks)
+        (setq-local org-agenda-files org-agenda-files))))
+  :custom
+  (cfw:read-date-command
+   (lambda nil
+     (interactive)
+     (let
+         ((xs
+           (decode-time
+            (org-time-string-to-time
+             (org-read-date)))))
+       (list
+        (nth 4 xs)
+        (nth 3 xs)
+        (nth 5 xs)))))
+  :config
+  (require 'calfw-cal)
+  (use-package calfw-org
+    :config
+    (setq cfw:org-agenda-schedule-args '(:deadline :timestamp :sexp)))
+
+  (setq cfw:fchar-junction         ?╋
+        cfw:fchar-vertical-line    ?┃
+        cfw:fchar-horizontal-line  ?━
+        cfw:fchar-left-junction    ?┣
+        cfw:fchar-right-junction   ?┫
+        cfw:fchar-top-junction     ?┯
+        cfw:fchar-top-left-corner  ?┏
+        cfw:fchar-top-right-corner ?┓))
+
+(use-package ob-diagrams
+  :after '(org))
+
+(use-package ob-restclient
+  :after '(org))
+
+(use-package org-babel
+  :straight nil
+  :no-require
+  :after ob-restclient
+  :config
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (shell . t)))
+
+  (defadvice org-babel-execute-src-block (around load-language nil activate)
+    "Load language if needed"
+    (let ((language (org-element-property :language (org-element-at-point))))
+      (unless (cdr (assoc (intern language) org-babel-load-languages))
+        (add-to-list 'org-babel-load-languages (cons (intern language) t))
+        (org-babel-do-load-languages 'org-babel-load-languages
+                                     org-babel-load-languages))
+      ad-do-it)))
+
+(use-package org-bookmark-heading
+  :after '(org))
+
+(use-package org-crypt
+  :straight nil
+  :bind (:map org-mode-map
+              ("C-c C-x C-/" . org-decrypt-entry)))
+
+(use-package org-gcal
+  :disabled t
+  :commands org-gcal-sync
+  :custom
+  (org-gcal-dir "~/.emacs.d/data/org-gcal/")
+  :config
+  (setq org-gcal-client-id
+        (lookup-password "org-caldav-user.google.com" "jwiegley" 80)
+        org-gcal-client-secret
+        (lookup-password "org-caldav.google.com" org-gcal-client-id 80)
+        org-gcal-file-alist
+        '(("jwiegley@gmail.com" .
+           "~/Documents/tasks/Google.org")
+          ("ajhrtkkubthrda9l40bf95hceo@group.calendar.google.com" .
+           "~/Documents/tasks/Bahá'í.org")
+          ("57jh2om1vl9sv16sor1mudl030@group.calendar.google.com" .
+           "~/Documents/tasks/Family.org")
+          ("789ust6872bajeo87oqd2jqfog@group.calendar.google.com" .
+           "~/Documents/tasks/Nasim.org")
+          ("sacramento.lsa1914@gmail.com" .
+           "~/Documents/tasks/Sacramento.org"))))
+
+(use-package org-generate
+  :after '(org))
+
+(use-package org-mime
+  :after '(org)
+  :config
+  (add-hook 'message-mode-hook
+            (lambda ()
+              (local-set-key "\C-c\M-o" 'org-mime-htmlize)))
+
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (local-set-key "\C-c\M-o" 'org-mime-org-buffer-htmlize)))
+
+  (add-hook 'org-mime-html-hook
+            (lambda ()
+              (org-mime-change-element-style
+               "blockquote" "border-left: 2px solid gray; padding-left: 4px;")
+              (org-mime-change-element-style
+               "pre" (format "color: %s; background-color: %s; padding: 0.5em;"
+                             "#E6E1DC" "#232323")))))
+
+(use-package org-noter
+  ;; jww (2020-01-16): This package requires a newer version of Org.
+  :disabled t
+  :commands org-noter)
+
+(use-package org-opml
+  :disabled t)
+
+(use-package org-pdfview
+  :after '(org)
+  :config
+  (delete '("\\.pdf\\'" . default) org-file-apps)
+  (add-to-list 'org-file-apps '("\\.pdf\\'" . org-pdfview-open))
+  (add-to-list 'org-file-apps
+               '("\\.pdf::\\([[:digit:]]+\\)\\'" . org-pdfview-open)))
+
+(use-package org-protocol
+  :straight nil)
+
+(use-package orca
+  :after '(org)
+  :config
+  (setq orca-handler-list
+        '((orca-handler-match-url
+           "https://emacs.stackexchange.com/"
+           "~/Dropbox/org/wiki/emacs.org"
+           "\\* Questions")
+          (orca-handler-current-buffer
+           "\\*\\* Captures")
+          (orca-handler-file
+           "~/Dropbox/org/ent.org"
+           "\\* Articles"))))
+
+(use-package org-prettify-source-block
+  :disabled t  ;; in favor of org-modern
+  :straight nil
+  :unless noninteractive
+  :after org
+  :preface
+  (defvar-local opsb-org-at-src-begin -1
+    "Variable that holds whether last position was a ")
+
+  (defvar opsb-ob-header-symbol ?☰
+    "Symbol used for babel headers")
+
+  (defun opsb-org-prettify-src--update ()
+    (let ((case-fold-search t)
+          (re "^[ \t]*#\\+begin_src[ \t]+[^ \f\t\n\r\v]+[ \t]*")
+          found)
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward re nil t)
+          (goto-char (match-end 0))
+          (let ((args (org-trim
+                       (buffer-substring-no-properties (point)
+                                                       (line-end-position)))))
+            (when (org-string-nw-p args)
+              (let ((new-cell (cons args opsb-ob-header-symbol)))
+                (cl-pushnew new-cell prettify-symbols-alist :test #'equal)
+                (cl-pushnew new-cell found :test #'equal)))))
+
+        (setq prettify-symbols-alist
+              (cl-set-difference prettify-symbols-alist
+                                 (cl-set-difference
+                                  (cl-remove-if-not
+                                   (lambda (elm)
+                                     (eq (cdr elm) opsb-ob-header-symbol))
+                                   prettify-symbols-alist)
+                                  found :test #'equal)))
+
+        ;; Clean up old font-lock-keywords.
+        (font-lock-remove-keywords nil prettify-symbols--keywords)
+        (setq prettify-symbols--keywords (prettify-symbols--make-keywords))
+        (font-lock-add-keywords nil prettify-symbols--keywords)
+        (while (re-search-forward re nil t)
+          (font-lock-flush (line-beginning-position) (line-end-position))))))
+
+  (defun opsb-org-prettify-src ()
+    "Hide src options via `prettify-symbols-mode'.
+      `prettify-symbols-mode' is used because it has
+      uncollapsing. It may not be efficient."
+    (let* ((case-fold-search t)
+           (at-src-block
+            (save-excursion
+              (beginning-of-line)
+              (looking-at "^[ \t]*#\\+begin_src[ \t]+[^ \f\t\n\r\v]+[ \t]*"))))
+      ;; Test if we moved out of a block.
+      (when (or (and opsb-org-at-src-begin
+                     (not at-src-block))
+                ;; File was just opened.
+                (eq opsb-org-at-src-begin -1))
+        (opsb-org-prettify-src--update))
+      (setq opsb-org-at-src-begin at-src-block)))
+
+  (defvar opsb-block-alist `(("#+begin_src" . ?╦) ;; ➤ 🖝 ➟ ➤ ✎ ✎
+                             ("#+end_src"   . ?╩) ;; □
+                             ("#+header:" . ,opsb-ob-header-symbol)
+                             ("#+begin_comment" . ?✎)
+                             ("#+end_comment" . ?✎)
+                             ("#+begin_notes" . ?➤)
+                             ("#+end_notes" . ?➤)
+                             ("#+begin_quote" . ?»)
+                             ("#+end_quote" . ?«)))
+
+  (defsubst opsb-append-upcase (the-list)
+    "Duplicate THE-LIST with upcased cars."
+    (cl-reduce 'append
+               (mapcar (lambda (x) (list x (cons (upcase (car x)) (cdr x))))
+                       the-list)))
+
+  (defun opsb-append-org-prettify-symbols ()
+    (setq prettify-symbols-alist
+          (cl-union prettify-symbols-alist
+                    (opsb-append-upcase opsb-block-alist))))
+
+  (defun opsb-delete-org-prettify-symbols ()
+    (setq prettify-symbols-alist
+          (cl-set-difference prettify-symbols-alist
+                             (opsb-append-upcase opsb-block-alist))))
+
+  (define-minor-mode org-prettify-source-block-mode
+    "Toggle prettification of org source blocks."
+    :lighter ""                         ; for desktop.el
+    (if org-prettify-source-block-mode
+        (progn
+          (turn-on-prettify-symbols-mode)
+          (add-hook 'post-command-hook 'opsb-org-prettify-src t t)
+          (opsb-append-org-prettify-symbols))
+      (remove-hook 'post-command-hook 'opsb-org-prettify-src t)
+      (opsb-delete-org-prettify-symbols)))
+
+  :commands (org-prettify-source-block-mode)
+  :hook (org-mode . (lambda () (org-prettify-source-block-mode +1))))
+
+(use-package org-habit
+  :straight nil
+  :after org-agenda
+  :custom
+  (org-habit-preceding-days 42)
+  (org-habit-today-glyph 45)
+  :custom-face
+  (org-habit-alert-face ((((background light)) (:background "#f5f946"))))
+  (org-habit-alert-future-face ((((background light)) (:background "#fafca9"))))
+  (org-habit-clear-face ((((background light)) (:background "#8270f9"))))
+  (org-habit-clear-future-face ((((background light)) (:background "#d6e4fc"))))
+  (org-habit-overdue-face ((((background light)) (:background "#f9372d"))))
+  (org-habit-overdue-future-face ((((background light)) (:background "#fc9590"))))
+  (org-habit-ready-face ((((background light)) (:background "#4df946"))))
+  (org-habit-ready-future-face ((((background light)) (:background "#acfca9")))))
+
+(use-package org-rainbow-tags
+  :disabled t
+  ;; :straight (:host github :repo "KaratasFurkan/org-rainbow-tags")
+  :custom
+  (org-rainbow-tags-face-attributes
+   ;; Default is '(:foreground color :weight 'bold)
+   '(:foreground color :inverse-video t :box t :weight 'bold))
+  :hook
+  (org-mode . org-rainbow-tags-mode))
+
+(use-package org-rich-yank
+  :defer 5
+  :bind (:map org-mode-map
+              ("C-M-y" . org-rich-yank)))
+
+(use-package org-super-agenda
+  :after '(org)
+  :preface
+  (defun super-jump-to-org-agenda ()
+    (interactive)
+    (let ((org-super-agenda-groups
+           '((:name "Today"
+                    :time-grid t
+                    :todo "TODAY")
+             (:name "Important"
+                    :tag "bills"
+                    :priority "A")
+             (:order-multi
+              (2 (:name "Shopping in town"
+                        :and (:tag "shopping" :tag "@town"))
+                 (:name "Food-related"
+                        :tag ("food" "dinner"))
+                 (:name "Personal"
+                        :habit t
+                        :tag "personal")
+                 (:name "Space-related (non-moon-or-planet-related)"
+                        :and (:regexp ("space" "NASA")
+                                      :not (:regexp "moon" :tag "planet")))))
+             (:todo "WAITING" :order 8)
+             (:todo ("SOMEDAY" "TO-READ" "CHECK" "TO-WATCH" "WATCHING")
+                    :order 9)
+             (:priority<= "B" :order 1))))
+      (org-agenda nil "a")))
+  :config
+  (org-super-agenda-mode))
+
+(use-package org-treescope
+  :after '(org)
+  :custom (org-treescope-query-userbuffer "~/path/to/projects.org")
+  :bind (("C-c M-t" . org-treescope)))
+
+(use-package org-velocity
+  :bind ("C-, C-." . org-velocity)
+  :custom
+  '(org-velocity-always-use-bucket t)
+  '(org-velocity-bucket "~/doc/tasks/notes.org")
+  '(org-velocity-capture-templates
+    '(("v" "Velocity" entry
+       (file "~/doc/tasks/notes.org")
+       "* NOTE %:search
+%i%?
+:PROPERTIES:
+:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
+:END:" :prepend t)))
+  (org-velocity-exit-on-match nil)
+  (org-velocity-force-new t)
+  (org-velocity-search-method 'regexp)
+  (org-velocity-use-completion t)
+  )
+
+(use-package org-web-tools
+  :bind (("C-, C-y" . my-org-insert-url)
+         ("C-, C-M-y" . org-web-tools-insert-web-page-as-entry))
+  :functions (org-web-tools--org-link-for-url
+              org-web-tools--get-first-url)
+  :preface
+  (declare-function org-web-tools--org-link-for-url "org-web-tools")
+  (declare-function org-web-tools--get-first-url "org-web-tools")
+  (defun my-org-insert-url (&optional arg)
+    (interactive "P")
+    (require' org-web-tools)
+    (let ((link (org-web-tools--org-link-for-url
+                 (org-web-tools--get-first-url))))
+      (if arg
+          (progn
+            (org-set-property "URL" link)
+            (message "Added pasteboard link to URL property"))
+        (insert link)))))
+
+(use-package orgit
+  :disabled t)
+
+(use-package orgnav
+  :after '(org))
+
+(use-package org-jira
+  :straight (org-jira :host github :repo "ahungry/org-jira")
+  :defer t
+  :commands (org-jira-hydra org-jira-select-board org-jira-select-spring)
+  :custom (org-jira-property-overrides '("CUSTOM_ID" "self"))
+  :bind (:map evil-normal-state-map ("SPC j" . org-jira-hydra))
+  :config
+  (setq jiralib-url "https://issues.redhat.com/"
+        jiralib-user-login-name "ikanello1@redhat.com"
+        jira-password nil
+        jira-token
+        (replace-regexp-in-string
+         "\n\\'" ""
+         (shell-command-to-string
+          "pass show websites/redhat.com/ikanello1@redhat.com/token"))
+        org-jira-working-dir (ensure-directory"~/Documents/org/jira/")
+        org-jira-projects-list '("ENTSBT" "SB" "QUARKUS"))
+  (setq jiralib-token `("Authorization" . ,(concat "Bearer " jira-token)))
+
+  (defvar org-jira-selected-board nil)
+  (defvar org-jira-selected-sprint nil)
+  (defvar org-jira-selected-epic nil)
+
+  (defvar org-jira-boards-cache ())
+  (defvar org-jira-sprint-by-board-cache ())
+  (defvar org-jira-epic-by-board-cache ())
+
+  ;;
+  ;; Custom functions
+  ;;
+
+  ;;
+  ;; Boards
+  ;;
+  (defun org-jira-get-boards-list()
+    "List all boards."
+    (unless org-jira-boards-cache
+      (setq org-jira-boards-cache (jiralib--agile-call-sync "/rest/agile/1.0/board" 'values)))
+    org-jira-boards-cache)
+
+  (defun org-jira-get-board-id()
+    "Select a board if one not already selected."
+    (unless org-jira-selected-board
+      (setq org-jira-selected-board (org-jira-board-completing-read)))
+    (cdr (assoc 'id org-jira-selected-board)))
+
+  (defun org-jira-get-board()
+    "Select a board if one not already selected."
+    (unless org-jira-selected-board
+      (setq org-jira-selected-board (org-jira-board-completing-read)))
+    org-jira-selected-board)
+
+  (defun org-jira-board-completing-read()
+    "Select a board by name."
+    (when (not (file-exists-p (org-jira--get-boards-file)))
+      (org-jira-get-boards-list))
+
+    (let* ((boards (with-current-buffer (org-jira--get-boards-buffer)
+                     (org-map-entries (lambda()
+                                        `((id . ,(org-entry-get nil "id"))
+                                          (self . ,(org-entry-get nil "url"))
+                                          (name . ,(org-entry-get nil "name")))) t  'file)))
+           (board-names (mapcar #'(lambda (a) (cdr (assoc 'name a))) boards))
+           (board-name (completing-read "Choose board:" board-names)))
+      (car (seq-filter #'(lambda (a) (equal (cdr (assoc 'name a)) board-name)) boards))))
+
+  (defun org-jira-select-board()
+    "Select a board."
+    (interactive)
+    (setq org-jira-selected-board (cdr (assoc 'name (org-jira-board-completing-read)))))
+
+  ;;
+  ;; Sprint
+  ;;
+  (defun org-jira-get-project-boards(project-id)
+    "Find the board of the project.")
+
+  (defun org-jira-get-sprints-by-board(board-id &optional filter)
+    "List all sprints by BOARD-ID."
+    (let ((board-sprints-cache (cdr (assoc board-id org-jira-sprint-by-board-cache))))
+      (unless board-sprints-cache
+        (setq board-sprints-cache (jiralib--agile-call-sync (format "/rest/agile/1.0/board/%s/sprint" board-id)'values)))
+
+      (add-to-list 'org-jira-sprint-by-board-cache `(,board-id . ,board-sprints-cache))
+      (if filter
+          (seq-filter filter board-sprints-cache)
+        board-sprints-cache)))
+
+  (defun org-jira--active-sprint-p(sprint)
+    "Predicate that checks if SPRINT is active."
+    (not (assoc 'completeDate sprint)))
+
+  (defun org-jira-sprint-completing-read(board-id)
+    "Select an active sprint by name."
+    (let* ((sprints (org-jira-get-sprints-by-board board-id 'org-jira--active-sprint-p))
+           (sprint-names (mapcar #'(lambda (a) (cdr (assoc 'name a))) sprints))
+           (sprint-name (completing-read "Choose sprint:" sprint-names)))
+      (car (seq-filter #'(lambda (a) (equal (cdr (assoc 'name a)) sprint-name)) sprints))))
+
+  (defun org-jira-move-issue-to-sprint(issue-id sprint-id)
+    "Move issue with ISSUE-ID to sprint with SPRINT-ID."
+    (jiralib--rest-call-it (format "/rest/agile/1.0/sprint/%s/issue" sprint-id) :type "POST" :data (format "{\"issues\": [\"%s\"]}" issue-id)))
+
+  (defun org-jira-assign-current-issue-to-sprint()
+    "Move the selected issue to an active sprint."
+    (interactive)
+    (let* ((issue-id (org-jira-parse-issue-id))
+           (board-id (cdr (assoc 'id (org-jira-get-board))))
+           (sprint-id (cdr (assoc 'id (org-jira-sprint-completing-read board-id)))))
+
+      (org-jira-move-issue-to-sprint issue-id sprint-id)))
+
+  (defun org-jira-get-sprint-id()
+    "Select a sprint id if one not already selected."
+    (unless org-jira-selected-sprint
+      (setq org-jira-selected-sprint (org-jira-sprint-completing-read)))
+    (cdr (assoc 'id org-jira-selected-sprint)))
+
+  (defun org-jira-get-sprint()
+    "Select a sprint if one not already selected."
+    (unless org-jira-selected-sprint
+      (setq org-jira-selected-sprint (org-jira-select-sprint)))
+    org-jira-selected-sprint)
+
+  (defun org-jira-select-sprint()
+    "Select a sprint."
+    (interactive)
+    (setq org-jira-selected-sprint (org-jira-sprint-completing-read (org-jira-get-board-id))))
+
+  ;;
+  ;; Epics
+  ;;
+  (defun org-jira-get-epics-by-board(board-id &optional filter)
+    "List all epics by BOARD-ID."
+    (interactive)
+    (let ((board-epics-cache (cdr (assoc board-id org-jira-epic-by-board-cache))))
+      (unless board-epics-cache
+        (setq board-epics-cache (jiralib--agile-call-sync (format "/rest/agile/1.0/board/%s/epic" board-id)'values)))
+
+      (add-to-list 'org-jira-epic-by-board-cache `(,board-id . ,board-epics-cache))
+      (if filter
+          (seq-filter filter board-epics-cache)
+        board-epics-cache)))
+
+  (defun org-jira--active-epic-p(epic)
+    "Predicate that checks if EPIC is active."
+    (not (equal (assoc 'done epic) 'false)))
+
+
+  (defun org-jira-epic-completing-read(board-id)
+    "Select an active epic by name."
+    (let* ((epics (org-jira-get-epics-by-board board-id 'org-jira--active-epic-p))
+           (epic-names (mapcar #'(lambda (a) (cdr (assoc 'name a))) epics))
+           (epic-name (completing-read "Choose epic:" epic-names)))
+      (car (seq-filter #'(lambda (a) (equal (cdr (assoc 'name a)) epic-name)) epics))))
+
+  (defun org-jira-move-issue-to-epic(issue-id epic-id)
+    "Move issue with ISSUE-ID to epic with SPRINT-ID."
+    (jiralib--rest-call-it (format "/rest/agile/1.0/epic/%s/issue" epic-id) :type "POST" :data (format "{\"issues\": [\"%s\"]}" issue-id)))
+
+  (defun org-jira-assign-current-issue-to-epic()
+    "Move the selected issue to an active epic."
+    (interactive)
+    (let* ((issue-id (org-jira-parse-issue-id))
+           (board-id (cdr (assoc 'id (org-jira-get-board))))
+           (epic-id (cdr (assoc 'id (org-jira-epic-completing-read board-id)))))
+
+      (org-jira-move-issue-to-epic issue-id epic-id)))
+
+  (defun org-jira-get-epic-id()
+    "Select a epic id if one not already selected."
+    (unless org-jira-selected-epic
+      (setq org-jira-selected-epic (org-jira-epic-completing-read)))
+    (cdr (assoc 'id org-jira-selected-epic)))
+
+  (defun org-jira-get-epic()
+    "Select a epic if one not already selected."
+    (unless org-jira-selected-epic
+      (setq org-jira-selected-epic (org-jira-select-epic)))
+    org-jira-selected-epic)
+
+  (defun org-jira-select-epic()
+    "Select a epic."
+    (interactive)
+    (setq org-jira-selected-epic (org-jira-epic-completing-read (org-jira-get-board-id))))
+
+  (defun org-jira-create-issue-with-defaults()
+    "Create an issue and assign to default sprint and epic."
+    (org-jira-create-issue)
+    (org-jira-move-issue-to-epic)
+    (org-jira-move-issue-to-sprint))
+
+  (defun org-jira-update-issue-description()
+    "Move the selected issue to an active sprint."
+    (interactive)
+    (let* ((issue-id (org-jira-parse-issue-id))
+           (filename (buffer-file-name))
+           (org-issue-description (org-trim (org-jira-get-issue-val-from-org 'description)))
+           (update-fields (list (cons 'description org-issue-description))))
+      (message "Updating issue:%s from file: %s with description:%s" issue-id filename org-issue-description)
+      (jiralib-update-issue issue-id update-fields
+                            (org-jira-with-callback
+                              (message (format "Issue '%s' updated!" issue-id))
+                              (jiralib-get-issue
+                               issue-id
+                               (org-jira-with-callback
+                                 (org-jira-log "Update get issue for refresh callback hit.")
+                                 (-> cb-data list org-jira-get-issues))))
+                            )))
+
+
+;;;###autoload
+  (defun ic/org-jira-postprocess ()
+    "Postprocess the org-jira project files."
+    (interactive)
+    (require 'org-sync-github)
+    (mapcar (lambda (p)
+              (let ((scheduled (format "%s  SCHEDULED: <%s>\n" (make-string 2 32) (org-read-date nil nil "+0d") ))
+                    (github-tasks-file (format "~/Documents/org/jira/%s.org" p)))
+                (with-temp-buffer
+                  (insert-file github-tasks-file)
+                  (goto-char (point-min))
+                  (while (re-search-forward "^\*\* TODO" nil t)
+                    (message "Setting scheduled and tags")
+                    (let* ((tags (org-get-tags)))
+                      (add-to-list 'tags "jira")
+                      (org-set-tags tags)
+                      (org-set-property "SCHEDULED" scheduled)
+                      (write-file github-tasks-file)))))) '("QUARKUS" "SB" "ENTSBT")))
+
+  (defun ic/org-jira-get-issues ()
+    "Sync using org-jira and postprocess."
+    (interactive)
+    (org-jira-get-issues (org-jira-get-issue-list org-jira-get-issue-list-callback))
+    (ic/org-jira-postprocess))
+
+  (defun org-jira-issue-id-at-point ()
+    "Returns the ID of the current issue."
+    (save-excursion
+      (org-previous-visible-heading 1)
+      (org-element-property :ID (org-element-at-point))))
+
+  (defun org-jira-hydra ()
+    "Define (if not already defined org-jira hydra and invoke it."
+    (interactive)
+    (unless (boundp 'org-jira-hydra/body)
+      (defhydra org-jira-hydra (:hint none :exit t)
+        ;; The '_' character is not displayed. This affects columns alignment.
+        ;; Remove s many spaces as needed to make up for the '_' deficit.
+        "
+         ^Actions^           ^Issue^              ^Buffer^                         ^Defaults^ 
+                           ?I?
+         ^^^^^^-----------------------------------------------------------------------------------------------
+          _L_ist issues      _u_pdate issue       _R_efresh issues in buffer       Select _B_oard ?B?
+          _C_reate issue     update _c_omment                                    Select _E_pic ?E?
+                           assign _s_print                                     Select _S_print ?S?
+                           assign _e_print                                     Create issue with _D_efaults
+                           _b_rowse issue
+                           _r_efresh issue
+                           _p_rogress issue
+  [_q_]: quit
+"
+        ("I" nil (or (org-jira-issue-id-at-point) ""))
+        ("L" ic/org-jira-get-issues)
+        ("C" org-jira-create-issue)
+
+        ("u" org-jira-update-issue)
+        ("c" org-jira-update-comment)
+        ("b" org-jira-browse-issue)
+        ("s" org-jira-assign-current-issue-to-sprint)
+        ("e" org-jira-assign-current-issue-to-epic)
+        ("r" org-jira-refresh-issue)
+        ("p" org-jira-progress-issue)
+
+        ("R" org-jira-refresh-issues-in-buffer)
+
+        ("B" org-jira-select-board (format "[%s]" (or org-jira-selected-board "")) :exit nil)
+        ("E" org-jira-select-epic (format "[%s]" (or org-jira-selected-epic "")) :exit nil)
+        ("S" org-jira-select-sprint (format "[%s]" (or org-jira-selected-sprint "")) :exit nil)
+        ("D" org-jira-create-with-defaults)
+
+        ("q" nil "quit")))
+    (org-jira-hydra/body))
+  )
+
+(use-package ob-async
+  :after org
+  :defer t)
+
+(use-package ob-http
+  :after org
+  :defer t)
+
+(use-package ob-kotlin
+  :after org
+  :defer t)
+
+(use-package ob-go
+  :after org
+  :defer t)
+
+(use-package ob-sql-mode
+  :after org
+  :defer t)
+
+(use-package ob-redi
+  :disabled t ;; repo vanished
+  :after org
+  :defer t)
+
+(use-package ob-restclient
+  :after org
+  :defer t)
+
+(use-package ob-tmux
+  :after org
+  :defer t
+  :custom
+  (org-babel-default-header-args:tmux
+   '((:results . "silent")   ;
+     (:session . "default")   ; The default tmux session to send code to
+     (:socket  . nil)            ; The default tmux socket to communicate with
+     (:terminal . "gnome-terminal")))
+  (org-babel-tmux-session-prefix "ob-")
+  (org-babel-tmux-location (executable-find "tmux")))
+
+(use-package org-tree-slide
+  :after org
+  :commands org-tree-slide-mode
+  :custom
+  (org-image-actual-width nil)
+  :bind (:map org-tree-slide-mode-map
+              (("C-c n" . org-tree-slide-move-next-tree)
+               ("C-c p" . org-tree-slide-move-previous-tree))))
+
+(use-package org-tree-slide-pauses
+  :after org-tree-slide)
+
+(use-package ob-translate
+  :after org
+  :defer t)
+
+(use-package ox-ioslide
+  :after org
+  :defer t)
+
+(use-package org-projectile
+  :unless noninteractive
+  :after org
+  :bind (("C-c C-n p" . org-projectile:project-todo-completing-read)
+         ("C-c c" . org-capture))
+  :config
+  (org-projectile-per-project)
+  (setq org-projectile-per-project-filepath "notes.org")
+  (setq org-agenda-files (append org-agenda-files (org-projectile-todo-files)))
+  (setq org-projectile:projects-file
+        "~/.emacs.d/org/projects.org")
+  (add-to-list 'org-capture-templates
+               (org-projectile:project-todo-entry "p")))
+
+(use-package poly-noweb
+  :defer t
+  :after org)
+
+(use-package poly-org
+  :defer t
+  :after org)
+
+(use-package org-superstar
+  :disabled t
+  :hook (org-mode . (lambda () (org-superstar-mode +1))))
+
+(use-package orgtbl-aggregate
+  :after '(org))
+
+(use-package ox-gfm
+  :after '(org)
+  ;;
+  ;; :commands ox-gfm-export-to-markdown
+  )
+
+(use-package ox-jira
+  :commands ox-jira-export-as-jira)
+
+(use-package git-link
+  :bind (("C-c g l" . git-link)
+         ("C-c g c" . git-link-commit)
+         ("C-c g h" . git-link-homepage)))
+
+(use-package ox-slack
+  :commands org-slack-export-to-clipboard-as-slack)
+
+(use-package ox-pandoc
+  :disabled t)
+
+(use-package ox-texinfo-plus
+  :straight (:host github :repo "tarsius/ox-texinfo-plus")
+  :defer t)
+
+(use-package ox-odt
+  :disabled t
+  :straight (org-mode-ox-odt
+             :type git
+             :host github
+             :repo "kjambunathan/org-mode-ox-odt"
+             :branch "master")
+  :config
+  (add-to-list 'org-export-filter-parse-tree-functions
+               (defun org-odt--translate-list-tables (tree backend info)
+                 (if (eq backend (or 'markdown
+                                     'html))
+                     (org-odt--translate-list-tables tree backend info)
+                   tree))))
+
+(use-package org-roam
+  :disabled t
+  :hook
+  (after-init . org-roam-mode)
+  :custom
+  (org-roam-directory "/path/to/org-files/")
+  :bind (:map org-roam-mode-map
+              (("C-c n l" . org-roam)
+               ("C-c n f" . org-roam-find-file)
+               ("C-c n g" . org-roam-show-graph))
+              :map org-mode-map
+              (("C-c n i" . org-roam-insert))))
+
+(use-package yankpad
+  :defer 10
+  :init
+  (setq yankpad-file "~/Documents/tasks/yankpad.org")
+  :config
+  ;; (bind-key "<f7>" 'yankpad-map)
+  ;; (bind-key "<f12>" 'yankpad-expand)
+  ;; If you want to complete snippets using company-mode
+  ;; (add-to-list 'company-backends #'company-yankpad)
+  ;; If you want to expand snippets with hippie-expand
+  ;; (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
+  )
 
 (if window-system
     (add-hook 'after-init-hook #'toggle-frame-maximized))
@@ -439,9 +2979,9 @@ Remove from `kill-buffer-hook', and also remove this function
 ;; set major mode of unsaved buffer to file extension
 (setq-default major-mode
               (lambda () (if buffer-file-name
-			     (fundamental-mode)
-			   (let ((buffer-file-name (buffer-name)))
-			     (set-auto-mode)))))
+			(fundamental-mode)
+		      (let ((buffer-file-name (buffer-name)))
+			(set-auto-mode)))))
 
 ;;;_ , Utility macros and functions
 
@@ -475,46 +3015,43 @@ Remove from `kill-buffer-hook', and also remove this function
 
 (eval-and-compile
   (define-key ctl-x-map "\C-i"
-  #'endless/ispell-word-then-abbrev)
+    #'endless/ispell-word-then-abbrev)
 
-(defun endless/simple-get-word ()
-  (car-safe (save-excursion (ispell-get-word nil))))
+  (defun endless/simple-get-word ()
+    (car-safe (save-excursion (ispell-get-word nil))))
 
-(defun endless/ispell-word-then-abbrev (p)
-  "Call `ispell-word', then create an abbrev for it.
+  (defun endless/ispell-word-then-abbrev (p)
+    "Call `ispell-word', then create an abbrev for it.
 With prefix P, create local abbrev. Otherwise it will
 be global.
 If there's nothing wrong with the word at point, keep
 looking for a typo until the beginning of buffer. You can
 skip typos you don't want to fix with `SPC', and you can
 abort completely with `C-g'."
-  (interactive "P")
-  (let (bef aft)
-    (save-excursion
-      (while (if (setq bef (endless/simple-get-word))
-                 ;; Word was corrected or used quit.
-                 (if (ispell-word nil 'quiet)
-                     nil ; End the loop.
-                   ;; Also end if we reach `bob'.
-                   (not (bobp)))
-               ;; If there's no word at point, keep looking
-               ;; until `bob'.
-               (not (bobp)))
-        (backward-word)
-        (backward-char))
-      (setq aft (endless/simple-get-word)))
-    (if (and aft bef (not (equal aft bef)))
-        (let ((aft (downcase aft))
-              (bef (downcase bef)))
-          (define-abbrev
-            (if p local-abbrev-table global-abbrev-table)
-            bef aft)
-          (message "\"%s\" now expands to \"%s\" %sally"
-                   bef aft (if p "loc" "glob")))
-      (user-error "No typo at or before point"))))
-
-(setq save-abbrevs 'silently)
-(setq-default abbrev-mode t))
+    (interactive "P")
+    (let (bef aft)
+      (save-excursion
+        (while (if (setq bef (endless/simple-get-word))
+                   ;; Word was corrected or used quit.
+                   (if (ispell-word nil 'quiet)
+                       nil ; End the loop.
+                     ;; Also end if we reach `bob'.
+                     (not (bobp)))
+                 ;; If there's no word at point, keep looking
+                 ;; until `bob'.
+                 (not (bobp)))
+          (backward-word)
+          (backward-char))
+        (setq aft (endless/simple-get-word)))
+      (if (and aft bef (not (equal aft bef)))
+          (let ((aft (downcase aft))
+                (bef (downcase bef)))
+            (define-abbrev
+              (if p local-abbrev-table global-abbrev-table)
+              bef aft)
+            (message "\"%s\" now expands to \"%s\" %sally"
+                     bef aft (if p "loc" "glob")))
+        (user-error "No typo at or before point")))))
 
 (use-package alert         :defer t)
 (use-package anaphora      :defer t)
@@ -804,45 +3341,45 @@ tools."
 
 ;; from magnars
 (eval-and-compile
-(defun rename-current-buffer-file ()
-  "Renames current buffer and file it is visiting."
-  (interactive)
-  (let ((name (buffer-name))
-        (filename (buffer-file-name)))
-    (if (not (and filename (file-exists-p filename)))
-        (error "Buffer '%s' is not visiting a file!" name)
-      (let ((new-name (read-file-name "New name: " filename)))
-        (cond ((get-buffer new-name)
-               (error "A buffer named '%s' already exists!" new-name))
-              (t
-               (let ((dir (file-name-directory new-name)))
-                 (when (and (not (file-exists-p dir))
-                            (yes-or-no-p (format "Create directory '%s'?" dir)))
-                   (make-directory dir t)))
-               (rename-file filename new-name 1)
-               (rename-buffer new-name)
-               (set-visited-file-name new-name)
-               (set-buffer-modified-p nil)
-               (when (fboundp 'recentf-add-file)
-                 (recentf-add-file new-name)
-                 (recentf-remove-if-non-kept filename))
-               (message "File '%s' successfully renamed to '%s'"
-                        name (file-name-nondirectory new-name))))))))
+  (defun rename-current-buffer-file ()
+    "Renames current buffer and file it is visiting."
+    (interactive)
+    (let ((name (buffer-name))
+          (filename (buffer-file-name)))
+      (if (not (and filename (file-exists-p filename)))
+          (error "Buffer '%s' is not visiting a file!" name)
+        (let ((new-name (read-file-name "New name: " filename)))
+          (cond ((get-buffer new-name)
+                 (error "A buffer named '%s' already exists!" new-name))
+                (t
+                 (let ((dir (file-name-directory new-name)))
+                   (when (and (not (file-exists-p dir))
+                              (yes-or-no-p (format "Create directory '%s'?" dir)))
+                     (make-directory dir t)))
+                 (rename-file filename new-name 1)
+                 (rename-buffer new-name)
+                 (set-visited-file-name new-name)
+                 (set-buffer-modified-p nil)
+                 (when (fboundp 'recentf-add-file)
+                   (recentf-add-file new-name)
+                   (recentf-remove-if-non-kept filename))
+                 (message "File '%s' successfully renamed to '%s'"
+                          name (file-name-nondirectory new-name))))))))
 
-;; from magnars
+  ;; from magnars
 
-(defun delete-current-buffer-file ()
-  "Remove file connected to current buffer and kill buffer."
-  (interactive)
-  (let ((filename (buffer-file-name))
-        (buffer (current-buffer))
-        (name (buffer-name)))
-    (if (not (and filename (file-exists-p filename)))
-        (ido-kill-buffer)
-      (when (yes-or-no-p "Are you sure you want to delete this file? ")
-        (delete-file filename t)
-        (kill-buffer buffer)
-        (message "File '%s' successfully removed" filename))))))
+  (defun delete-current-buffer-file ()
+    "Remove file connected to current buffer and kill buffer."
+    (interactive)
+    (let ((filename (buffer-file-name))
+          (buffer (current-buffer))
+          (name (buffer-name)))
+      (if (not (and filename (file-exists-p filename)))
+          (ido-kill-buffer)
+        (when (yes-or-no-p "Are you sure you want to delete this file? ")
+          (delete-file filename t)
+          (kill-buffer buffer)
+          (message "File '%s' successfully removed" filename))))))
 
 ;; found at http://emacswiki.org/emacs/KillingBuffers
 (defun kill-other-buffers ()
@@ -937,10 +3474,6 @@ tools."
 ;;;_. Keybindings
 
 ;;;_ , global-map
-
-(autoload 'org-cycle "org" nil t)
-(autoload 'hippie-expand "hippie-exp" nil t)
-(autoload 'indent-according-to-mode "indent" nil t)
 
 ;;;_ , tab
 
@@ -1302,56 +3835,56 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
 (bind-key "C-c f" 'flush-lines)
 (bind-key "C-c k" 'keep-lines)
 
-(eval-when-compile
-  (defvar emacs-min-top)
-  (defvar emacs-min-left)
-  (defvar emacs-min-height)
-  (defvar emacs-min-width))
+;; (eval-when-compile
+;;   (defvar emacs-min-top)
+;;   (defvar emacs-min-left)
+;;   (defvar emacs-min-height)
+;;   (defvar emacs-min-width))
 
-(defun emacs-min ()
-  "Switch to minimal window size."
-  (interactive)
-  (set-frame-parameter (selected-frame) 'fullscreen nil)
-  (set-frame-parameter (selected-frame) 'vertical-scroll-bars nil)
-  (set-frame-parameter (selected-frame) 'horizontal-scroll-bars nil)
-  (set-frame-parameter (selected-frame) 'top emacs-min-top)
-  (set-frame-parameter (selected-frame) 'left emacs-min-left)
-  (set-frame-parameter (selected-frame) 'height emacs-min-height)
-  (set-frame-parameter (selected-frame) 'width emacs-min-width))
+;; (defun emacs-min ()
+;;   "Switch to minimal window size."
+;;   (interactive)
+;;   (set-frame-parameter (selected-frame) 'fullscreen nil)
+;;   (set-frame-parameter (selected-frame) 'vertical-scroll-bars nil)
+;;   (set-frame-parameter (selected-frame) 'horizontal-scroll-bars nil)
+;;   (set-frame-parameter (selected-frame) 'top emacs-min-top)
+;;   (set-frame-parameter (selected-frame) 'left emacs-min-left)
+;;   (set-frame-parameter (selected-frame) 'height emacs-min-height)
+;;   (set-frame-parameter (selected-frame) 'width emacs-min-width))
 
-;; (if window-system
-;;     (add-hook 'after-init-hook 'emacs-min))
+;; ;; (if window-system
+;; ;;     (add-hook 'after-init-hook 'emacs-min))
 
-(defun emacs-max ()
-  "Switch to maximized window size."
-  (interactive)
-  (if t
-      (progn
-        (set-frame-parameter (selected-frame) 'fullscreen 'fullboth)
-        (set-frame-parameter (selected-frame) 'vertical-scroll-bars nil)
-        (set-frame-parameter (selected-frame) 'horizontal-scroll-bars nil))
-    (set-frame-parameter (selected-frame) 'top 26)
-    (set-frame-parameter (selected-frame) 'left 2)
-    (set-frame-parameter (selected-frame) 'width
-                         (floor (/ (float (x-display-pixel-width)) 9.15)))
-    (if (= 1050 (x-display-pixel-height))
-        (set-frame-parameter (selected-frame) 'height
-                             (if (>= emacs-major-version 24)
-                                 66
-                               55))
-      (set-frame-parameter (selected-frame) 'height
-                           (if (>= emacs-major-version 24)
-                               75
-                             64)))))
+;; (defun emacs-max ()
+;;   "Switch to maximized window size."
+;;   (interactive)
+;;   (if t
+;;       (progn
+;;         (set-frame-parameter (selected-frame) 'fullscreen 'fullboth)
+;;         (set-frame-parameter (selected-frame) 'vertical-scroll-bars nil)
+;;         (set-frame-parameter (selected-frame) 'horizontal-scroll-bars nil))
+;;     (set-frame-parameter (selected-frame) 'top 26)
+;;     (set-frame-parameter (selected-frame) 'left 2)
+;;     (set-frame-parameter (selected-frame) 'width
+;;                          (floor (/ (float (x-display-pixel-width)) 9.15)))
+;;     (if (= 1050 (x-display-pixel-height))
+;;         (set-frame-parameter (selected-frame) 'height
+;;                              (if (>= emacs-major-version 24)
+;;                                  66
+;;                                55))
+;;       (set-frame-parameter (selected-frame) 'height
+;;                            (if (>= emacs-major-version 24)
+;;                                75
+;;                              64)))))
 
-(defun emacs-toggle-size ()
-  "Toggle between min and max widow sizes."
-  (interactive)
-  (if (> (cdr (assq 'width (frame-parameters))) 100)
-      (emacs-min)
-    (emacs-max)))
+;; (defun emacs-toggle-size ()
+;;   "Toggle between min and max widow sizes."
+;;   (interactive)
+;;   (if (> (cdr (assq 'width (frame-parameters))) 100)
+;;       (emacs-min)
+;;     (emacs-max)))
 
-(bind-key "C-c m" 'emacs-toggle-size)
+;; (bind-key "C-c m" 'emacs-toggle-size)
 
 (defcustom user-initials nil
   "*Initials of this user."
@@ -1714,29 +4247,26 @@ If region is active, apply to active region instead."
 (use-package abbrev
   ;; internal
   :straight nil
-  :defer 5
-  :commands abbrev-mode
-  :diminish abbrev-mode
+  :diminish t
   :preface
   (defun define-abbrev-sedlike (text)
     "Search TEXT for sedlike s/./,/ and add abbrev to mode table."
+    (interactive "sSedlike Expression? ")
     (when (string-match "^[Ss]/\\([^/]*\\)/\\([^/]*\\)/" text)
-      ;; (message "Added abbrev \"%s\"->\"%s\" "
-      ;;          (match-string 1 text)
-      ;;          (match-string 2 text))
       (define-abbrev local-abbrev-table
         (match-string 1 text)
         (match-string 2 text))))
-  :init
-  (defun abbrev ())
-  :hook (text-mode . #'abbrev-mode)
-  :hook (prog-mode . #'abbrev-mode)
-  :hook (erc-mode . #'abbrev-mode)
-  :hook (LaTeX-mode . #'abbrev-mode)
+  :hook
+  ((text-mode prog-mode erc-mode LaTeX-mode) . #'abbrev-mode)
+  (expand-load
+   . (lambda ()
+       (add-hook 'expand-expand-hook #'indent-according-to-mode)
+       (add-hook 'expand-jump-hook #'indent-according-to-mode)))
+  :custom
+  (abbrev-file-name (emacs-path "abbrevs.el"))
   :config
-  (progn
-    (if (file-exists-p abbrev-file-name)
-        (quietly-read-abbrev-file))))
+  (if (file-exists-p abbrev-file-name)
+      (quietly-read-abbrev-file)))
 
 ;;;_ , ace-jump-mode
 
@@ -1783,75 +4313,23 @@ If region is active, apply to active region instead."
   (alert-play-volume 0.2)
   (alert-play-command "play"))
 
-;;;_ , allout
-
-(use-package allout
-  ;; BULK-ENSURE :ensure t
-  :diminish allout-mode
-  :commands allout-mode
-  :config
-  (progn
-    (defvar allout-unprefixed-keybindings nil)
-
-    (defun my-allout-mode-hook ()
-      (dolist (mapping '((?b . allout-hide-bodies)
-                         (?c . allout-hide-current-entry)
-                         (?l . allout-hide-current-leaves)
-                         (?i . allout-show-current-branches)
-                         (?e . allout-show-entry)
-                         (?o . allout-show-to-offshoot)))
-        (bind-key (concat (format-kbd-macro allout-command-prefix)
-                          " " (char-to-string (car mapping)))
-                  (cdr mapping)
-                  allout-mode-map))
-
-      (if (memq major-mode lisp-modes)
-          (unbind-key "C-k" allout-mode-map)))
-
-    (add-hook 'allout-mode-hook 'my-allout-mode-hook)))
-
-(use-package anakondo
-  :disabled t
-  :unless noninteractive
-  :commands anakondo-minor-mode
-  :hook ((inf-clojure-mode
-          clojure-mode
-          clojurescript-mode
-          clojurec-mode) . #'anakondo-minor-mode))
-
-;;;_ , anzu
-
-(use-package anzu
-  ;; BULK-ENSURE :ensure t
-  :diminish anzu-mode
-  :config
-  (global-anzu-mode 1))
-
 ;;;_ , ascii
 
 (use-package ascii
-  :unless install-run
-  :commands (ascii-on ascii-toggle)
-  :init
-  (progn
-    (defun ascii-toggle ()
-      (interactive)
-      (if ascii-display
-          (ascii-off)
-        (ascii-on)))
-
-    (bind-key "C-c e A" 'ascii-toggle)))
+  :bind ("C-c e A" . ascii-toggle)
+  :commands (ascii-on ascii-off ascii-toggle)
+  :preface
+  (defun ascii-toggle ()
+    (interactive)
+    (if ascii-display
+        (ascii-off)
+      (ascii-on))))
 
 ;;;_ , archive-region
 
 (use-package archive-region
   :commands kill-region-or-archive-region
   :bind ("C-w" . kill-region-or-archive-region))
-
-;;;_ , async
-
-(use-package async)
-;; BULK-ENSURE :ensure t
 
 (use-package atomic-chrome
   :custom
@@ -1861,21 +4339,44 @@ If region is active, apply to active region instead."
      ("github\\.com" . gfm-mode)
      ("redmine" . textile-mode))
    "Major modes for URLs.")
+  (atomic-chrome-server-ghost-text-port (+ 4000 user-number))
   :config
   (atomic-chrome-start-server))
 
-
-;;;_ , auth-password-store
-
-(use-package auth-password-store
-  ;; TBD
+(use-package auth-source-pass
   :disabled t
+  :preface
+  (defvar auth-source-pass--cache (make-hash-table :test #'equal))
+
+  (defun auth-source-pass--reset-cache ()
+    (setq auth-source-pass--cache (make-hash-table :test #'equal)))
+
+  (defun auth-source-pass--read-entry (entry)
+    "Return a string with the file content of ENTRY."
+    (run-at-time 45 nil #'auth-source-pass--reset-cache)
+    (let ((cached (gethash entry auth-source-pass--cache)))
+      (or cached
+          (puthash
+           entry
+           (with-temp-buffer
+             (insert-file-contents (expand-file-name
+                                    (format "%s.gpg" entry)
+                                    (getenv "PASSWORD_STORE_DIR")))
+             (buffer-substring-no-properties (point-min) (point-max)))
+           auth-source-pass--cache))))
+
+  (defun auth-source-pass-entries ()
+    "Return a list of all password store entries."
+    (let ((store-dir (getenv "PASSWORD_STORE_DIR")))
+      (mapcar
+       (lambda (file) (file-name-sans-extension (file-relative-name file store-dir)))
+       (directory-files-recursively store-dir "\.gpg$"))))
   :config
-  (auth-pass-enable))
+  (auth-source-pass-enable))
 
 (use-package autorevert
-  :hook ((dired-mode . auto-revert-mode)
-         (after-init . global-auto-revert-mode)))
+  :config
+  (global-auto-revert-mode t))
 
 (use-package autoinsert
   :straight nil
@@ -1887,10 +4388,106 @@ If region is active, apply to active region instead."
 ;;;_ , avy
 
 (use-package avy
-  :bind
-  ("M-`" . avy-goto-char-2)
+  :bind ("C-." . avy-goto-char-timer)
+  :custom
+  (avy-case-fold-search t)
+  (avy-keys '(97 111 101 117 105 100 104 116 110 115))
+  (avy-timeout-seconds 0.3)
+  :functions (avy-setup-default)
+  :preface
+  (defun avy-action-kill-whole-line (pt)
+    (save-excursion
+      (goto-char pt)
+      (kill-whole-line))
+    (select-window
+     (cdr
+      (ring-ref avy-ring 0)))
+    t)
+
+  (defun avy-action-copy-whole-line (pt)
+    (save-excursion
+      (goto-char pt)
+      (cl-destructuring-bind (start . end)
+          (bounds-of-thing-at-point 'line)
+        (copy-region-as-kill start end)))
+    (select-window
+     (cdr
+      (ring-ref avy-ring 0)))
+    t)
+
+  (defun avy-action-yank-whole-line (pt)
+    (avy-action-copy-whole-line pt)
+    (save-excursion (yank))
+    t)
+
+  (defun avy-action-teleport-whole-line (pt)
+    (avy-action-kill-whole-line pt)
+    (save-excursion (yank)) t)
+
+  (defun avy-action-mark-to-char (pt)
+    (activate-mark)
+    (goto-char pt))
   :config
-  (avy-setup-default))
+  (avy-setup-default)
+
+  (setf (alist-get ?k avy-dispatch-alist) 'avy-action-kill-stay
+        (alist-get ?K avy-dispatch-alist) 'avy-action-kill-whole-line)
+
+  (setf (alist-get ?y avy-dispatch-alist) 'avy-action-yank
+        (alist-get ?w avy-dispatch-alist) 'avy-action-copy
+        (alist-get ?W avy-dispatch-alist) 'avy-action-copy-whole-line
+        (alist-get ?Y avy-dispatch-alist) 'avy-action-yank-whole-line)
+
+  (setf (alist-get ?t avy-dispatch-alist) 'avy-action-teleport
+        (alist-get ?T avy-dispatch-alist) 'avy-action-teleport-whole-line)
+
+  (setf (alist-get ?  avy-dispatch-alist) 'avy-action-mark-to-char))
+
+(use-package avy-embark
+  :straight nil
+  :no-require t
+  :after (avy embark)
+  :preface
+  (defun avy-action-embark (pt)
+    (require 'embark
+             (unwind-protect
+                 (save-excursion
+                   (goto-char pt)
+                   (embark-act))
+               (select-window
+                (cdr (ring-ref avy-ring 0))))
+             t))
+  :config
+  (setf (alist-get ?. avy-dispatch-alist) 'avy-action-embark))
+
+(use-package avy-flyspell
+  :straight nil
+  :no-require t
+  :after avy
+  :functions (flyspell-auto-correct-word)
+  :preface
+  (defun avy-action-flyspell (pt)
+    (save-excursion
+      (goto-char pt)
+      (when (require 'flyspell nil t)
+        (flyspell-auto-correct-word)))
+    (select-window
+     (cdr (ring-ref avy-ring 0)))
+    t)
+  :config
+  (setf (alist-get ?\; avy-dispatch-alist) 'avy-action-flyspell))
+
+(use-package avy-zap
+  :straight nil
+  :bind (("M-z" . avy-zap-up-to-char-dwim)
+         ("M-Z" . avy-zap-to-char-dwim)))
+
+;;;_ , auto-yasnippet
+
+(use-package auto-yasnippet
+  :after yasnippet
+  :bind (("C-c y e" . aya-expand)
+         ("C-c y c" . aya-create)))
 
 ;;;_ , backup-each-save
 
@@ -1918,20 +4515,6 @@ If region is active, apply to active region instead."
 
 (use-package backup-walker
   :commands backup-walker-start)
-
-;;;_ , auto-yasnippet
-
-(use-package auto-yasnippet
-  ;; BULK-ENSURE :ensure t
-  :after yasnippet
-  :bind (("C-c y e" . aya-expand)
-         ("C-c y c" . aya-create)))
-
-(use-package bazel-mode
-  ;;; replaced by `bazel`
-  :disabled t
-  :mode "WORKSPACE"
-  :mode "BUILD")
 
 (use-package bazel)
 
@@ -1981,91 +4564,78 @@ If region is active, apply to active region instead."
              bm-buffer-save
              bm-buffer-save-all
              bm-buffer-restore)
-  :init
-  (add-hook 'after-init-hook 'bm-repository-load)
-  (add-hook 'find-file-hooks 'bm-buffer-restore)
-  (add-hook 'after-revert-hook #'bm-buffer-restore)
-  (add-hook 'kill-buffer-hook #'bm-buffer-save)
-  (add-hook 'after-save-hook #'bm-buffer-save)
-  (add-hook 'vc-before-checkin-hook #'bm-buffer-save)
-  (add-hook 'kill-emacs-hook #'(lambda nil
-                                 (bm-buffer-save-all)
-                                 (bm-repository-save))))
+  :hook
+  (after-init        . bm-repository-load)
+  (find-file         . bm-buffer-restore)
+  (after-revert      . bm-buffer-restore)
+  (kill-buffer       . bm-buffer-save)
+  (after-save        . bm-buffer-save)
+  (vc-before-checkin . bm-buffer-save)
+  (kill-emacs        . (lambda ()
+                         (bm-buffer-save-all)
+                         (bm-repository-save)))
+  :custom
+  (bm-buffer-persistence t)
+  (bm-cycle-all-buffers t)
+  (bm-highlight-style 'bm-highlight-only-fringe)
+  (bm-in-lifo-order t)
+  (bm-repository-file (user-data "bm-repository")))
 
-;;;_ , bookmark+
-;;
+(use-package bookmark
+  :straight nil
+  :defer t
+  :bind
+  ("<f4>" . (lambda () (interactive) (bookmark-set "SAVED")))
+  ("<f1>" . (lambda () (interactive) (bookmark-jump "SAVED")))
+  :custom
+  (bookmark-default-file (emacs-path "bookmarks")))
 
-(use-package bookmark+
-  ;; TBD must be downloaded by hand, no melpa
-  :disabled t
-  :init
-  (progn
-    (require 'bookmark)
-    ;;! A `.txt' extension would load Org at the time `bookmark' is required!
-    (setq bookmark-default-file "~/.emacs.d/bookmarks.bmk")
-    (unless (file-exists-p bookmark-default-file)
-      (bookmark-save)))
+(use-package browse-url
+  :straight nil
+  :defer t
   :config
-  (progn
-    (defun leuven-bmkp-autoname-line (position)
-      "Name autonamed bookmark at POSITION using line number."
-      (let ((line  (line-number-at-pos position)))
-        ;; (format "%s:%d (%s)" (buffer-name) line (buffer-file-name))
-        (format "%s:%d: %s"
-                (buffer-name)
-                line
-                (buffer-substring-no-properties
-                 (line-beginning-position)
-                 (1- (line-beginning-position 2))))))
+  (setq browse-url-generic-program (or (executable-find "firefox")
+                                       (executable-find "chrome"))))
 
-    (setq bookmark-save-flag 1
+(use-package browse-kill-ring
+  :commands browse-kill-ring)
 
-          ;; Priorities of bookmark highlighting overlay types.
-          bmkp-light-priorities '((bmkp-autonamed-overlays     . 150)
-                                  (bmkp-non-autonamed-overlays . 160))
-
-          ;; Symbols for the fringe bitmaps to use to highlight a bookmark.
-          bmkp-light-left-fringe-bitmap 'filled-square
-          bmkp-light-right-fringe-bitmap 'filled-square
-
-          ;; Default highlight style for ANONYMOUS (= default) bookmarks.
-          bmkp-light-style-autonamed 'line+lfringe
-
-          ;; Default highlight style for bookmarks WITH MNEMONICS.
-          bmkp-light-style-non-autonamed 'line+lfringe
-
-          ;; Automatically highlight bookmarks when set.
-          bmkp-auto-light-when-set 'all-in-buffer
-
-          ;; Automatically highlight bookmarks when jumped to.
-          bmkp-auto-light-when-jump 'all-in-buffer
-
-          ;; Don't propertize bookmark names to hold full bookmark data.
-          bmkp-propertize-bookmark-names-flag nil
-          ;; We will often be going back and forth between using Bookmark+ and
-          ;; using vanilla Emacs.
-
-          bmkp-last-as-first-bookmark-file nil
-
-          ;; Name ANONYMOUS bookmarks with buffer name and line number.
-          ;; (setq bmkp-autoname-format "^%B:[0-9]+ (%s)")
-          bmkp-autoname-format "^%B:[0-9]+: %s"
-
-          bmkp-autoname-bookmark-function #'leuven-bmkp-autoname-line)))
-
-;;;_ . browse-at-remote
-
-(use-package browse-at-remote
+(use-package calc
+  :straight nil
   :defer t
   :custom
-  (browse-at-remote-add-line-number-if-no-region-selected nil)
-  :bind ("C-c g g" . browse-at-remote))
+  (math-additional-units
+   '((GiB "1024 * MiB" "Gibi Byte")
+     (MiB "1024 * KiB" "Mebi Byte")
+     (KiB "1024 * B" "Kibi Byte")
+     (Gib "1024 * Mib" "Gibi Bit")
+     (Mib "1024 * Kib" "Mebi Bit")
+     (Kib "1024 * b" "Kibi Bit")
+     (GB "1000 * MB" "Giga Byte")
+     (MB "1000 * KB" "Mega Byte")
+     (KB "1000 * B" "Kilo Byte")
+     (Gb "1000 * Mb" "Giga Bit")
+     (Mb "1000 * Kb" "Mega Bit")
+     (Kb "1000 * b" "Kilo Bit")
+     (B nil "Byte")
+     (b "B / 8" "Bit")))
+  (math-units-table nil))
 
+(use-package calendar
+  :straight nil
+  :custom
+  (calendar-mark-holidays-flag t)
+  (calendar-date-style 'iso)
+  (diary-file (emacs-path "diary")))
 
-;;;_ , browse-kill-ring+
-
-(use-package browse-kill-ring+
-  :disabled t)
+(use-package cal-dst
+  :straight nil
+  :custom
+  (calendar-daylight-time-zone-name "PDT")
+  (calendar-standard-time-zone-name "PST")
+  (calendar-time-zone -480)
+  :init
+  (setenv "TZ" "PST8PDT"))
 
 ;;;_ , captain
 
@@ -2090,21 +4660,6 @@ If region is active, apply to active region instead."
             (lambda ()
               (setq captain-predicate (lambda () (> (length (word-at-point)) 1)))))
 
-  ;; (add-hook 'erc-mode-hook
-  ;;           (lambda ()
-  ;;             (setq captain-predicate
-  ;;                   (lambda ()
-  ;;                     (let* ((gt1 (> (length (word-at-point)) 1))
-  ;;                            (the-line (thing-at-point 'line t))
-  ;;                            (laslash (= 0 (string-match "[[:alnum:]]+/$"
-  ;;                                                        (reverse the-line)))))
-  ;;                       (message "line: %s word: %s >1:%s %s"
-  ;;                                the-line
-  ;;                                (word-at-point)
-  ;;                                (if gt1 "yes" "no")
-  ;;                                (if laslash "yes" "no"))
-  ;;                       gt1)))))
-
   (add-hook
    'org-mode-hook
    (lambda ()
@@ -2112,69 +4667,38 @@ If region is active, apply to active region instead."
            (lambda () (not (org-in-src-block-p))))))
   (global-captain-mode +1))
 
-;;;_ , cedet
+(use-package shell-maker
+  :straight (:host github :repo "xenodium/chatgpt-shell"
+                   :files ("shell-maker.el")))
 
-(use-package cedet
+(use-package chatgpt-shell
+  :requires shell-maker
+  :custom
+  (chatgpt-shell-openai-key
+   (auth-source-pick-first-password :host "api.openai.com"))
+  :straight (:host github :repo "xenodium/chatgpt-shell"
+                   :files ("chatgpt-shell.el")))
+
+(use-package chatgpt-shell
+  :disabled t                           ; when using =package=
+  :ensure t
+  :custom
+  ((chatgpt-shell-api-url-base "https://api.chatgpt.domain.com")
+   (chatgpt-shell-openai-key
+    (lambda ()
+      ;; Here the openai-key should be the proxy service key.
+      (auth-source-pass-get 'secret "openai-key")))))
+
+(use-package copilot
   :disabled t
-  :commands
+  :straight (:type git :host github :repo zerofx/copilot.el :branch master)
+  :hook (prog-mode . copilot-mode)
   :init
-  (progn
-    ;; Enable Semantic
-    (semantic-mode 1)
-    (semantic-load-excessive-code-helpers)
+  (my/toggle-map
+   :keymaps 'override
+   :states '(normal insert motion)
+   "g" #'copilot-mode))
 
-    ;;(when nil              ; jww (2012-06-20): this kills buffers
-    ;; if you want to enable support for gnu global
-    (use-package semanticdb-global)
-    (use-package semantic-ia)
-    (use-package semantic-gcc)
-    (use-package marshal)
-
-    (use-package eassist
-      :init
-      (progn
-        (defun local/c-mode-cedet-hook ()
-          (bind-key "C-c t" 'eassist-switch-h-cpp)
-          (bind-key "C-x t" 'eassist-switch-h-cpp)
-          (bind-key "C-c e" 'eassist-list-methods)
-          (bind-key "C-c C-r" 'semantic-symref))
-
-        (add-hook 'c-mode-common-hook 'local/c-mode-cedet-hook))
-
-      (global-semantic-tag-folding-mode 1)
-      (semanticdb-enable-gnu-global-databases 'c-mode)
-      (semanticdb-enable-gnu-global-databases 'c++-mode)
-
-      (defun my-cedet-hook ()
-        (bind-key [(control return)] 'semantic-ia-complete-symbol)
-        (bind-key "C-c ?" 'semantic-ia-complete-symbol-menu)
-        (bind-key "C-c >" 'semantic-complete-analyze-inline)
-        (bind-key "C-c =" 'semantic-decoration-include-visit)
-        (bind-key "C-c j" 'semantic-ia-fast-jump)
-        (bind-key "C-c q" 'semantic-ia-show-doc)
-        (bind-key "C-c s" 'semantic-ia-show-summary)
-        (bind-key "C-c p" 'semantic-analyze-proto-impl-toggle)
-        (bind-key "C-c +" 'semantic-tag-folding-show-block)
-        (bind-key "C-c -" 'semantic-tag-folding-fold-block)
-        (bind-key "C-c C-c +" 'semantic-tag-folding-show-all)
-        (bind-key "C-c C-c -" 'semantic-tag-folding-fold-all))
-
-      (add-hook 'c-mode-common-hook 'my-cedet-hook)
-
-      ;; ctags
-      (use-package semanticdb-ectag
-        :init
-        (progn
-          (semantic-load-enable-primary-exuberent-ctags-support)))
-
-      (global-semantic-idle-tag-highlight-mode 1)
-      (when (cedet-ectag-version-check)
-        (semantic-load-enable-primary-exuberent-ctags-support)))))
-
-(use-package centered-cursor-mode
-  :disabled t                           ; preferred scroll-margins
-  :config
-  (global-centered-cursor-mode +1))
 
 ;;;_ , cider
 
@@ -2243,10 +4767,6 @@ If region is active, apply to active region instead."
                      ("async" . "clojure.core.async")))
     (add-to-list 'cljr-magic-require-namespaces mapping t)))
 
-;;;_ , cljr-helm
-
-(use-package cljr-ivy)
-
 ;;;_ , clojure-mode
 
 (use-package clojure-mode
@@ -2293,234 +4813,72 @@ If region is active, apply to active region instead."
   :mode (("CMakeLists\\.txt\\'" . cmake-mode)
          ("\\.cmake\\'"         . cmake-mode)))
 
-;;;_ , company
+(use-package color-identifiers-mode
+  :unless noninteractive
+  ;; BULK-ENSURE :ensure t
+  :diminish color-identifiers-mode
+  :custom
+  (color-identifiers-coloring-method 'hash)
+  :hook (after-init . (lambda () (global-color-identifiers-mode +1))))
 
-;; (use-package company
-;;   :defer 1
-;;   :diminish " 𝍎"
-;;   :commands (company-mode company-indent-or-complete-common)
-;;   :custom
-;;   (company-tooltip-align-annotations t)
-;;   ;; (company-tooltip-flip-when-above t)
-;;   (company-tooltip-limit 10)
-;;   (company-require-match nil)
-;;   (company-dabbrev-code-other-buffers t)
-;;   (company-dabbrev-downcase t)
-;;   (company-dabbrev-minimum-length 2)
-;;   (company-dabbrev-ignore-case t)
-;;   (company-minimum-prefix-length 1)
-;;   (company-idle-delay 0.0)
-;;   (company-show-numbers t)
-;;   (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
-;;                        ;; company-echo-metadata-frontend
-;;                        company-preview-if-just-one-frontend))
-;;   (company-occurrence-weight-function
-;;    #'company-occurrence-prefer-any-closest)
-;;   (company-continue-commands
-;;    '(append company-continue-commands
-;;             '(comint-previous-matching-input-from-input
-;;               comint-next-matching-input-from-input)))
+;;;_ , color-moccur
 
-;;   :init
-;;   (dolist (hook '(prog-mode
-;;                   emacs-lisp-mode-hook
-;;                   haskell-mode-hook
-;;                   c-mode-common-hook))
-;;     (add-hook hook
-;;               #'(lambda ()
-;;                   (local-set-key (kbd "<tab>")
-;;                                  #'company-indent-or-complete-common))))
-;;   :config
-;;   ;;(hook-into-modes 'company-mode 'prog-mode-hook 'erc-mode)
-;;   ;; From https://github.com/company-mode/company-mode/issues/87
-;;   ;; See also https://github.com/company-mode/company-mode/issues/123
+(use-package color-moccur
+  :commands (isearch-moccur isearch-all isearch-moccur-all)
+  :bind (("M-s O" . moccur)
+         :map isearch-mode-map
+         ("M-o" . isearch-moccur)
+         ("M-O" . isearch-moccur-all)))
 
-;;   ;; (defadvice company-pseudo-tooltip-unless-just-one-frontend
-;;   ;;     (around only-show-tooltip-when-invoked activate)
-;;   ;;   (when (company-explicit-action-p)
-;;   ;;     ad-do-it))
+(use-package command-log-mode
+  :bind (("C-c e M" . command-log-mode)
+         ("C-c e L" . clm/open-command-log-buffer)))
 
-;;   ;; see http://oremacs.com/2017/12/27/company-numbers/
+(use-package compile
+  :straight nil
+  :bind (("C-c c" . compile)
+         ("M-O"   . show-compilation))
+  :bind (:map compilation-mode-map
+              ("z" . delete-window))
+  :hook (compilation-filter . compilation-ansi-color-process-output)
+  :custom
+  (compilation-always-kill t)
+  (compilation-ask-about-save nil)
+  (compilation-context-lines 10)
+  (compilation-scroll-output 'first-error)
+  (compilation-skip-threshold 2)
+  (compilation-window-height 100)
+  :preface
+  (defun show-compilation ()
+    (interactive)
+    (let ((it
+           (catch 'found
+             (dolist (buf (buffer-list))
+               (when (string-match "\\*compilation\\*" (buffer-name buf))
+                 (throw 'found buf))))))
+      (if it
+          (display-buffer it)
+        (call-interactively 'compile))))
 
-;;   (defun ora-company-number ()
-;;     "Forward to `company-complete-number'.
-;; Unless the number is potentially part of the candidate.
-;; In that case, insert the number."
-;;     (interactive)
-;;     (let* ((k (this-command-keys))
-;;            (re (concat "^" company-prefix k)))
-;;       (if (or (cl-find-if (lambda (s) (string-match re s))
-;;                           company-candidates)
-;;               (> (string-to-number k)
-;;                  (length company-candidates))
-;;               (looking-back "[0-9]+\\.[0-9]*" (line-beginning-position)))
-;;           (self-insert-command 1)
-;;         (company-complete-number
-;;          (if (equal k "0")
-;;              10
-;;            (string-to-number k))))))
+  (defun compilation-ansi-color-process-output ()
+    (ansi-color-process-output nil)
+    (set (make-local-variable 'comint-last-output-start)
+         (point-marker))))
 
-;;   (defun ora--company-good-prefix-p (orig-fn prefix)
-;;     (unless (and (stringp prefix) (string-match-p "\\`[0-9]+\\'" prefix))
-;;       (funcall orig-fn prefix)))
-
-;;   (advice-add 'company--good-prefix-p :around #'ora--company-good-prefix-p)
-
-;;   (let ((map company-active-map))
-;;     (mapc
-;;      (lambda (x)
-;;        (define-key map (format "%d" x) 'ora-company-number))
-;;      (number-sequence 0 9))
-;;     (define-key map " " (lambda ()
-;;                           (interactive)
-;;                           (company-abort)
-;;                           (self-insert-command 1))))
-
-;;   (defun check-expansion ()
-;;     (save-excursion
-;;       (if (outline-on-heading-p t)
-;;           nil
-;;         (if (looking-at "\\_>") t
-;;           (backward-char 1)
-;;           (if (looking-at "\\.") t
-;;             (backward-char 1)
-;;             (if (looking-at "->") t nil))))))
-
-;;   (define-key company-mode-map [tab]
-;;     '(menu-item "maybe-company-expand" nil
-;;                 :filter (lambda (&optional _)
-;;                           (when (check-expansion)
-;;                             #'company-complete-common))))
-
-;;   (eval-after-load "yasnippet"
-;;     '(progn
-;;        (defun company-mode/backend-with-yas (backend)
-;;          (if (and (listp backend) (member 'company-yasnippet backend))
-;;              backend
-;;            (append (if (consp backend) backend (list backend))
-;;                    '(:with company-yasnippet))))
-;;        (setq company-backends
-;;              (mapcar #'company-mode/backend-with-yas company-backends))))
-
-;;   (global-company-mode +1))
-
-
-;; (use-package company-dict
-;;   :after company
-;;   :config
-;;   (setq company-dict-dir (ensure-user-dir "dict/"))
-;;   (cons 'company-dict company-backends))
-
-;; (use-package company-ebdb
-;;   :after company
-;;   :config
-;;   (cons 'company-ebdb company-backends))
-
-;; (use-package company-emoji
-;;   :disabled t
-;;   ;; in favor of coompany-emojify
-;;   :after company
-;;   :config
-;;   (progn
-;;     (cons 'company-emoji company-backends)
-;;     (set-fontset-font
-;;      t 'symbol (font-spec :family "Symbola") nil 'prepend)))
-
-;; (use-package company-emojify
-;;   :after company
-;;   :config
-;;   (add-to-list 'company-backends 'company-emojify))
-
-;; (use-package company-flx
-;;   :after company
-;;   :config
-;;   (company-flx-mode +1))
-
-;; (use-package company-go
-;;   :after company)
-
-;; (use-package company-jedi
-;;   :disabled t
-;;   :unless noninteractive
-;;   :hook
-;;   ((python-mode . jedi:setup))
-;;   :init
-;;   (setq jedi:complete-on-dot t)
-;;   (setq jedi:use-shortcuts t)
-;;   (add-hook 'python-mode-hook
-;;             (lambda () (add-to-list 'company-backends 'company-jedi))))
-
-;; (use-package company-math
-;;   :after company
-;;   :defer t
-;;   :config
-;;   (add-to-list 'company-backends 'company-math-symbols-unicode))
-
-;; (use-package company-ngram
-;;   :disabled t
-;;   :after company
-;;   :config
-;;   (progn
-;;     (setq company-ngram-data-dir
-;;           (locate-user-emacs-file "data/ngram"))
-;;     ;; company-ngram supports python 3 or newer
-;;     company-ngram-python "python3"
-;;     (company-ngram-init)
-;;     (add-to-list 'company-backends #'company-ngram-backend)
-;;     ;; or use `M-x turn-on-company-ngram' and
-;;     ;; `M-x turn-off-company-ngram' on individual buffers
-
-;;     ;; save the cache of candidates
-;;     (run-with-idle-timer 7200 t
-;;                          (lambda (
-;;                              (company-ngram-command "save_cache"))))))
-
-;; (use-package company-org-block
-;;   :after org
-;;   :custom
-;;   (company-org-block-edit-style 'auto) ;; 'auto, 'prompt, or 'inline
-;;   :hook ((org-mode . (lambda ()
-;;                        (setq-local company-backends '(company-org-block))
-;;                        (company-mode +1)))))
-
-;; (use-package company-php
-;;   :after company
-;;   :config
-;;   (add-hook 'php-mode-hook
-;;             '(lambda ()
-;;                (require 'company-php)
-;;                (company-mode t)
-;;                (add-to-list 'company-backends 'company-ac-php-backend))))
-
-;; (use-package company-quickhelp
-;;   :after company
-;;   :custom
-;;   (company-quickhelp-use-propertized-text t)
-;;   (company-quickhelp-delay 0)
-;;   :config (company-quickhelp-mode +1))
-
-;; (use-package company-shell
-;;   :after company
-;;   :config
-;;   (progn
-;;     (add-to-list 'company-backends 'company-shell)
-;;     (add-to-list 'company-backends 'company-shell-env)))
-
-;; (use-package company-statistics
-;;   :after company
-;;   :config
-;;   (company-statistics-mode))
-
-;; (use-package company-web
-;;   :after company
-;;   :preface
-
-;;   :config
-;;   (add-hook
-;;    'web-mode-hook (lambda ()
-;;                     (set (make-local-variable 'company-backends)
-;;                          '(company-web-html))
-;;                     (company-mode t))))
+(use-package copy-as-format
+  :bind (("C-c w m" . copy-as-format-markdown)
+         ("C-c w s" . copy-as-format-slack)
+         ("C-c w o" . copy-as-format-org-mode)
+         ("C-c w r" . copy-as-format-rst)
+         ("C-c w g" . copy-as-format-github)
+         ("C-c w w" . copy-as-format))
+  :custom
+  (copy-as-format-default "markdown")
+  :config
+  (defun copy-as-format--org-mode (text _multiline)
+    (format "#+begin_src %s\n%s\n#+end_src\n"
+            (replace-regexp-in-string "-mode\\'" "" (symbol-name major-mode))
+            text)))
 
 (use-package corfu
   :bind (:map corfu-map
@@ -2557,7 +4915,7 @@ If region is active, apply to active region instead."
       (setq-local corfu-auto nil) ; Ensure auto completion is disabled
       (corfu-mode 1)))
   (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
-  :init
+  :config
   (global-corfu-mode +1))
 
 (use-package popon
@@ -2576,6 +4934,20 @@ If region is active, apply to active region instead."
   :unless (display-graphic-p)
   :config
   (corfu-terminal-mode +1))
+
+(use-package elisp-mode-cape
+  :no-require t
+  :straight nil
+  :after (cape elisp-mode)
+  :hook (emacs-lisp-mode . my/setup-elisp)
+  :preface
+  (defun my/setup-elisp ()
+    (setq-local completion-at-point-functions
+                `(,(cape-super-capf
+                    #'elisp-completion-at-point
+                    #'cape-dabbrev)
+                  cape-file)
+                cape-dabbrev-min-length 5)))
 
 (use-package cape
   :bind (("C-c p p" . completion-at-point) ;; capf
@@ -2612,57 +4984,31 @@ If region is active, apply to active region instead."
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify)
   )
 
-
-;;;_ , compile
-
-(use-package compile
-  :disabled
-  :bind (("C-c c" . compile)
-         ("M-O"   . show-compilation))
+(use-package elisp-mode-cape
+  :no-require t
+  :straight nil
+  :after (cape elisp-mode)
+  :hook (emacs-lisp-mode . my/setup-elisp)
   :preface
-  (defun show-compilation ()
-    (interactive)
-    (let ((compile-buf
-           (catch 'found
-             (dolist (buf (buffer-list))
-               (if (string-match "\\*compilation\\*" (buffer-name buf))
-                   (throw 'found buf))))))
-      (if compile-buf
-          (switch-to-buffer-other-window compile-buf)
-        (call-interactively 'compile))))
-
-  (defun compilation-ansi-color-process-output ()
-    (ansi-color-process-output nil)
-    (set (make-local-variable 'comint-last-output-start)
-         (point-marker)))
-
-  :config
-  (add-hook 'compilation-filter-hook #'compilation-ansi-color-process-output))
-
-(use-package color-identifiers-mode
-  :unless noninteractive
-  ;; BULK-ENSURE :ensure t
-  :diminish color-identifiers-mode
-  :custom
-  (color-identifiers-coloring-method 'hash)
-  :hook (after-init . (lambda () (global-color-identifiers-mode +1))))
-
-;;;_ , color-moccur
-
-(use-package color-moccur
-  :commands (isearch-moccur isearch-all isearch-moccur-all)
-  :bind (("M-s O" . moccur)
-         :map isearch-mode-map
-         ("M-o" . isearch-moccur)
-         ("M-O" . isearch-moccur-all)))
+  (defun my/setup-elisp ()
+    (setq-local completion-at-point-functions
+                `(,(cape-super-capf
+                    #'elisp-completion-at-point
+                    #'cape-dabbrev)
+                  cape-file)
+                cape-dabbrev-min-length 5)))
 
 (use-package marginalia
   :after vertico
+  :bind (("M-A" . marginalia-cycle)
+         :map minibuffer-local-map
+         ("M-A" . marginalia-cycle))
   :custom
   (marginalia-align 'right)
-  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
-  :init
-  (marginalia-mode +1))
+  (marginalia-annotators
+   '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  (popwin:universal-display-config
+   (marginalia-mode +1)))
 
 (use-package embark
   :after vertico
@@ -2686,7 +5032,6 @@ If region is active, apply to active region instead."
 
 ;; Consult users will also want the embark-consult package.
 (use-package embark-consult
-  :after (embark consult)
   :hook
   (embark-collect-mode . consult-preview-at-point-mode))
 
@@ -2840,6 +5185,21 @@ If region is active, apply to active region instead."
              :repo "OlMon/consult-projectile"
              :branch "master"))
 
+(use-package copy-as-format
+  :bind (("C-c w m" . copy-as-format-markdown)
+         ("C-c w s" . copy-as-format-slack)
+         ("C-c w o" . copy-as-format-org-mode)
+         ("C-c w r" . copy-as-format-rst)
+         ("C-c w g" . copy-as-format-github)
+         ("C-c w w" . copy-as-format))
+  :custom
+  (copy-as-format-default "slack")
+  :config
+  (defun copy-as-format--org-mode (text _multiline)
+    (format "#+begin_src %s\n%s\n#+end_src\n"
+            (replace-regexp-in-string "-mode\\'" "" (symbol-name major-mode))
+            text)))
+
 ;;;_ , crosshairs
 
 (use-package crosshairs
@@ -2857,33 +5217,25 @@ If region is active, apply to active region instead."
 
 (use-package css-eldoc)
 
+(use-package dabbrev
+  :straight nil
+  :bind ("C-M-/" . dabbrev-expand)
+  :custom
+  (dabbrev-case-fold-search nil)
+  (dabbrev-case-replace nil)
+  (dabbrev-ignored-buffer-regexps '("\\.\\(?:pdf\\|jpe?g\\|png\\)\\'")))
+
+(use-package deadgrep
+  :bind ("M-s d" . deadgrep))
 
 ;;;_ , dedicated
 
 (use-package dedicated
-  :defer t)
+  :bind ("C-c W" . dedicated-mode))
 
 (use-package default-text-scale
   :config)
 (default-text-scale-mode +1)
-
-;;;_ , deft
-
-(use-package deft
-  :commands deft
-  :custom
-  (deft-directory "~/doc/notes")
-  (deft-text-mode 'org-mode)
-  (deft-use-filename-as-title t)
-  :config
-  (progn
-    (setq deft-default-extension "org")
-    (setq deft-extensions '("org"))
-    (setq deft-use-filter-string-for-filename t)
-    (setq deft-file-naming-rules '((noslash . "_")
-                                   (nospace . "_")
-                                   (case-fn . downcase)))
-    (setq deft-directory "~/SparkleShare/org/notes")))
 
 (use-package devdocs
   :disabled t
@@ -2938,17 +5290,95 @@ Install the doc if it's not installed."
     ;; Lookup the symbol at point
     (devdocs-lookup nil (thing-at-point 'symbol t))))
 
+(use-package diff-hl
+  :commands (diff-hl-mode diff-hl-dired-mode))
+
+(use-package diff-hl-flydiff
+  :straight nil
+  :after diff-hl
+  :commands diff-hl-flydiff-mode)
+
 ;;;_ , diff-mode
 
 (use-package diff-mode
-  :commands diff-mode)
+  :commands diff-mode
+  :custom
+  (diff-mode-hook '(diff-delete-empty-files diff-make-unified smerge-mode))
+  :custom-face
+  (diff-added ((((background dark)) (:foreground "#FFFF9B9BFFFF"))
+               (t (:foreground "DarkGreen"))))
+  (diff-changed ((((background dark)) (:foreground "Yellow"))
+                 (t (:foreground "MediumBlue"))))
+  (diff-context ((((background dark)) (:foreground "White"))
+                 (t (:foreground "Black"))))
+  (diff-file-header ((((background dark)) (:foreground "Cyan" :background "Black"))
+                     (t (:foreground "Red" :background "White"))))
+  (diff-header ((((background dark)) (:foreground "Cyan"))
+                (t (:foreground "Red"))))
+  (diff-index ((((background dark)) (:foreground "Magenta"))
+               (t (:foreground "Green"))))
+  (diff-nonexistent ((((background dark)) (:foreground "#FFFFFFFF7474"))
+                     (t (:foreground "DarkBlue")))))
+
+(use-package diffview
+  :commands (diffview-current diffview-region diffview-message))
 
 ;;;_ , dired
 
 (use-package dired
   :straight nil
-  :bind ("C-c J" . dired-double-jump)
+  :diminish dired-omit-mode
+  :bind ("C-c j" . dired-two-pane)
+  :bind (:map dired-mode-map
+              ("j"     . dired)
+              ("l"     . dired-up-directory)
+              ("z"     . pop-window-configuration)
+              ("e"     . ora-ediff-files)
+              ("^"     . dired-up-directory)
+              ("q"     . pop-window-configuration)
+              ("Y"     . ora-dired-rsync)
+              ("M-!"   . #'async-shell-command)
+              ("<tab>" . dired-next-window)
+              (";"     . dired-do-repeat-shell-command)
+              ("M-G")
+              ("M-s f"))
+  :hook (dired-mode . dired-hide-details-mode)
+  :custom
+  (dired-clean-up-buffers-too nil)
+  (dired-dwim-target t)
+  (dired-hide-details-hide-information-lines nil)
+  (dired-hide-details-hide-symlink-targets nil)
+  ;; jww (2023-05-13): This does not work on all Tramp hosts
+  ;; (dired-listing-switches "--group-directories-first -lah")
+  (dired-listing-switches "-lah")
+  (dired-no-confirm
+   '(byte-compile chgrp chmod chown copy hardlink symlink touch))
+  (dired-omit-mode nil t)
+  ;; (dired-omit-size-limit 60000)
+  (dired-recursive-copies 'always)
+  (dired-recursive-deletes 'always)
+  (dired-shell-command-history '("mpv --fs --volume=50 --osd-bar-align-y=1 *"))
+  :functions (dired-dwim-target-directory)
   :preface
+  (defun dired-two-pane ()
+    (interactive)
+    (push-window-configuration)
+    (let ((here default-directory))
+      (delete-other-windows)
+      (dired "~/dl")
+      (split-window-horizontally)
+      (dired here)))
+
+  (defun dired-next-window ()
+    (interactive)
+    (let ((next (car (cl-remove-if-not
+                      #'(lambda (wind)
+                          (with-current-buffer (window-buffer wind)
+                            (eq major-mode 'dired-mode)))
+                      (cdr (window-list))))))
+      (when next
+        (select-window next))))
+
   (defvar mark-files-cache (make-hash-table :test #'equal))
 
   (defun mark-similar-versions (name)
@@ -2962,54 +5392,6 @@ Install the doc if it's not installed."
     (interactive)
     (setq mark-files-cache (make-hash-table :test #'equal))
     (dired-mark-sexp '(mark-similar-versions name)))
-
-  (defun dired-double-jump (first-dir second-dir)
-    (interactive
-     (list (read-directory-name "First directory: "
-                                (expand-file-name "~")
-                                nil nil "dl/")
-           (read-directory-name "Second directory: "
-                                (expand-file-name "~")
-                                nil nil "Archives/")))
-    (dired first-dir)
-    (dired-other-window second-dir))
-
-  (defun my-dired-switch-window ()
-    (interactive)
-    (if (eq major-mode 'sr-mode)
-        (call-interactively #'sr-change-window)
-      (call-interactively #'other-window)))
-
-  :custom
-  (dired-recursive-deletes 'always)
-  (dired-recursive-copies 'always)
-  (dired-deletion-confirmer 'y-or-n-p)
-  (dired-clean-up-buffers-too nil)
-  (delete-by-moving-to-trash t)
-  ;; trash-directory "~/.Trash/emacs"
-  (dired-dwim-target t)
-  (dired-guess-shell-alist-user
-   '(("\\.pdf\\'" "evince")
-     ("\\.jpg\\'" "feh")))
-  (dired-listing-switches "-alv")
-  :config
-  (bind-key "l" #'dired-up-directory dired-mode-map)
-
-  (bind-key "<tab>" #'my-dired-switch-window dired-mode-map)
-
-  (bind-key "M-!" #'async-shell-command dired-mode-map)
-  (unbind-key "M-G" dired-mode-map)
-
-  (use-package dired-narrow
-    :defer t
-    ;; BULK-ENSURE :ensure t
-    :bind (:map dired-mode-map
-                ("/" . dired-narrow)))
-
-  ;; (fset 'asynch-play-media-using-last-command
-  ;;       [?& up return])
-
-  (setq dired-shell-command-history '("mpv --fs --volume=50 --osd-bar-align-y=1 *"))
 
   (defun dired-do-repeat-shell-command (&optional arg file-list)
     (interactive
@@ -3025,123 +5407,77 @@ Install the doc if it's not installed."
       (dired-do-async-shell-command
        (car dired-shell-command-history) arg file-list)))
 
-  (bind-key ";" #'dired-do-repeat-shell-command dired-mode-map)
+  (defun ora-dired-rsync (dest)
+    (interactive
+     (list
+      (expand-file-name
+       (read-file-name "Rsync to: " (dired-dwim-target-directory)))))
+    (let ((files (dired-get-marked-files
+                  nil current-prefix-arg))
+          (tmtxt/rsync-command "rsync -aP "))
+      (dolist (file files)
+        (setq tmtxt/rsync-command
+              (concat tmtxt/rsync-command
+                      (shell-quote-argument file)
+                      " ")))
+      (setq tmtxt/rsync-command
+            (concat tmtxt/rsync-command
+                    (shell-quote-argument dest)))
+      (async-shell-command tmtxt/rsync-command "*rsync*")
+      (other-window 1)))
 
-  ;; (setq my-dired-omit-files
-  ;;    '("^\\.$"
-  ;;      "^\\.\\.$"
-  ;;      "^\\.git$")
-  ;;    )
-  ;; (setq dired-omit-files
-  ;;    (mapconcat #'identity my-dired-omit-files "\\|"))
+  (defun ora-ediff-files ()
+    (interactive)
+    (let ((files (dired-get-marked-files))
+          (wnd (current-window-configuration)))
+      (if (<= (length files) 2)
+          (let ((file1 (car files))
+                (file2 (if (cdr files)
+                           (cadr files)
+                         (read-file-name
+                          "file: "
+                          (dired-dwim-target-directory)))))
+            (if (file-newer-than-file-p file1 file2)
+                (ediff-files file2 file1)
+              (ediff-files file1 file2))
+            (add-hook 'ediff-after-quit-hook-internal
+                      `(lambda ()
+                         (setq ediff-after-quit-hook-internal nil)
+                         (set-window-configuration ,wnd))))
+        (error "No more than 2 files should be marked")))))
 
-  ;; (add-hook 'dired-mode-hook (lambda () (dired-omit-mode)))
+(use-package dired-follow
+  :straight nil
+  :no-require t
+  :after dired
+  :bind (:map dired-mode-map
+              ("F" . dired-follow-mode))
+  :preface
+  (defun do-dired-display-file (_)
+    (dired-display-file))
 
-  (use-package dired+
-    :disabled t
-    :config
-    (unbind-key "M-s f" dired-mode-map))
+  (define-minor-mode dired-follow-mode
+    "Diplay file at point in dired after a move."
+    :lighter " dired-f"
+    :global t
+    :group 'dired
+    (if dired-follow-mode
+        (advice-add 'dired-next-line :after #'do-dired-display-file)
+      (advice-remove 'dired-next-line #'do-dired-display-file))))
 
-  (use-package dired-details
-    ;; (shell-command "rm -f site-lisp/dired-details.el*")
-    :disabled t)
+(use-package dired-hist
+  :after dired
+  :straight (dired-hist :type git :host github :repo "karthink/dired-hist")
+  :bind (:map  dired-mode-map
+               ("l" . dired-hist-go-back)
+               ("r" . dired-hist-go-forward))
+  :config
+  (dired-hist-mode +1))
 
-  (use-package dired-ranger
-    ;; BULK-ENSURE :ensure t
-    :defer t
-    :bind (:map dired-mode-map
-                ("W" . dired-ranger-copy)
-                ("X" . dired-ranger-move)
-                ("Y" . dired-ranger-paste)))
-
-  (use-package dired-toggle
-    :disabled t
-    :bind (("C-c C-T" . #'dired-toggle)
-           :map dired-mode-map
-           ("q" . #'dired-toggle-quit)
-           ([remap dired-find-file] . #'dired-toggle-find-file)
-           ([remap dired-up-directory] . #'dired-toggle-up-directory)
-           ("C-c C-u" . #'dired-toggle-up-directory))
-    :config
-    (setq dired-toggle-window-size 32)
-    (setq dired-toggle-window-side 'left)
-
-    ;; Optional, enable =visual-line-mode= for our narrow dired buffer:
-    (add-hook 'dired-toggle-mode-hook
-              (lambda () (interactive)
-                (visual-line-mode 1)
-                (setq-local visual-line-fringe-indicators '(nil right-curly-arrow))
-                (setq-local word-wrap nil))))
-
-  ;; (defadvice dired-omit-startup (after diminish-dired-omit activate)
-  ;;   "Make sure to remove \"Omit\" from the modeline."
-  ;;   (diminish 'dired-omit-mode) dired-mode-map)
-
-  ;; (defadvice dired-next-line (around dired-next-line+ activate)
-  ;;   "Replace current buffer if file is a directory."
-  ;;   ad-do-it
-  ;;   (while (and  (not  (eobp)) (not ad-return-value))
-  ;;     (forward-line)
-  ;;     (setq ad-return-value(dired-move-to-filename)))
-  ;;   (when (eobp)
-  ;;     (forward-line -1)
-  ;;     (setq ad-return-value(dired-move-to-filename))))
-
-  ;; (defadvice dired-previous-line (around dired-previous-line+ activate)
-  ;;   "Replace current buffer if file is a directory."
-  ;;   ad-do-it
-  ;;   (while (and  (not  (bobp)) (not ad-return-value))
-  ;;     (forward-line -1)
-  ;;     (setq ad-return-value(dired-move-to-filename)))
-  ;;   (when (bobp)
-  ;;     (call-interactively 'dired-next-line)))
-
-  (defvar dired-omit-regexp-orig (symbol-function 'dired-omit-regexp))
-
-  ;; Omit files that Git would ignore
-  (defun dired-omit-regexp ()
-    (let ((file (expand-file-name ".git"))
-          parent-dir)
-      (while (and (not (file-exists-p file))
-                  (progn
-                    (setq parent-dir
-                          (file-name-directory
-                           (directory-file-name
-                            (file-name-directory file))))
-                    ;; Give up if we are already at the root dir.
-                    (not (string= (file-name-directory file)
-                                  parent-dir))))
-        ;; Move up to the parent dir and try again.
-        (setq file (expand-file-name ".git" parent-dir)))
-      ;; If we found a change log in a parent, use that.
-      (if (file-exists-p file)
-          (let ((regexp (funcall dired-omit-regexp-orig))
-                (omitted-files
-                 (shell-command-to-string "git clean -d -x -n")))
-            (if (= 0 (length omitted-files))
-                regexp
-              (concat
-               regexp
-               (if (> (length regexp) 0)
-                   "\\|" "")
-               "\\("
-               (mapconcat
-                #'(lambda (str)
-                    (concat
-                     "^"
-                     (regexp-quote
-                      (substring str 13
-                                 (if (= ?/ (aref str (1- (length str))))
-                                     (1- (length str))
-                                   nil)))
-                     "$"))
-                (split-string omitted-files "\n" t)
-                "\\|")
-               "\\)")))
-        (funcall dired-omit-regexp-orig)))))
-
-(use-package dired-duplicates
-  :disabled t)
+(use-package dired-narrow
+  :after dired
+  :bind (:map dired-mode-map
+              ("/" . dired-narrow)))
 
 (use-package dired-git
   :hook (dired-mode-hook . #'dired-git-mode))
@@ -3162,13 +5498,18 @@ Install the doc if it's not installed."
                                  :severity 'normal
                                  :title "dired-rsync")))))
 
-  (advice-add #'dired-rsync--update-modeline :after #'my/dired-rsync-update-modeline))
+  (advice-add #'dired-rsync--update-modeline
+              :after #'my/dired-rsync-update-modeline))
 
-
-(use-package dirvish
-  :disabled t
-  :init
-  (dirvish-override-dired-mode))
+(use-package dired-toggle
+  :bind ("C-c ~" . dired-toggle)
+  :preface
+  (defun my-dired-toggle-mode-hook ()
+    (interactive)
+    (visual-line-mode 1)
+    (setq-local visual-line-fringe-indicators '(nil right-curly-arrow))
+    (setq-local word-wrap nil))
+  :hook (dired-toggle-mode . my-dired-toggle-mode-hook))
 
 ;;;_ , disable-mouse-mode
 
@@ -3176,21 +5517,6 @@ Install the doc if it's not installed."
   :diminish disable-mouse-global-mode
   :config
   (global-disable-mouse-mode +1))
-
-;; try this alternative
-;; (defun turn-off-mouse (&optional frame)
-;;   (interactive)
-;;   (let ((inhibit-message t) (default-directory "~"))
-;;     (shell-command "synclient TouchpadOff=1")))
-
-;; (defun turn-on-mouse (&optional frame)
-;;   (interactive)
-;;   (let ((inhibit-message t) (default-directory "~"))
-;;     (shell-command "synclient TouchpadOff=0")))
-
-;; (add-hook 'focus-in-hook #'turn-off-mouse)
-;; (add-hook 'focus-out-hook #'turn-on-mouse)
-;; (add-hook 'delete-frame-functions #'turn-on-mouse)
 
 ;;;_ , display-line-numbers-
 
@@ -3207,23 +5533,13 @@ Install the doc if it's not installed."
 (use-package docker-compose-mode
   :mode "docker-compose.*\.yml\\'")
 
-(use-package docker-tramp
-  :after tramp
-  :defer 5)
-
 ;;;_ , dockerfile
 
 (use-package dockerfile-mode
   ;; BULK-ENSURE :ensure t
   :mode "Dockerfile[a-zA-Z.-]*\\'")
 
-;;;_ , docker-tramp
-
-(use-package docker-tramp)
-;; BULK-ENSURE :ensure t
-
 (use-package doom-modeline
-  ;; BULK-ENSURE :ensure t
   :preface
   (defvar lui-tracking-propertized '())
   (defvar lui-tracking-shortened '())
@@ -3542,6 +5858,7 @@ Install the doc if it's not installed."
 ;;     (add-hook 'after-init-hook 'edit-server-start t)))
 
 (use-package ef-themes
+  :disabled t
   :custom
   (ef-themes-to-toggle '(ef-dark ef-night ef-dark ef-spring
                                  ef-summer ef-autumn ef-winter))
@@ -3568,27 +5885,27 @@ Install the doc if it's not installed."
   :custom
   (eglot-confirm-server-initiated-edits nil))
   ;;; inherited cruft, not sure if needed
-  ;; :config
-  ;; (setq pd-toolchain-directory "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/")
-  ;; (setq pd-clangd-path (pcase system-type
-  ;;                        (`darwin "/opt/homebrew/opt/llvm/bin/clangd")
-  ;;                        (_ "clangd")))
-  ;; (setq pd-sourcekit-lsp-path (pcase system-type
-  ;;                               (`darwin (concat pd-toolchain-directory "usr/bin/sourcekit-lsp"))
-  ;;                               (_ "sourcekit-lsp")))
+;; :config
+;; (setq pd-toolchain-directory "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/")
+;; (setq pd-clangd-path (pcase system-type
+;;                        (`darwin "/opt/homebrew/opt/llvm/bin/clangd")
+;;                        (_ "clangd")))
+;; (setq pd-sourcekit-lsp-path (pcase system-type
+;;                               (`darwin (concat pd-toolchain-directory "usr/bin/sourcekit-lsp"))
+;;                               (_ "sourcekit-lsp")))
 
-  ;; (defun pd-cc-mode-lsp-server (arg)
-  ;;   "Figure if we want to use sourcekit-lsp or clangd as our server."
-  ;;   (let* ((root (nth 0 (project-roots (project-current))))
-  ;;          (swift-package-file (concat root "Package.swift"))
-  ;;          (cmake-file (concat root "CMakeLists.txt")))
-  ;;     (if (and (not (file-exists-p cmake-file)) (file-exists-p swift-package-file) (file-exists-p pd-sourcekit-lsp-path))
-  ;;         (list pd-sourcekit-lsp-path)
-  ;;       (list pd-clangd-path))))
+;; (defun pd-cc-mode-lsp-server (arg)
+;;   "Figure if we want to use sourcekit-lsp or clangd as our server."
+;;   (let* ((root (nth 0 (project-roots (project-current))))
+;;          (swift-package-file (concat root "Package.swift"))
+;;          (cmake-file (concat root "CMakeLists.txt")))
+;;     (if (and (not (file-exists-p cmake-file)) (file-exists-p swift-package-file) (file-exists-p pd-sourcekit-lsp-path))
+;;         (list pd-sourcekit-lsp-path)
+;;       (list pd-clangd-path))))
 
-  ;; (add-to-list 'eglot-server-programs '((swift-mode) . (pd-sourcekit-lsp-path)))
-  ;; (add-to-list 'eglot-server-programs '((c-mode c++-mode obj-c-mode) . pd-cc-mode-lsp-server))
-  ;; (add-to-list 'eglot-server-programs '(rust-mode "rust-analyzer")))
+;; (add-to-list 'eglot-server-programs '((swift-mode) . (pd-sourcekit-lsp-path)))
+;; (add-to-list 'eglot-server-programs '((c-mode c++-mode obj-c-mode) . pd-cc-mode-lsp-server))
+;; (add-to-list 'eglot-server-programs '(rust-mode "rust-analyzer")))
 
 ;;;_ , elfeed
 
@@ -4197,7 +6514,7 @@ FORM => (eval FORM)."
                             "WM_HINTS" frame "WM_HINTS"
                             source nil t) nil))
          (flags (car wm-hints)))
-; (message flags)
+                                        ; (message flags)
     (setcar wm-hints
             (if arg
                 (logior flags #x00000100)
@@ -4857,47 +7174,47 @@ display, depending on the window manager)."
   ;; TBD no package but exists on emacsmirror
   :disabled t)
 
-;;;_ , helm
+;; ;;;_ , helm
 
-;; (defvar helm-alive-p nil)
+;; ;; (defvar helm-alive-p nil)
 
-;; (use-package helm-config
-;;
-;;   :init
-;;   (progn
-;;     (bind-key "C-c M-x" 'helm-M-x)
-;;     (bind-key "C-h a" 'helm-c-apropos)
-;;     (bind-key "M-s a" 'helm-do-grep)
-;;     (bind-key "M-s b" 'helm-occur)
-;;     (bind-key "M-s F" 'helm-for-files)
+;; ;; (use-package helm-config
+;; ;;
+;; ;;   :init
+;; ;;   (progn
+;; ;;     (bind-key "C-c M-x" 'helm-M-x)
+;; ;;     (bind-key "C-h a" 'helm-c-apropos)
+;; ;;     (bind-key "M-s a" 'helm-do-grep)
+;; ;;     (bind-key "M-s b" 'helm-occur)
+;; ;;     (bind-key "M-s F" 'helm-for-files)
 
-;;     (use-package helm-commands)
+;; ;;     (use-package helm-commands)
 
-;;     (use-package helm-flycheck
-;;       :bind ("C-c ! h" . helm-flycheck))
+;; ;;     (use-package helm-flycheck
+;; ;;       :bind ("C-c ! h" . helm-flycheck))
 
-;;     (bind-key "C-h e a" 'my-helm-apropos)
-;;     (bind-key "C-x M-!" 'helm-command-from-zsh)
-;;     (bind-key "C-x f" 'helm-find-git-file)
+;; ;;     (bind-key "C-h e a" 'my-helm-apropos)
+;; ;;     (bind-key "C-x M-!" 'helm-command-from-zsh)
+;; ;;     (bind-key "C-x f" 'helm-find-git-file)
 
-;;     (use-package helm-descbinds
-;;       :commands helm-descbinds
-;;       :init
-;;       (fset 'describe-bindings 'helm-descbinds))
+;; ;;     (use-package helm-descbinds
+;; ;;       :commands helm-descbinds
+;; ;;       :init
+;; ;;       (fset 'describe-bindings 'helm-descbinds))
 
-;;     (bind-key "C-h b" 'helm-descbinds))
+;; ;;     (bind-key "C-h b" 'helm-descbinds))
 
-;;   :config
-;;   (helm-match-plugin-mode t))
+;; ;;   :config
+;; ;;   (helm-match-plugin-mode t))
 
-;;;_ , help-mode
+;; ;;;_ , help-mode
 
-(use-package help-mode+
-  :defer t
-  :bind (:map help-mode-map
-              ("<tab>" . forward-button)))
+;; (use-package help-mode+
+;;   :defer t
+;;   :bind (:map help-mode-map
+;;               ("<tab>" . forward-button)))
 
-;;;_ , helpful
+;; ;;;_ , helpful
 
 (use-package helpful
   :bind
@@ -4917,18 +7234,11 @@ display, depending on the window manager)."
 
 ;;;_ , hilit-chg
 
-;; (require 'hilit-chg)
-;; (global-highlight-changes-mode t)
-;; (set-face-attribute 'highlight-changes nil :background "gray23" :foreground 'unspecified)
-;; (use-package hilit-chg
-;;   :bind ("M-o C" . highlight-changes-mode))
-
-;;;_ , hl-line
-
-;; (use-package hl-line
-;;   :bind ("M-o h" . hl-line-mode)
-;;   :config
-;;   (use-package hl-line+))
+(require 'hilit-chg)
+(global-highlight-changes-mode t)
+(set-face-attribute 'highlight-changes nil :background "gray23" :foreground 'unspecified)
+(use-package hilit-chg
+  :bind ("M-o C" . highlight-changes-mode))
 
 ;;;_ , highlight-sexp
 
@@ -5201,6 +7511,7 @@ display, depending on the window manager)."
 ;;;_ , iflipb
 
 (use-package iflipb
+  :disabled t
   :commands (iflipb-next-buffer iflipb-previous-buffer)
   :bind (("S-<right>" . my-iflipb-next-buffer)
          ("S-<left>" . my-iflipb-previous-buffer))
@@ -5279,418 +7590,418 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;;_ , info
 
 (use-package info
-  :bind ("C-h C-i" . info-lookup-symbol))
+  :autoload Info-goto-node)
 
 (use-package info-look
   :init
-  (autoload 'info-lookup-add-help "info-look"))
+  :autoload info-lookup-add-help)
 
-(use-package info-lookmore
-  :disabled t
-  :after info-look
-  :config
-  (info-lookmore-elisp-cl)
-  (info-lookmore-elisp-userlast)
-  (info-lookmore-elisp-gnus)
-  (info-lookmore-apropos-elisp))
-
-;; (use-package info-look
-;;   :commands info-lookup-add-help)
-
-;;;_ , ipa
-
-(use-package ipa
-  :disabled t
-  :commands ipa-insert
-  :init
-  (progn
-    (autoload 'ipa-load-annotations-into-buffer "ipa")
-    (add-hook 'find-file-hook 'ipa-load-annotations-into-buffer)))
-
-;;;_ , ivy-mode
-
-(use-package ivy
-  :disabled t
-  :preface
-  (defun ivy-done-or-delete-char ()
-    (interactive)
-    (call-interactively
-     (if (eolp)
-         #'ivy-immediate-done
-       #'ivy-delete-char)))
-
-  (defun ivy-alt-done-or-space ()
-    (interactive)
-    (call-interactively
-     (if (= ivy--length 1)
-         #'ivy-alt-done
-       #'self-insert-command)))
-
-  (defun ivy-switch-buffer-kill ()
-    (interactive)
-    (debug)
-    (let ((bn (ivy-state-current ivy-last)))
-      (when (get-buffer bn)
-        (kill-buffer bn))
-      (unless (buffer-live-p (ivy-state-buffer ivy-last))
-        (setf (ivy-state-buffer ivy-last)
-              (with-ivy-window (current-buffer))))
-      (setq ivy--all-candidates (delete bn ivy--all-candidates))
-      (ivy--exhibit)))
-
-  ;; This is the value of `magit-completing-read-function', so that we see
-  ;; Magit's own sorting choices.
-  (defun my-ivy-completing-read (&rest args)
-    (let ((ivy-sort-functions-alist '((t . nil))))
-      (apply 'ivy-completing-read args)))
-
-  :bind (("C-c C-r". ivy-resume)
-         ("C-x C-f" . counsel-find-file)
-         ("C-x b" . ivy-switch-buffer)
-         ("C-c C-r" . ivy-resume)
-         ("C-c C-v p" . ivy-push-view)
-         ("C-c C-v o" . ivy-pop-view)
-         ("C-c C-v C-|" . ivy-switch-view))
-
-  :bind (:map ivy-minibuffer-map
-              ("<tab>" . ivy-alt-done)
-              ("SPC"   . ivy-alt-done-or-space)
-              ("C-d"   . ivy-done-or-delete-char)
-              ("C-i"   . ivy-partial-or-done)
-              ("C-r"   . ivy-previous-line-or-history)
-              ("M-r"   . ivy-reverse-i-search))
-
-  :diminish ivy-mode
-  :custom
-  (ivy-dynamic-exhibit-delay-ms 200)
-  (ivy-height 10)
-  (ivy-initial-inputs-alist nil t)
-  (ivy-magic-tilde nil)
-  (ivy-use-virtual-buffers t)
-  (ivy-wrap t)
-  (ivy-count-format "(%d/%d) ")
-  :config
-  (ivy-mode +1))
-
-(use-package counsel
-  :disabled t
-  :after ivy org
-  :diminish counsel-mode
-  :init
-  (counsel-mode +1)
-  :custom
-  (counsel-yank-pop-preselect-last t)
-  (counsel-search-engine 'google)
-  :bind
-  (("M-y" . counsel-yank-pop)
-   :map ivy-minibuffer-map
-   ("M-y" . ivy-next-line)
-   :map counsel-mode-map
-   ([remap swiper] . counsel-grep-or-swiper)
-   ([remap dired] . counsel-dired)
-   ("C-x C-r" . counsel-recentf)
-   ("C-x j" . counsel-mark-ring)
-   ("C-h F" . counsel-describe-face)
-
-   ("C-c L" . counsel-load-library)
-   ("C-c P" . counsel-package)
-   ("C-c f" . counsel-find-library)
-   ("C-c g" . counsel-grep)
-   ("C-c h" . counsel-command-history)
-   ("C-c j" . counsel-git-grep)
-   ("C-c l" . counsel-locate)
-   ("C-c r" . counsel-rg)
-   ("C-c z" . counsel-fzf)
-
-   ("C-c c F" . counsel-faces)
-   ("C-c c L" . counsel-load-library)
-   ("C-c c P" . counsel-package)
-   ("C-c c a" . counsel-apropos)
-   ("C-c c e" . counsel-colors-emacs)
-   ("C-c c f" . counsel-find-library)
-   ("C-c c g" . counsel-grep)
-   ("C-c c h" . counsel-command-history)
-   ("C-c c i" . counsel-git)
-   ("C-c c j" . counsel-git-grep)
-   ("C-c c l" . counsel-locate)
-   ("C-c c m" . counsel-minibuffer-history)
-   ("C-c c o" . counsel-outline)
-   ("C-c c p" . counsel-pt)
-   ("C-c c r" . counsel-rg)
-   ("C-c c s" . counsel-ag)
-   ("C-c c t" . counsel-load-theme)
-   ("C-c c u" . counsel-unicode-char)
-   ("C-c c w" . counsel-colors-web)
-   ("C-c c z" . counsel-fzf)))
-
-(use-package counsel-projectile
-  :disabled t
-  :after (counsel projectile)
-  :config
-  ;; open project in vc after switching
-  (counsel-projectile-modify-action
-   'counsel-projectile-switch-project-action
-   '((default counsel-projectile-switch-project-action-vc)))
-  (counsel-projectile-mode))
-
-(use-package counsel-flycheck
-  :disabled t
-  :straight nil
-  :after counsel flycheck
-  :unless noninteractive
-  :preface
-  (defvar counsel-flycheck-history nil
-    "History for `counsel-flycheck'")
-
-  (defun counsel-flycheck ()
-    "Navigate to flycheck errors"
-    (interactive)
-    (if (not (bound-and-true-p flycheck-mode))
-        (message "Flycheck mode is not available or enabled")
-      (ivy-read "Error: "
-                (let ((source-buffer (current-buffer)))
-                  (with-current-buffer
-                      (or (get-buffer flycheck-error-list-buffer)
-                          (progn
-                            (with-current-buffer
-                                (get-buffer-create flycheck-error-list-buffer)
-                              (flycheck-error-list-mode)
-                              (current-buffer))))
-                    (flycheck-error-list-set-source source-buffer)
-                    (flycheck-error-list-reset-filter)
-                    (revert-buffer t t t)
-                    (split-string (buffer-string) "\n" t " *")))
-                :action
-                (lambda (s &rest _)
-                  (when-let*
-                      ((the-error (get-text-property 0 'tabulated-list-id s))
-                       (pos (flycheck-error-pos the-error)))
-                    (goto-char (flycheck-error-pos the-error))))
-                :history 'counsel-flycheck-history)))
-  :commands (counsel-flycheck)
-  :bind ("C-!" . #'counsel-flycheck))
-
-(use-package counsel-ebdb
-  :disabled t)
-
-(use-package counsel-etags
-  :disabled t
-  :bind ("C-c C-t" . counsel-etags-find-tag-at-point))
-
-(use-package ivy-emoji
-  :disabled t
-  :bind ("C-c i e" . ivy-emoji) ;; mnemonics i e = insert emoji
-  )
-
-(use-package ivy-rich
-  :disabled t
-  :after ivy
-  :init
-  (defun ivy-rich-bookmark-name (candidate)
-    (car (assoc candidate bookmark-alist)))
-
-  (defun ivy-rich-buffer-icon (candidate)
-    "Display buffer icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (let* ((buffer (get-buffer candidate))
-             (buffer-file-name (buffer-file-name buffer))
-             (major-mode (buffer-local-value 'major-mode buffer))
-             (icon (if (and buffer-file-name
-                            (all-the-icons-auto-mode-match?))
-                       (all-the-icons-icon-for-file
-                        (file-name-nondirectory buffer-file-name)
-                        :v-adjust -0.05)
-                     (all-the-icons-icon-for-mode
-                      major-mode :v-adjust -0.05))))
-        (if (symbolp icon)
-            (all-the-icons-faicon
-             "file-o" :face 'all-the-icons-dsilver :height 0.8 :v-adjust 0.0)
-          icon))))
-
-  (defun ivy-rich-file-icon (candidate)
-    "Display file icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (let* ((path (file-local-name (concat ivy--directory candidate)))
-             (file (file-name-nondirectory path))
-             (icon (cond
-                    ((file-directory-p path)
-                     (cond
-                      ((and (fboundp 'tramp-tramp-file-p)
-                            (tramp-tramp-file-p default-directory))
-                       (all-the-icons-octicon
-                        "file-directory" :height 1.0 :v-adjust 0.01))
-                      ((file-symlink-p path)
-                       (all-the-icons-octicon
-                        "file-symlink-directory" :height 1.0 :v-adjust 0.01))
-                      ((all-the-icons-dir-is-submodule path)
-                       (all-the-icons-octicon
-                        "file-submodule" :height 1.0 :v-adjust 0.01))
-                      ((file-exists-p (format "%s/.git" path))
-                       (all-the-icons-octicon
-                        "repo" :height 1.1 :v-adjust 0.01))
-                      (t (let ((matcher (all-the-icons-match-to-alist
-                                         path all-the-icons-dir-icon-alist)))
-                           (apply (car matcher)
-                                  (list (cadr matcher) :v-adjust 0.01))))))
-                    ((string-match "^/.*:$" path)
-                     (all-the-icons-material
-                      "settings_remote" :height 1.0 :v-adjust -0.2))
-                    ((not (string-empty-p file))
-                     (all-the-icons-icon-for-file file :v-adjust -0.05)))))
-        (if (symbolp icon)
-            (all-the-icons-faicon
-             "file-o" :face 'all-the-icons-dsilver :height 0.8 :v-adjust 0.0)
-          icon))))
-
-  (defun ivy-rich-dir-icon (candidate)
-    "Display directory icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-octicon "file-directory" :height 1.0 :v-adjust 0.01)))
-
-  (defun ivy-rich-function-icon (_candidate)
-    "Display function icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-faicon
-       "cube" :height 0.9 :v-adjust -0.05 :face 'all-the-icons-purple)))
-
-  (defun ivy-rich-variable-icon (_candidate)
-    "Display variable icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-faicon
-       "tag" :height 0.9 :v-adjust -0.05 :face 'all-the-icons-lblue)))
-
-  (defun ivy-rich-symbol-icon (_candidate)
-    "Display symbol icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-octicon
-       "gear" :height 0.9 :v-adjust -0.05)))
-
-  (defun ivy-rich-theme-icon (_candidate)
-    "Display theme icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-material
-       "palette" :height 1.0 :v-adjust -0.2 :face 'all-the-icons-lblue)))
-
-  (defun ivy-rich-keybinding-icon (_candidate)
-    "Display keybindings icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-material "keyboard" :height 1.0 :v-adjust -0.2)))
-
-  (defun ivy-rich-library-icon (_candidate)
-    "Display library icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-material
-       "view_module" :height 1.0 :v-adjust -0.2 :face 'all-the-icons-lblue)))
-
-  (defun ivy-rich-package-icon (_candidate)
-    "Display package icons in `ivy-rich'."
-    (when (display-graphic-p)
-      (all-the-icons-faicon
-       "archive" :height 0.9 :v-adjust 0.0 :face 'all-the-icons-silver)))
-
-  (when (display-graphic-p)
-    (defun ivy-rich-bookmark-type-plus (candidate)
-      (let ((filename (file-local-name
-                       (ivy-rich-bookmark-filename candidate))))
-        (cond ((null filename)
-               (all-the-icons-material "block" :v-adjust -0.2 :face 'warning))
-              ((file-remote-p filename)
-               (all-the-icons-material "wifi_tethering" :v-adjust -0.2 :face 'mode-line-buffer-id))
-              ((not (file-exists-p filename))
-               (all-the-icons-material
-                "block" :v-adjust -0.2 :face 'error))
-              ((file-directory-p filename)
-               (all-the-icons-octicon
-                "file-directory" :height 0.9 :v-adjust -0.05))
-              (t (all-the-icons-icon-for-file
-                  (file-name-nondirectory filename)
-                  :height 0.9 :v-adjust -0.05)))))
-    (advice-add #'ivy-rich-bookmark-type
-                :override #'ivy-rich-bookmark-type-plus))
-  :hook (ivy-rich-mode . (lambda ()
-                           (setq ivy-virtual-abbreviate
-                                 (or (and ivy-rich-mode
-                                          'abbreviate) 'name))))
-  :custom
-  (ivy-use-virtual-buffers t)
-  (ivy-virtual-abbreviate 'full)
-  (ivy-rich-switch-buffer-align-virtual-buffer t)
-  (ivy-rich-path-style 'abbrev)
-  :config
-  (ivy-rich-mode +1))
-
-;; (use-package ivy-historian
-;;   :after ivy
-;;   ;; BULK-ENSURE :ensure t
-;;   :config
-;;   (ivy-historian-mode +1))
-(use-package ivy-hydra
-  :disabled t
-  :after ivy hydra
-  :defer t)
-
-(use-package ivy-rtags
-  :disabled t
-  :after ivy)
-
-(use-package ivy-youtube
-  :disabled t
-  :after ivy)
-
-(use-package ivy-pass
-  :disabled t
-  :after ivy)
-
-(use-package ivy-todo
-  :disabled t
-  ;; BULK-ENSURE :ensure t
-  :after ivy
-  :defer t
-  :bind ("C-c t" . ivy-todo)
-  :commands ivy-todo)
-
-(use-package all-the-icons-ivy
-  :disabled t
-  :after ivy
-  :defer t
-  :config
-  (all-the-icons-ivy-setup))
-
-(use-package all-the-icons-ivy-rich
-  :disabled t
-  :after ivy-rich
-  :config (all-the-icons-ivy-rich-mode +1))
-
-(use-package swiper
-  :disabled t
-  :after ivy
-  :bind (("C-M-+" . swiper-mc)
-         ("C-s" . swiper)
-         ("C-r" . swiper))
-  :config
-  (defun swiper-mc ()
-    (interactive)
-    (unless (require 'multiple-cursors nil t)
-      (error "Multiple-cursors isn't installed"))
-    (let ((cands (nreverse ivy--old-cands)))
-      (unless (string= ivy-text "")
-        (ivy-set-action
-         (lambda (_)
-           (let (cand)
-             (while (setq cand (pop cands))
-               (swiper--action cand)
-               (when cands
-                 (mc/create-fake-cursor-at-point))))
-           (mc/maybe-multiple-cursors-mode)))
-        (setq ivy-exit 'done)
-        (exit-minibuffer)))))
-
-;;;_ , jdee
-
-;; (use-package jdee
+;; (use-package info-lookmore
 ;;   :disabled t
+;;   :after info-look
 ;;   :config
-;;   (setq jdee-server-dir "/home/emacs/jdee-server/target"))
+;;   (info-lookmore-elisp-cl)
+;;   (info-lookmore-elisp-userlast)
+;;   (info-lookmore-elisp-gnus)
+;;   (info-lookmore-apropos-elisp))
+
+;; ;; (use-package info-look
+;; ;;   :commands info-lookup-add-help)
+
+;; ;;;_ , ipa
+
+;; (use-package ipa
+;;   :disabled t
+;;   :commands ipa-insert
+;;   :init
+;;   (progn
+;;     (autoload 'ipa-load-annotations-into-buffer "ipa")
+;;     (add-hook 'find-file-hook 'ipa-load-annotations-into-buffer)))
+
+;; ;;;_ , ivy-mode
+
+;; (use-package ivy
+;;   :disabled t
+;;   :preface
+;;   (defun ivy-done-or-delete-char ()
+;;     (interactive)
+;;     (call-interactively
+;;      (if (eolp)
+;;          #'ivy-immediate-done
+;;        #'ivy-delete-char)))
+
+;;   (defun ivy-alt-done-or-space ()
+;;     (interactive)
+;;     (call-interactively
+;;      (if (= ivy--length 1)
+;;          #'ivy-alt-done
+;;        #'self-insert-command)))
+
+;;   (defun ivy-switch-buffer-kill ()
+;;     (interactive)
+;;     (debug)
+;;     (let ((bn (ivy-state-current ivy-last)))
+;;       (when (get-buffer bn)
+;;         (kill-buffer bn))
+;;       (unless (buffer-live-p (ivy-state-buffer ivy-last))
+;;         (setf (ivy-state-buffer ivy-last)
+;;               (with-ivy-window (current-buffer))))
+;;       (setq ivy--all-candidates (delete bn ivy--all-candidates))
+;;       (ivy--exhibit)))
+
+;;   ;; This is the value of `magit-completing-read-function', so that we see
+;;   ;; Magit's own sorting choices.
+;;   (defun my-ivy-completing-read (&rest args)
+;;     (let ((ivy-sort-functions-alist '((t . nil))))
+;;       (apply 'ivy-completing-read args)))
+
+;;   :bind (("C-c C-r". ivy-resume)
+;;          ("C-x C-f" . counsel-find-file)
+;;          ("C-x b" . ivy-switch-buffer)
+;;          ("C-c C-r" . ivy-resume)
+;;          ("C-c C-v p" . ivy-push-view)
+;;          ("C-c C-v o" . ivy-pop-view)
+;;          ("C-c C-v C-|" . ivy-switch-view))
+
+;;   :bind (:map ivy-minibuffer-map
+;;               ("<tab>" . ivy-alt-done)
+;;               ("SPC"   . ivy-alt-done-or-space)
+;;               ("C-d"   . ivy-done-or-delete-char)
+;;               ("C-i"   . ivy-partial-or-done)
+;;               ("C-r"   . ivy-previous-line-or-history)
+;;               ("M-r"   . ivy-reverse-i-search))
+
+;;   :diminish ivy-mode
+;;   :custom
+;;   (ivy-dynamic-exhibit-delay-ms 200)
+;;   (ivy-height 10)
+;;   (ivy-initial-inputs-alist nil t)
+;;   (ivy-magic-tilde nil)
+;;   (ivy-use-virtual-buffers t)
+;;   (ivy-wrap t)
+;;   (ivy-count-format "(%d/%d) ")
+;;   :config
+;;   (ivy-mode +1))
+
+;; (use-package counsel
+;;   :disabled t
+;;   :after ivy org
+;;   :diminish counsel-mode
+;;   :init
+;;   (counsel-mode +1)
+;;   :custom
+;;   (counsel-yank-pop-preselect-last t)
+;;   (counsel-search-engine 'google)
+;;   :bind
+;;   (("M-y" . counsel-yank-pop)
+;;    :map ivy-minibuffer-map
+;;    ("M-y" . ivy-next-line)
+;;    :map counsel-mode-map
+;;    ([remap swiper] . counsel-grep-or-swiper)
+;;    ([remap dired] . counsel-dired)
+;;    ("C-x C-r" . counsel-recentf)
+;;    ("C-x j" . counsel-mark-ring)
+;;    ("C-h F" . counsel-describe-face)
+
+;;    ("C-c L" . counsel-load-library)
+;;    ("C-c P" . counsel-package)
+;;    ("C-c f" . counsel-find-library)
+;;    ("C-c g" . counsel-grep)
+;;    ("C-c h" . counsel-command-history)
+;;    ("C-c j" . counsel-git-grep)
+;;    ("C-c l" . counsel-locate)
+;;    ("C-c r" . counsel-rg)
+;;    ("C-c z" . counsel-fzf)
+
+;;    ("C-c c F" . counsel-faces)
+;;    ("C-c c L" . counsel-load-library)
+;;    ("C-c c P" . counsel-package)
+;;    ("C-c c a" . counsel-apropos)
+;;    ("C-c c e" . counsel-colors-emacs)
+;;    ("C-c c f" . counsel-find-library)
+;;    ("C-c c g" . counsel-grep)
+;;    ("C-c c h" . counsel-command-history)
+;;    ("C-c c i" . counsel-git)
+;;    ("C-c c j" . counsel-git-grep)
+;;    ("C-c c l" . counsel-locate)
+;;    ("C-c c m" . counsel-minibuffer-history)
+;;    ("C-c c o" . counsel-outline)
+;;    ("C-c c p" . counsel-pt)
+;;    ("C-c c r" . counsel-rg)
+;;    ("C-c c s" . counsel-ag)
+;;    ("C-c c t" . counsel-load-theme)
+;;    ("C-c c u" . counsel-unicode-char)
+;;    ("C-c c w" . counsel-colors-web)
+;;    ("C-c c z" . counsel-fzf)))
+
+;; (use-package counsel-projectile
+;;   :disabled t
+;;   :after (counsel projectile)
+;;   :config
+;;   ;; open project in vc after switching
+;;   (counsel-projectile-modify-action
+;;    'counsel-projectile-switch-project-action
+;;    '((default counsel-projectile-switch-project-action-vc)))
+;;   (counsel-projectile-mode))
+
+;; (use-package counsel-flycheck
+;;   :disabled t
+;;   :straight nil
+;;   :after counsel flycheck
+;;   :unless noninteractive
+;;   :preface
+;;   (defvar counsel-flycheck-history nil
+;;     "History for `counsel-flycheck'")
+
+;;   (defun counsel-flycheck ()
+;;     "Navigate to flycheck errors"
+;;     (interactive)
+;;     (if (not (bound-and-true-p flycheck-mode))
+;;         (message "Flycheck mode is not available or enabled")
+;;       (ivy-read "Error: "
+;;                 (let ((source-buffer (current-buffer)))
+;;                   (with-current-buffer
+;;                       (or (get-buffer flycheck-error-list-buffer)
+;;                           (progn
+;;                             (with-current-buffer
+;;                                 (get-buffer-create flycheck-error-list-buffer)
+;;                               (flycheck-error-list-mode)
+;;                               (current-buffer))))
+;;                     (flycheck-error-list-set-source source-buffer)
+;;                     (flycheck-error-list-reset-filter)
+;;                     (revert-buffer t t t)
+;;                     (split-string (buffer-string) "\n" t " *")))
+;;                 :action
+;;                 (lambda (s &rest _)
+;;                   (when-let*
+;;                       ((the-error (get-text-property 0 'tabulated-list-id s))
+;;                        (pos (flycheck-error-pos the-error)))
+;;                     (goto-char (flycheck-error-pos the-error))))
+;;                 :history 'counsel-flycheck-history)))
+;;   :commands (counsel-flycheck)
+;;   :bind ("C-!" . #'counsel-flycheck))
+
+;; (use-package counsel-ebdb
+;;   :disabled t)
+
+;; (use-package counsel-etags
+;;   :disabled t
+;;   :bind ("C-c C-t" . counsel-etags-find-tag-at-point))
+
+;; (use-package ivy-emoji
+;;   :disabled t
+;;   :bind ("C-c i e" . ivy-emoji) ;; mnemonics i e = insert emoji
+;;   )
+
+;; (use-package ivy-rich
+;;   :disabled t
+;;   :after ivy
+;;   :init
+;;   (defun ivy-rich-bookmark-name (candidate)
+;;     (car (assoc candidate bookmark-alist)))
+
+;;   (defun ivy-rich-buffer-icon (candidate)
+;;     "Display buffer icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (let* ((buffer (get-buffer candidate))
+;;              (buffer-file-name (buffer-file-name buffer))
+;;              (major-mode (buffer-local-value 'major-mode buffer))
+;;              (icon (if (and buffer-file-name
+;;                             (all-the-icons-auto-mode-match?))
+;;                        (all-the-icons-icon-for-file
+;;                         (file-name-nondirectory buffer-file-name)
+;;                         :v-adjust -0.05)
+;;                      (all-the-icons-icon-for-mode
+;;                       major-mode :v-adjust -0.05))))
+;;         (if (symbolp icon)
+;;             (all-the-icons-faicon
+;;              "file-o" :face 'all-the-icons-dsilver :height 0.8 :v-adjust 0.0)
+;;           icon))))
+
+;;   (defun ivy-rich-file-icon (candidate)
+;;     "Display file icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (let* ((path (file-local-name (concat ivy--directory candidate)))
+;;              (file (file-name-nondirectory path))
+;;              (icon (cond
+;;                     ((file-directory-p path)
+;;                      (cond
+;;                       ((and (fboundp 'tramp-tramp-file-p)
+;;                             (tramp-tramp-file-p default-directory))
+;;                        (all-the-icons-octicon
+;;                         "file-directory" :height 1.0 :v-adjust 0.01))
+;;                       ((file-symlink-p path)
+;;                        (all-the-icons-octicon
+;;                         "file-symlink-directory" :height 1.0 :v-adjust 0.01))
+;;                       ((all-the-icons-dir-is-submodule path)
+;;                        (all-the-icons-octicon
+;;                         "file-submodule" :height 1.0 :v-adjust 0.01))
+;;                       ((file-exists-p (format "%s/.git" path))
+;;                        (all-the-icons-octicon
+;;                         "repo" :height 1.1 :v-adjust 0.01))
+;;                       (t (let ((matcher (all-the-icons-match-to-alist
+;;                                          path all-the-icons-dir-icon-alist)))
+;;                            (apply (car matcher)
+;;                                   (list (cadr matcher) :v-adjust 0.01))))))
+;;                     ((string-match "^/.*:$" path)
+;;                      (all-the-icons-material
+;;                       "settings_remote" :height 1.0 :v-adjust -0.2))
+;;                     ((not (string-empty-p file))
+;;                      (all-the-icons-icon-for-file file :v-adjust -0.05)))))
+;;         (if (symbolp icon)
+;;             (all-the-icons-faicon
+;;              "file-o" :face 'all-the-icons-dsilver :height 0.8 :v-adjust 0.0)
+;;           icon))))
+
+;;   (defun ivy-rich-dir-icon (candidate)
+;;     "Display directory icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-octicon "file-directory" :height 1.0 :v-adjust 0.01)))
+
+;;   (defun ivy-rich-function-icon (_candidate)
+;;     "Display function icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-faicon
+;;        "cube" :height 0.9 :v-adjust -0.05 :face 'all-the-icons-purple)))
+
+;;   (defun ivy-rich-variable-icon (_candidate)
+;;     "Display variable icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-faicon
+;;        "tag" :height 0.9 :v-adjust -0.05 :face 'all-the-icons-lblue)))
+
+;;   (defun ivy-rich-symbol-icon (_candidate)
+;;     "Display symbol icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-octicon
+;;        "gear" :height 0.9 :v-adjust -0.05)))
+
+;;   (defun ivy-rich-theme-icon (_candidate)
+;;     "Display theme icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-material
+;;        "palette" :height 1.0 :v-adjust -0.2 :face 'all-the-icons-lblue)))
+
+;;   (defun ivy-rich-keybinding-icon (_candidate)
+;;     "Display keybindings icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-material "keyboard" :height 1.0 :v-adjust -0.2)))
+
+;;   (defun ivy-rich-library-icon (_candidate)
+;;     "Display library icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-material
+;;        "view_module" :height 1.0 :v-adjust -0.2 :face 'all-the-icons-lblue)))
+
+;;   (defun ivy-rich-package-icon (_candidate)
+;;     "Display package icons in `ivy-rich'."
+;;     (when (display-graphic-p)
+;;       (all-the-icons-faicon
+;;        "archive" :height 0.9 :v-adjust 0.0 :face 'all-the-icons-silver)))
+
+;;   (when (display-graphic-p)
+;;     (defun ivy-rich-bookmark-type-plus (candidate)
+;;       (let ((filename (file-local-name
+;;                        (ivy-rich-bookmark-filename candidate))))
+;;         (cond ((null filename)
+;;                (all-the-icons-material "block" :v-adjust -0.2 :face 'warning))
+;;               ((file-remote-p filename)
+;;                (all-the-icons-material "wifi_tethering" :v-adjust -0.2 :face 'mode-line-buffer-id))
+;;               ((not (file-exists-p filename))
+;;                (all-the-icons-material
+;;                 "block" :v-adjust -0.2 :face 'error))
+;;               ((file-directory-p filename)
+;;                (all-the-icons-octicon
+;;                 "file-directory" :height 0.9 :v-adjust -0.05))
+;;               (t (all-the-icons-icon-for-file
+;;                   (file-name-nondirectory filename)
+;;                   :height 0.9 :v-adjust -0.05)))))
+;;     (advice-add #'ivy-rich-bookmark-type
+;;                 :override #'ivy-rich-bookmark-type-plus))
+;;   :hook (ivy-rich-mode . (lambda ()
+;;                            (setq ivy-virtual-abbreviate
+;;                                  (or (and ivy-rich-mode
+;;                                           'abbreviate) 'name))))
+;;   :custom
+;;   (ivy-use-virtual-buffers t)
+;;   (ivy-virtual-abbreviate 'full)
+;;   (ivy-rich-switch-buffer-align-virtual-buffer t)
+;;   (ivy-rich-path-style 'abbrev)
+;;   :config
+;;   (ivy-rich-mode +1))
+
+;; ;; (use-package ivy-historian
+;; ;;   :after ivy
+;; ;;   ;; BULK-ENSURE :ensure t
+;; ;;   :config
+;; ;;   (ivy-historian-mode +1))
+;; (use-package ivy-hydra
+;;   :disabled t
+;;   :after ivy hydra
+;;   :defer t)
+
+;; (use-package ivy-rtags
+;;   :disabled t
+;;   :after ivy)
+
+;; (use-package ivy-youtube
+;;   :disabled t
+;;   :after ivy)
+
+;; (use-package ivy-pass
+;;   :disabled t
+;;   :after ivy)
+
+;; (use-package ivy-todo
+;;   :disabled t
+;;   ;; BULK-ENSURE :ensure t
+;;   :after ivy
+;;   :defer t
+;;   :bind ("C-c t" . ivy-todo)
+;;   :commands ivy-todo)
+
+;; (use-package all-the-icons-ivy
+;;   :disabled t
+;;   :after ivy
+;;   :defer t
+;;   :config
+;;   (all-the-icons-ivy-setup))
+
+;; (use-package all-the-icons-ivy-rich
+;;   :disabled t
+;;   :after ivy-rich
+;;   :config (all-the-icons-ivy-rich-mode +1))
+
+;; (use-package swiper
+;;   :disabled t
+;;   :after ivy
+;;   :bind (("C-M-+" . swiper-mc)
+;;          ("C-s" . swiper)
+;;          ("C-r" . swiper))
+;;   :config
+;;   (defun swiper-mc ()
+;;     (interactive)
+;;     (unless (require 'multiple-cursors nil t)
+;;       (error "Multiple-cursors isn't installed"))
+;;     (let ((cands (nreverse ivy--old-cands)))
+;;       (unless (string= ivy-text "")
+;;         (ivy-set-action
+;;          (lambda (_)
+;;            (let (cand)
+;;              (while (setq cand (pop cands))
+;;                (swiper--action cand)
+;;                (when cands
+;;                  (mc/create-fake-cursor-at-point))))
+;;            (mc/maybe-multiple-cursors-mode)))
+;;         (setq ivy-exit 'done)
+;;         (exit-minibuffer)))))
+
+;; ;;;_ , jdee
+
+;; ;; (use-package jdee
+;; ;;   :disabled t
+;; ;;   :config
+;; ;;   (setq jdee-server-dir "/home/emacs/jdee-server/target"))
 
 (use-package jira-markup-mode
   :commands (jira-markup-mode)
@@ -6593,36 +8904,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package orderless
   :custom
   (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles . (partial-completion)))))
+  (completion-category-overrides '((file (styles basic partial-completion))))
   :init
   (add-to-list 'completion-styles 'substring)
   (add-to-list 'completion-styles 'orderless))
-
-;;;_ , org-mode
-
-(use-package my-dot-org
-  :disabled t
-  :straight nil
-  :preface
-  (load dot-org))
-
-;; (key-chord-define-global
-;;  "hh"
-;;  (defhydra my/key-chord-commands ()
-;;    "Main"
-;;    ;; ...
-;;    ("L" my/org-insert-link)
-;;    ("l" org-insert-last-stored-link)
-;;    ;; ...
-;;    )
-;;  )
-
-;; org prettify
-(use-package org-indent
-  :after org
-  :straight nil
-  :unless noninteractive
-  :hook (org-mode . #'org-indent-mode))
 
 ;;;_ , outline
 
@@ -8123,7 +10408,7 @@ means save all with no questions."
   ;;   "Buffer-local templates.")
   ;; (add-to-list 'tempel-template-sources 'my-global-templates)
   ;; (add-to-list 'tempel-template-sources 'my-local-templates)
-  
+
   ;; Setup completion at point
   (defun tempel-setup-capf ()
     ;; Add the Tempel Capf to `completion-at-point-functions'.
@@ -8432,12 +10717,9 @@ means save all with no questions."
   :commands (whitespace-buffer
              whitespace-cleanup
              whitespace-mode)
+  :hook (prog-mode . (lambda () (whitespace-mode +1)) )
   :init
   (progn
-    (hook-into-modes #'whitespace-mode
-                     'prog-mode-hook
-                     'c-mode-common-hook)
-
     (defun normalize-file ()
       (interactive)
       (save-excursion
@@ -8480,8 +10762,6 @@ means save all with no questions."
           (whitespace-cleanup))))
 
     (add-hook 'find-file-hooks 'maybe-turn-on-whitespace t))
-  :bind (("C-x w" . fixup-whitespace)
-         ("C-c w" . whitespace-cleanup))
   :config
   (progn
     (setq whitespace-style '(face trailing space-before-tab empty))
@@ -8666,7 +10946,7 @@ means save all with no questions."
   :disabled t
   :after company
   :init
-  (setq yankpad-file "/var/shared-elpa/org/yankpad.org")
+  (setq yankpad-file "/var/sharedelpa/org/yankpad.org")
   (when (not (file-exists-p yankpad-file))
     (shell-command (concat "touch " yankpad-file)))
   :config
@@ -8685,35 +10965,11 @@ means save all with no questions."
 
 ;;;_. Post initialization
 
-(unless (and noninteractive (not window-system))
-  (eval-and-compile
-    (defun init-windows ()
-      "Default window layout."
-      (interactive)
-      (if (window-full-width-p)
-          (split-window-horizontally))
-      (other-window 1)
-      (vterm))
-    (add-hook 'after-init-hook  #'init-windows)))
-
-(message "Init done")
-
-(when window-system
-  (let ((elapsed (float-time (time-subtract (current-time)
-                                            emacs-start-time))))
-    (message "Loading %s...done (%.3fs)" load-file-name elapsed))
-
-  (add-hook 'after-init-hook
-            `(lambda ()
-               (let ((elapsed (float-time (time-subtract (current-time)
-                                                         emacs-start-time))))
-                 (message "Loading %s...done (%.3fs) [after-init]"
-                          ,load-file-name elapsed)))
-            t))
+(report-time-since-load)
 
 ;;   mode: emacs-lisp
-;;   outline-regexp: "^;;;_\\([,. ]+\\)"
-;; End:
+;; Local Variables:
+;; byte-compile-warnings: (not docstrings lexical noruntime)
 
 ;; ; LocalWords:  CApitals
 ;;; init.el ends here

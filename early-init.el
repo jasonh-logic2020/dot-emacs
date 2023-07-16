@@ -17,7 +17,7 @@
              (message "calling garbage-collect")
              (garbage-collect) t))
 
-(setq straight-base-dir                "/var/shared-elpa"
+(setq straight-base-dir                "/var/sharedelpa"
       package-enable-at-startup        nil
       file-name-handler-alist          nil
       file-name-handler-alist          nil
@@ -51,16 +51,16 @@ raxod502/straight.el/develop/install.el"
 
 (setq use-package-verbose t)
 
-(message "pre length %s" (length load-path))
+;; (message "pre length %s" (length load-path))
 
-(setq load-path (cl-remove-if
-                 #'(lambda (x)
-                     (cl-search "/lisp/org/" x))
-                 load-path))
+;; (setq load-path (cl-remove-if
+;;                  #'(lambda (x)
+;;                      (cl-search "/lisp/org/" x))
+;;                  load-path))
 
-(message "post length %s" (length load-path))
+;; (message "post length %s" (length load-path))
 
-(add-to-list 'load-path "/var/shared-elpa/build/org" t)
+;; (add-to-list 'load-path "/var/shared-elpa/build/org" t)
 
 (use-package bind-key)
 ;; (use-package no-littering)
