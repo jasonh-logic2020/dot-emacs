@@ -3126,7 +3126,7 @@ abort completely with `C-g'."
 (use-package tablist       :defer t)
 (use-package uuidgen       :defer t)
 (use-package web           :defer t)
-(use-package web-server    :defer t)
+(use-package web-server    :defer t :straight nil)
 (use-package websocket     :defer t)
 (use-package with-editor   :defer t)
 (use-package xml-rpc       :defer t)
@@ -5863,13 +5863,30 @@ Install the doc if it's not installed."
 ;;     (add-hook 'after-init-hook 'server-start t)
 ;;     (add-hook 'after-init-hook 'edit-server-start t)))
 
+(use-package lsp-pyright
+  :ensure t)
+
 (use-package eglot
   :commands eglot
   :custom
   (eglot-autoshutdown t)
   :config
-  (setq read-process-output-max (* 1024 1024))
+  (if (executable-find "pip")
+      (unless (executable-find "pyright-python-langserver")
+        (shell-command "pip install pyright"))
+    (unless (executable-find "jedi-language-server")
+      (shell-command "pip install jedi-language-server"))
+    (unless (executable-find "pylsp")
+      (shell-command "pip install pylsp"))
+    )
 
+  (setq read-process-output-max (* 1024 1024))
+  (add-to-list 'eglot-server-programs
+               `(python-mode
+                 . ,(eglot-alternatives
+                     '("pylsp"
+                       "jedi-language-server"
+                       ("pyright-langserver" "--stdio")))))
   (add-hook 'eglot-managed-mode-hook
             #'(lambda ()
                 ;; Show flymake diagnostics first.
@@ -8136,12 +8153,13 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :mode ("\\.md\\'" . markdown-mode)
   :defer t)
 
-(use-package markdown-preview-mode
-  :after markdown-mode
-  :config
-  (setq markdown-preview-stylesheets
-        (list (concat "https://github.com/dmarcotte/github-markdown-preview/"
-                      "blob/master/data/css/github.css"))))
+;; (use-package markdown-preview-mode
+;;   :after markdown-mode
+;;   :config
+;;   (setq markdown-preview-stylesheets
+;;         (list (concat "https://github.com/dmarcotte/github-markdown-preview/"
+;;                       "blob/master/data/css/github.css"))))
+
 (use-package mastodon
   :config
   (mastodon-discover))
@@ -9027,14 +9045,7 @@ means save all with no questions."
                         (match-string 1 item)))))))))
 
       (bind-key "C-c C-z" 'python-shell python-mode-map)
-      (unbind-key "C-c c" python-mode-map)
-
-      (use-package company-jedi
-        :after (company python)
-        :defer t
-        :config
-        (progn
-          (add-to-list 'company-backends 'company-jedi))))
+      (unbind-key "C-c c" python-mode-map))
     (add-hook 'python-mode-hook 'my-python-mode-hook)))
 
 ;;;_ , quickrun
