@@ -208,7 +208,7 @@
                      `(eval-and-compile (add-to-list 'load-path ,path t)))
                  args)
          body))))
-  
+
   (advice-add 'use-package-handler/:load-path
               :around #'load-path-handler-override))
 
@@ -389,7 +389,6 @@ Meant to be added to `occur-hook'."
   (large-file-warning-threshold nil)
   (save-abbrevs 'silently)
   (trash-directory "~/.Trash")
-  (version-control t)
 
   ;; simple.el
   (backward-delete-char-untabify-method 'untabify)
@@ -440,6 +439,26 @@ Meant to be added to `occur-hook'."
 
   ;; nsm.el
   (nsm-settings-file (user-data "network-security.data"))
+
+  ;; treesit
+  (treesit-language-source-alist
+   '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+     (clojure "https://github.com/sogaiu/tree-sitter-clojure")
+     (java "https://github.com/tree-sitter/tree-sitter-java")
+     (cmake "https://github.com/uyha/tree-sitter-cmake")
+     (css "https://github.com/tree-sitter/tree-sitter-css")
+     (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+     (go "https://github.com/tree-sitter/tree-sitter-go")
+     (html "https://github.com/tree-sitter/tree-sitter-html")
+     (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+     (json "https://github.com/tree-sitter/tree-sitter-json")
+     (make "https://github.com/alemuller/tree-sitter-make")
+     (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+     (python "https://github.com/tree-sitter/tree-sitter-python")
+     (toml "https://github.com/tree-sitter/tree-sitter-toml")
+     (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+     (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+     (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
   :custom-face
   ;; (cursor ((t (:background "hotpink"))))
@@ -533,14 +552,6 @@ Meant to be added to `occur-hook'."
 (save-place-mode                1) ; Remember per-file positions
 
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
-
-;; (load dot-org)
-(message "starting dot-org")
-
-;; (add-to-list 'load-path "/var/sharedelpa/stra;; ight/build/org")
-
-;; (load "/var/sharedelpa/straight/build/org/org.el")
-;; (require 'org)
 
 (use-package org
   :mode ("\\.org" . org-mode)
@@ -3196,6 +3207,247 @@ Single Capitals as you type."
           dired-mode
           tabulated-list-mode) . #'set-scroll-margin))
 
+(use-package display-buffer-alist
+  :unless noninteractive
+  :straight nil
+  :no-require t
+  :preface
+  (defun prot-common-window-small-p ()
+    "Return non-nil if window is small.
+Check if the `window-width' or `window-height' is less than
+`split-width-threshold' and `split-height-threshold',
+respectively."
+    (or (and (numberp split-width-threshold)
+             (< (window-total-width) split-width-threshold))
+        (and (numberp split-height-threshold)
+             (> (window-total-height) split-height-threshold))))
+
+  (defun prot-common-window-narrow-p ()
+    "Return non-nil if window is narrow.
+Check if the `window-width' is less than `split-width-threshold'."
+    (and (numberp split-width-threshold)
+         (< (window-total-width) split-width-threshold)))
+
+;;;###autoload
+  (defun prot-common-three-or-more-windows-p (&optional frame)
+    "Return non-nil if three or more windows occupy FRAME.
+If FRAME is non-nil, inspect the current frame."
+    (>= (length (window-list frame :no-minibuffer)) 3))
+
+
+  (defvar prot-window-window-sizes
+    '( :max-height (lambda () (floor (frame-height) 3))
+       :min-height 10
+       :max-width (lambda () (floor (frame-width) 4))
+       :min-width 20)
+    "Property list of maximum and minimum window sizes.
+The property keys are `:max-height', `:min-height', `:max-width',
+and `:min-width'.  They all accept a value of either a
+number (integer or floating point) or a function.")
+
+  (defun prot-window--get-window-size (key)
+    "Extract the value of KEY from `prot-window-window-sizes'."
+    (when-let ((value (plist-get prot-window-window-sizes key)))
+      (cond
+       ((functionp value)
+        (funcall value))
+       ((numberp value)
+        value)
+       (t
+        (error "The value of `%s' is neither a number nor a function" key)))))
+
+  (defun prot-window-select-fit-size (window)
+    "Select WINDOW and resize it.
+The resize pertains to the maximum and minimum values for height
+and width, per `prot-window-window-sizes'.
+
+Use this as the `body-function' in a `display-buffer-alist' entry."
+    (select-window window)
+    (fit-window-to-buffer
+     window
+     (prot-window--get-window-size :max-height)
+     (prot-window--get-window-size :min-height)
+     (prot-window--get-window-size :max-width)
+     (prot-window--get-window-size :min-width))
+    ;; If we did not use `display-buffer-below-selected', then we must
+    ;; be in a lateral window, which has more space.  Then we do not
+    ;; want to dedicate the window to this buffer, because we will be
+    ;; running out of space.
+    (when (or (window-in-direction 'above) (window-in-direction 'below))
+      (set-window-dedicated-p window t)))
+
+  (defun prot-window--get-display-buffer-below-or-pop ()
+    "Return list of functions for `prot-window-display-buffer-below-or-pop'."
+    (list
+     #'display-buffer-reuse-mode-window
+     (if (or (prot-common-window-small-p)
+             (prot-common-three-or-more-windows-p))
+         #'display-buffer-below-selected
+       #'display-buffer-pop-up-window)))
+
+  (defun prot-window-display-buffer-below-or-pop (&rest args)
+    "Display buffer below current window or pop a new window.
+The criterion for choosing to display the buffer below the
+current one is a non-nil return value for
+`prot-common-window-small-p'.
+
+Apply ARGS expected by the underlying `display-buffer' functions.
+
+This as the action function in a `display-buffer-alist' entry."
+    (let ((functions (prot-window--get-display-buffer-below-or-pop)))
+      (catch 'success
+        (dolist (fn functions)
+          (when (apply fn args)
+            (throw 'success fn))))))
+
+  (defun prot-window-shell-or-term-p (buffer &rest _)
+    "Check if BUFFER is a shell or terminal.
+This is a predicate function for `buffer-match-p', intended for
+use in `display-buffer-alist'."
+    (when (string-match-p "\\*.*\\(e?shell\\|v?term\\).*" (buffer-name (get-buffer buffer)))
+      (with-current-buffer buffer
+        ;; REVIEW 2022-07-14: Is this robust?
+        (and (not (derived-mode-p 'message-mode 'text-mode))
+             (derived-mode-p 'eshell-mode 'shell-mode 'comint-mode 'fundamental-mode)))))
+
+  (defun prot-window-remove-dedicated (&rest _)
+    "Remove dedicated window parameter.
+Use this as :after advice to `delete-other-windows' and
+`delete-window'."
+    (when (one-window-p :no-mini)
+      (set-window-dedicated-p nil nil)))
+
+  (mapc
+   (lambda (fn)
+     (advice-add fn :after #'prot-window-remove-dedicated))
+   '(delete-other-windows delete-window))
+
+  (defmacro prot-window-define-full-frame (name &rest args)
+    "Define command to call ARGS in new frame with `display-buffer-full-frame' bound.
+Name the function prot-window- followed by NAME.  If ARGS is nil,
+call NAME as a function."
+    (declare (indent 1))
+    `(defun ,(intern (format "prot-window-%s" name)) ()
+       ,(format "Call `prot-window-%s' in accordance with `prot-window-define-full-frame'." name)
+       (interactive)
+       (let ((display-buffer-alist '((".*" (display-buffer-full-frame)))))
+         (with-selected-frame (make-frame)
+           ,(if args
+                `(progn ,@args)
+              `(funcall ',name))
+           (modify-frame-parameters nil '((buffer-list . nil)))))))
+
+  (defun prot-window--get-shell-buffers ()
+    "Return list of `shell' buffers."
+    (seq-filter
+     (lambda (buffer)
+       (with-current-buffer buffer
+         (derived-mode-p 'shell-mode)))
+     (buffer-list)))
+
+  (defun prot-window--get-new-shell-buffer ()
+    "Return buffer name for `shell' buffers."
+    (if-let ((buffers (prot-window--get-shell-buffers))
+             (buffers-length (length buffers))
+             ((>= buffers-length 1)))
+        (format "*shell*<%s>" (1+ buffers-length))
+      "*shell*"))
+
+;;;###autoload (autoload 'prot-window-shell "prot-window")
+  (prot-window-define-full-frame shell
+    (let ((name (prot-window--get-new-shell-buffer)))
+      (shell name)
+      (set-frame-name name)
+      (when-let ((buffer (get-buffer name)))
+        (with-current-buffer buffer
+          (add-hook
+           'delete-frame-functions
+           (lambda (_)
+             ;; FIXME 2023-09-09: Works for multiple frames (per
+             ;; `make-frame-command'), but not if the buffer is in two
+             ;; windows in the same frame.
+             (unless (> (safe-length (get-buffer-window-list buffer nil t)) 1)
+               (let ((kill-buffer-query-functions nil))
+                 (kill-buffer buffer))))
+           nil
+           :local)))))
+  :custom
+  (display-buffer-alist
+   `(;; no window
+     ("\\`\\*Async Shell Command\\*\\'"
+      (display-buffer-no-window))
+     ("\\`\\*\\(Warnings\\|Compile-Log\\|Org Links\\)\\*\\'"
+      (display-buffer-no-window)
+      (allow-no-window . t))
+     ;; bottom side window
+     ("\\*Org \\(Select\\|Note\\)\\*" ; the `org-capture' key selection and `org-add-log-note'
+      (display-buffer-in-side-window)
+      (dedicated . t)
+      (side . bottom)
+      (slot . 0)
+      (window-parameters . ((mode-line-format . none))))
+     ;; bottom buffer (NOT side window)
+     ((or . ((derived-mode . flymake-diagnostics-buffer-mode)
+             (derived-mode . flymake-project-diagnostics-mode)
+             (derived-mode . messages-buffer-mode)
+             (derived-mode . backtrace-mode)))
+      (display-buffer-reuse-mode-window display-buffer-at-bottom)
+      (window-height . 0.3)
+      (dedicated . t)
+      (preserve-size . (t . t)))
+     ("\\*Embark Actions\\*"
+      (display-buffer-reuse-mode-window display-buffer-below-selected)
+      (window-height . fit-window-to-buffer)
+      (window-parameters . ((no-other-window . t)
+                            (mode-line-format . none))))
+     ("\\*\\(Output\\|Register Preview\\).*"
+      (display-buffer-reuse-mode-window display-buffer-at-bottom))
+     ;; below current window
+     ("\\(\\*Capture\\*\\|CAPTURE-.*\\)"
+      (display-buffer-reuse-mode-window display-buffer-below-selected))
+     ("\\*\\vc-\\(incoming\\|outgoing\\|git : \\).*"
+      (display-buffer-reuse-mode-window display-buffer-below-selected)
+      (window-height . 0.1)
+      (dedicated . t)
+      (preserve-size . (t . t)))
+     ((derived-mode . reb-mode)         ; M-x re-builder
+      (display-buffer-reuse-mode-window display-buffer-below-selected)
+      (window-height . 4)           ; note this is literal lines, not relative
+      (dedicated . t)
+      (preserve-size . (t . t)))
+     ((or . ((derived-mode . occur-mode)
+             (derived-mode . grep-mode)
+             (derived-mode . Buffer-menu-mode)
+             (derived-mode . log-view-mode)
+             (derived-mode . help-mode) ; See the hooks for `visual-line-mode'
+             "\\*\\(|Buffer List\\|Occur\\|vc-change-log\\).*"
+             prot-window-shell-or-term-p
+             ,world-clock-buffer-name))
+      (prot-window-display-buffer-below-or-pop)
+      (body-function . prot-window-select-fit-size))
+     ("\\*\\(Calendar\\|Bookmark Annotation\\|ert\\).*"
+      (display-buffer-reuse-mode-window display-buffer-below-selected)
+      (dedicated . t)
+      (window-height . fit-window-to-buffer))
+     ;; NOTE 2022-09-10: The following is for `ispell-word', though
+     ;; it only works because I override `ispell-display-buffer'
+     ;; with `prot-spell-ispell-display-buffer' and change the
+     ;; value of `ispell-choices-buffer'.
+     ("\\*ispell-top-choices\\*.*"
+      (display-buffer-reuse-mode-window display-buffer-below-selected)
+      (window-height . fit-window-to-buffer))
+     ;; same window
+
+     ;; NOTE 2023-02-17: `man' does not fully obey the
+     ;; `display-buffer-alist'.  It works for new frames and for
+     ;; `display-buffer-below-selected', but otherwise is
+     ;; unpredictable.  See `Man-notify-method'.
+     ((or . ((derived-mode . Man-mode)
+             (derived-mode . woman-mode)
+             "\\*\\(Man\\|woman\\).*"))
+      (display-buffer-same-window))))
+  )
+
 (use-package start-per-user-server
   :unless noninteractive
   :straight nil
@@ -4300,6 +4552,25 @@ If region is active, apply to active region instead."
   :chords ("jw" . ace-jump-char-mode)
   :bind ("M-i" . ace-window))
 
+(use-package activities
+  :init
+  (activities-mode)
+  (activities-tabs-mode)
+  ;; Prevent `edebug' default bindings from interfering.
+  (setq edebug-inhibit-emacs-lisp-mode-bindings t)
+
+  :bind
+  (("C-x C-a C-n" . activities-new)
+   ;; As resuming is expected to be one of the most commonly used
+   ;; commands, this binding is one of the easiest to press.
+   ("C-x C-a C-a" . activities-resume)
+   ("C-x C-a C-s" . activities-suspend)
+   ("C-x C-a C-k" . activities-kill)
+   ;; This binding mirrors, e.g. "C-x t RET".
+   ("C-x C-a RET" . activities-switch)
+   ("C-x C-a g" . activities-revert)
+   ("C-x C-a l" . activities-list)))
+
 ;;;_ , aggressive-indent
 
 (use-package aggressive-indent
@@ -4539,6 +4810,14 @@ If region is active, apply to active region instead."
     (setq beacon-push-mark 35)
     (setq beacon-color "#666600")))
 
+(use-package beframe
+  :bind ("C-c b f" . beframe-prefix-map)
+  :custom
+  (beframe-global-buffers '("*scratch*" "*Messages*" "*ielm*" "*vterm*"
+                            "*elfeed-search*" "*straight-byte-compilation*"
+                            "*straight-process*" "*Native-compile-Log*"
+                            "*elfeed-log*" "*Feather dashboard*"
+                            "*Warnings*")))
 ;;;_ , beginend
 
 (use-package beginend
@@ -4799,7 +5078,7 @@ If region is active, apply to active region instead."
   :after clojure-mode
   :config
   (define-key clojure-mode-map (kbd "C-c M-h")
-    'html-to-hiccup-convert-region))
+              'html-to-hiccup-convert-region))
 
 (use-package clojure-snippets
   ;; BULK-ENSURE :ensure t
@@ -5243,6 +5522,16 @@ If region is active, apply to active region instead."
   :config)
 (default-text-scale-mode +1)
 
+(use-package denote
+  :custom ((denote-directory "~/Dokumente/braindump")
+	   (denote-known-keywords '())
+	   (denote-prompts '(signature title keywords)))
+  :hook (dired-mode . denote-dired-mode)
+  :bind (("C-c n d d" . denote)
+	 ("C-c n d f" . denote-open-or-create)
+	 ("C-c n d i" . denote-insert-link)
+	 ("C-c n d I" . denote-link-insert-links-matching-regexp)))
+
 (use-package devdocs
   :disabled t
   :straight nil
@@ -5488,6 +5777,12 @@ Install the doc if it's not installed."
 (use-package dired-git
   :hook (dired-mode-hook . #'dired-git-mode))
 
+(use-package cc-dired-sort-by
+  :disabled t                           ; prog-mode not defined
+  :after dired
+  :straight nil
+  :load-path "cc-dired-sort-by.el")
+
 (use-package dired-imenu
   :after dired)
 
@@ -5724,6 +6019,34 @@ Install the doc if it's not installed."
                    'help-echo "ERC"))
                 erc-modified-channels-alist))))
 
+  (doom-modeline-def-segment keycast-key
+    (when (bound-and-true-p keycast-mode)
+      (when-let ((casting keycast-mode)
+                 (active (doom-modeline--active))
+                 (key (ignore-errors
+                        (key-description keycast--this-command-keys))))
+        (concat
+         doom-modeline-spc
+         (propertize key 'face 'doom-modeline-evil-visual-state)
+         doom-modeline-spc))))
+
+  (doom-modeline-def-segment keycast-cmd
+    (when (bound-and-true-p keycast-mode)
+      (when-let ((casting keycast-mode)
+                 (active (doom-modeline--active))
+                 (cmd keycast--this-command)
+                 (rep keycast--command-repetitions))
+        (propertize
+         (concat
+          doom-modeline-spc
+          (format "%s" cmd)
+          (if (> rep 0)
+              (format " x%s" (1+ rep))
+            "")
+          doom-modeline-spc)
+         'face 'doom-modeline-evil-visual-state))
+      ))
+
   (add-to-list 'global-mode-string '(:eval
                                      (doom-modeline-segment--ati-erc-track))
                'APPEND))
@@ -5894,6 +6217,11 @@ Install the doc if it's not installed."
                       (cons #'flymake-eldoc-function
                             (remove #'flymake-eldoc-function
                                     eldoc-documentation-functions))))))
+
+(use-package eglot-booster
+  :straight (:host github :repo "jdtsmith/eglot-booster")
+  :after eglot
+  :config (eglot-booster-mode +1))
 
 (use-package eglot-orderless
   :straight nil
@@ -7098,7 +7426,10 @@ display, depending on the window manager)."
   :after go-mode)
 
 (use-package goggles
-  :hook ((prog-mode text-mode) . goggles-mode)
+  :disabled t
+  ;; ;stopped working? Now using volatile-highlights
+  ;; :hook
+  ((prog-mode text-mode) . goggles-mode)
   :config
   (setq-default goggles-pulse t))
 
@@ -7136,7 +7467,26 @@ display, depending on the window manager)."
   :unless noninteractive
   :bind ("M-g m" . goto-last-change))
 
-;;;_ , grab-x-link
+
+(use-package gptel
+  ;; https://github.com/karthink/gptel?tab=readme-ov-file#manual
+  :custom
+  ()
+  :config
+  ;; (gptel-make-azure "Azure-1"           ;Name, whatever you'd like
+  ;;                   :protocol "https"   ;Optional -- https is the default
+  ;;                   :host "YOUR_RESOURCE_NAME.openai.azure.com"
+  ;;                   :endpoint "/openai/deployments/YOUR_DEPLOYMENT_NAME/chat/completions?api-version=2023-05-15" ;or equivalent
+  ;;                   :stream t           ;Enable streaming responses
+  ;;                   :key #'gptel-api-key
+  ;;                   :models '("gpt-3.5-turbo" "gpt-4"))
+
+  ;; :key can be a function that returns the API key.
+  ;; (gptel-make-gemini "Gemini" :key "YOUR_GEMINI_API_KEY" :stream t)
+  )
+                                        ;
+
+;;_ , grab-x-link
 
 (use-package grab-x-link
   :defer t)
@@ -7714,6 +8064,10 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
       (httpd-start))
     (initialize-impatient-mode)))
 
+(use-package indent-bars
+  :straight (indent-bars :type git :host github :repo "jdtsmith/indent-bars")
+  :hook ((python-mode yaml-mode) . indent-bars-mode))
+
 ;;;_ , info
 
 (use-package info
@@ -7757,6 +8111,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (split-window-vertically)
     (other-window 1)
     (call-interactively 'isearch-forward)))
+
+(use-package cc-isearch-menu
+  :disabled t                           ;broken melpa recipe
+  :bind (:map isearch-mode-map
+              ("C-v" . cc-isearch-menu-transient)))
 
 (use-package jira-markup-mode
   :commands (jira-markup-mode)
@@ -7836,16 +8195,15 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package just-mode
   :unless noninteractive)
 
-;;;_ , key-chord
-
 (use-package key-chord
-  ;; BULK-ENSURE :ensure t
   :defer t
   :commands key-chord-mode
   :init
   (key-chord-mode 1)
   :config
   (setq key-chord-two-keys-delay 0.1))
+
+(use-package keycast)
 
 (use-package keypression
   :commands key-chord-mode)
@@ -8074,6 +8432,17 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package log4j-mode
   :disabled t
   :mode ("\\.log\\'" . log4j-mode))
+
+(use-package lsp-bridge
+  :straight '(lsp-bridge :type git
+                         :host github
+                         :repo "manateelazycat/lsp-bridge"
+                         :files (:defaults "*.el" "*.py" "acm"
+                                           "core" "langserver"
+                                           "multiserver" "resources")
+                         :build (:not compile))
+  :init
+  (global-lsp-bridge-mode))
 
 (use-package lsp-java
   :disabled t)
@@ -8956,6 +9325,8 @@ means save all with no questions."
   (setq ps-print-region-function 'ps-spool-to-pdf))
 
 (use-package pulsar
+  :config
+  (add-hook 'next-error-hook #'pulsar-pulse-line)
   :custom
   (pulsar-pulse-functions
    '(isearch-repeat-forward
@@ -9048,6 +9419,10 @@ means save all with no questions."
       (bind-key "C-c C-z" 'python-shell python-mode-map)
       (unbind-key "C-c c" python-mode-map))
     (add-hook 'python-mode-hook 'my-python-mode-hook)))
+
+(use-package python-black
+  :after python
+  :hook (python-mode . python-black-on-save-mode-enable-dwim))
 
 ;;;_ , quickrun
 
@@ -9493,6 +9868,14 @@ means save all with no questions."
   :config
   (add-hook 'typescript-mode-hook #'tide-setup))
 
+(use-package treesit-auto
+  :preface
+  (defun treesil-install-grammars
+      (interactive)
+    (mapc #'treesit-install-language-grammar (mapcar #'car treesit-language-source-alist)))
+  :config
+  (global-treesit-auto-mode +1))
+
 ;;;_ , slime
 
 (use-package slime
@@ -9847,7 +10230,7 @@ means save all with no questions."
 ;;;_ , volatile highlights - temporarily highlight changes from pasting etc
 
 (use-package volatile-highlights
-  :disabled t                           ;in favor of goggles
+  :unless noninteractive
   :diminish " 🌋"
   :config
   (volatile-highlights-mode t))
@@ -10189,6 +10572,23 @@ means save all with no questions."
   (bind-key "<f12>" 'yankpad-expand)
   ;; If you want to complete snippets using company-mode
   (add-to-list 'company-backends #'company-yankpad))
+
+(use-package yeetube
+  :straight '(yeetube :type git
+	              :host nil
+	              :repo "https://git.thanosapollo.org/yeetube")
+  ;; (:states 'normal
+  ;;          :keymaps 'yeetube-mode-map
+  ;;          "RET" 'yeetube-play
+  ;;          "d" 'yeetube-download-video
+  ;;          "b" 'yeetube-play-saved-video
+  ;;          "B" 'yeetube-save-video
+  ;;          "x" 'yeetube-remove-saved-video
+  ;;          "/" 'yeetube-search
+  ;;          "0" 'yeetube-toggle-video
+  ;;          )
+  )
+
 
 (use-package znc
   :disabled t
