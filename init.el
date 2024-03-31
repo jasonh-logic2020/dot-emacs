@@ -299,6 +299,7 @@ Meant to be added to `occur-hook'."
   (menu-bar-mode                nil)
   (message-log-max              16384)
   (redisplay-dont-pause         t)
+  (tab-bar-show                 nil)
   (tool-bar-mode                nil)
   (undo-limit                   800000)
   (user-full-name               (or (getenv "USERNAME")
@@ -413,6 +414,7 @@ Meant to be added to `occur-hook'."
 
   ;; scroll-bar.el
   (scroll-bar-mode nil)
+  (tab-bar-mode nil)
 
   ;; paragraphs.el
   (sentence-end-double-space nil)
@@ -1596,13 +1598,13 @@ end tell" (match-string 1))))
     (interactive)
     (push-window-configuration)
     (cl-flet ((prep-window
-               (wind)
-               (with-selected-window wind
-                 (org-fit-window-to-buffer wind)
-                 (ignore-errors
-                   (window-resize
-                    wind
-                    (- 100 (window-width wind)) t)))))
+                (wind)
+                (with-selected-window wind
+                  (org-fit-window-to-buffer wind)
+                  (ignore-errors
+                    (window-resize
+                     wind
+                     (- 100 (window-width wind)) t)))))
       (let ((buf (or (get-buffer "*Org Agenda*")
                      (get-buffer "*Org Agenda(a)*"))))
         (if buf
@@ -1803,6 +1805,7 @@ To use this function, add it to `org-agenda-finalize-hook':
 (use-package org-modern
   :defer t
   :after '(org)
+  :custom (org-startup-indented t)
   :hook ((org-mode . #'org-modern-mode)
          (org-agenda-finalize . #'org-modern-agenda)
          (org-modern-mode . (lambda ()
@@ -1910,6 +1913,13 @@ prepended to the element after the #+HEADER: tag."
           (expand-file-name "references.bib" projectile-project-root)
           org-ref-pdf-directory
           (expand-file-name "bibtex-pdfs/" projectile-project-root))))
+
+(use-package org-sliced-images
+  :disabled t   ;; package not found
+  :config
+  (defalias 'org-remove-inline-images #'org-sliced-images-remove-inline-images)
+  (defalias 'org-toggle-inline-images #'org-sliced-images-toggle-inline-images)
+  (defalias 'org-display-inline-images #'org-sliced-images-display-inline-images))
 
 (use-package org-board
   :after '(org projectile)
@@ -2616,12 +2626,12 @@ prepended to the element after the #+HEADER: tag."
       (message "Updating issue:%s from file: %s with description:%s" issue-id filename org-issue-description)
       (jiralib-update-issue issue-id update-fields
                             (org-jira-with-callback
-                              (message (format "Issue '%s' updated!" issue-id))
-                              (jiralib-get-issue
-                               issue-id
-                               (org-jira-with-callback
-                                 (org-jira-log "Update get issue for refresh callback hit.")
-                                 (-> cb-data list org-jira-get-issues))))
+                             (message (format "Issue '%s' updated!" issue-id))
+                             (jiralib-get-issue
+                              issue-id
+                              (org-jira-with-callback
+                               (org-jira-log "Update get issue for refresh callback hit.")
+                               (-> cb-data list org-jira-get-issues))))
                             )))
 
 
@@ -2664,7 +2674,7 @@ prepended to the element after the #+HEADER: tag."
         ;; The '_' character is not displayed. This affects columns alignment.
         ;; Remove s many spaces as needed to make up for the '_' deficit.
         "
-         ^Actions^           ^Issue^              ^Buffer^                         ^Defaults^ 
+         ^Actions^           ^Issue^              ^Buffer^                         ^Defaults^
                            ?I?
          ^^^^^^-----------------------------------------------------------------------------------------------
           _L_ist issues      _u_pdate issue       _R_efresh issues in buffer       Select _B_oard ?B?
@@ -3032,7 +3042,7 @@ Remove from `kill-buffer-hook', and also remove this function
 
 (eval-and-compile
   (define-key ctl-x-map "\C-i"
-    #'endless/ispell-word-then-abbrev)
+              #'endless/ispell-word-then-abbrev)
 
   (defun endless/simple-get-word ()
     (car-safe (save-excursion (ispell-get-word nil))))
@@ -3079,6 +3089,8 @@ abort completely with `C-g'."
 (use-package async         :defer t)
 (use-package button-lock   :defer t)
 (use-package ctable        :defer t)
+(use-package ct
+  :straight (ct :host github :repo "neeasade/ct.el" :branch "master"))
 (use-package dash          :defer t)
 (use-package deferred      :defer t)
 (use-package diminish      )
@@ -4553,6 +4565,7 @@ If region is active, apply to active region instead."
   :bind ("M-i" . ace-window))
 
 (use-package activities
+  :after consult
   :init
   (activities-mode)
   (activities-tabs-mode)
@@ -4794,7 +4807,11 @@ If region is active, apply to active region instead."
 (use-package backup-walker
   :commands backup-walker-start)
 
-(use-package bazel)
+(use-package bazel
+  :disabled t)
+
+(use-package bazel
+  :straight (emacs-bazel-mode :host github :repo "bazel-build/emacs-bazel-mode"))
 
 ;;;_ , bbdb
 
@@ -4953,6 +4970,13 @@ If region is active, apply to active region instead."
            (lambda () (not (org-in-src-block-p))))))
   (global-captain-mode +1))
 
+(use-package casual
+  :disabled t
+  :after transient
+  :commands (casual-mode)
+  :bind (:map calc-mode-map
+              ("C-o" . #'casual-main-menu)))
+
 (use-package shell-maker
   :straight (:host github :repo "xenodium/chatgpt-shell"
                    :files ("shell-maker.el")))
@@ -4989,7 +5013,7 @@ If region is active, apply to active region instead."
 ;;;_ , cider
 
 (use-package cider
-  :after clojure-mode
+  :after (clojure-mode cape)
   :unless noninteractive
   :custom
   ;; (cider-repl-pop-to-buffer-on-connect nil)
@@ -5009,7 +5033,34 @@ If region is active, apply to active region instead."
   :hook (cider-repl-mode . (lambda ()
                              (aggressive-indent-mode -1)
                              (lispy-mode +1)))
-  :config)
+  :config
+  (add-hook 'cider-repl-mode-hook #'paredit-mode)
+  ;; use lsp
+  ;; (add-hook 'cider-mode-hook
+  ;;           (lambda ()
+  ;;             (remove-hook 'completion-at-point-functions #'cider-complete-at-point t)))
+  (defun +eglot-completion-at-point ()
+    (when (boundp 'eglot-completion-at-point)
+      (funcall 'eglot-completion-at-point)))
+
+  (defalias 'cape-cider-eglot
+    (cape-capf-super #'cider-complete-at-point
+                     #'+eglot-completion-at-point))
+
+  (defun mpenet/cider-capf ()
+    (add-to-list 'completion-at-point-functions
+                 #'cape-cider-eglot))
+
+  :hook ((cider-mode . mpenet/cider-capf)
+         (cider-repl-mode . mpenet/cider-capf)
+         (cider-repl-mode . company-mode))
+  :bind (:map
+         cider-mode-map
+         ("C-c C-d" . cider-debug-defun-at-point)
+         ("C-c d" . cider-debug-defun-at-point)
+         :map
+         cider-repl-mode-map
+         ("C-j" . nil)))
 
 ;; (defun tdd-test ()
 ;;   "Thin wrapper around `cider-test-run-tests'."
@@ -5105,6 +5156,93 @@ If region is active, apply to active region instead."
   :custom
   (color-identifiers-coloring-method 'hash)
   :hook (after-init . (lambda () (global-color-identifiers-mode +1))))
+
+;; we recommend using use-package to organize your init.el
+(use-package codeium
+  ;; if you use straight
+  :straight '(:type git :host github :repo "Exafunction/codeium.el")
+  ;; otherwise, make sure that the codeium.el file is on load-path
+  :custom
+  (codeium/metadata/api_key "a2fd01b4-12f8-4843-9412-491259476c40")
+  :init
+  (defun my/cape-codeium (&optional interactive)
+    "Allow codeium capf to be run by itself"
+    (interactive (list t))
+    (when interactive
+      ;; if also testing copilot, clear their overlay before showing capf popup
+      (when (bound-and-true-p copilot-mode) (copilot-clear-overlay))
+      (cape-interactive #'codeium-completion-at-point)))
+  (bind-key "C-c p c" #'my/cape-codeium)
+
+  (defvar my/codeium-is-enabled t)
+
+  (defun codeium-toggle ()
+    "toggle codeium when connected"
+    (interactive)
+    (setq my/codeium-is-enabled (not (my/codeium-is-enabled)))
+    (message (concat ("Codeium is " (if (my/codeium-is-enabled)
+                                        ("eb")
+                                      ("dis"))
+                      "abled"))))
+
+  ;; use globally
+  ;; (add-to-list 'completion-at-point-functions #'codeium-completion-at-point)
+  ;; or on a hook
+  ;; (add-hook 'python-mode-hook
+  ;;     (lambda ()
+  ;;         (setq-local completion-at-point-functions '(codeium-completion-at-point))))
+
+  ;; if you want multiple completion backends, use cape (https://github.com/minad/cape):
+  ;; (add-hook 'python-mode-hook
+  ;;     (lambda ()
+  ;;         (setq-local completion-at-point-functions
+  ;;             (list (cape-super-capf #'codeium-completion-at-point #'lsp-completion-at-point)))))
+  ;; an async company-backend is coming soon!
+
+  ;; codeium-completion-at-point is autoloaded, but you can
+  ;; optionally set a timer, which might speed up things as the
+  ;; codeium local language server takes ~0.2s to start up
+  ;; (add-hook 'emacs-startup-hook
+  ;;  (lambda () (run-with-timer 0.1 nil #'codeium-init)))
+
+  ;; :defer t ;; lazy loading, if you want
+  :config
+  (setq use-dialog-box nil) ;; do not use popup boxes
+
+  ;; if you don't want to use customize to save the api-key
+  ;; (setq codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+
+  ;; get codeium status in the modeline
+  (setq codeium-mode-line-enable
+        (lambda (api) (not (memq api '(CancelRequest Heartbeat AcceptCompletion)))))
+  (add-to-list 'mode-line-format '(:eval (car-safe codeium-mode-line)) t)
+  ;; alternatively for a more extensive mode-line
+  ;; (add-to-list 'mode-line-format '(-50 "" codeium-mode-line) t)
+
+  ;; use M-x codeium-diagnose to see apis/fields that would be sent to the local language server
+  (setq codeium-api-enabled
+        (lambda (api)
+          (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect AcceptCompletion))))
+  ;; you can also set a config for a single buffer like this:
+  ;; (add-hook 'python-mode-hook
+  ;;     (lambda ()
+  ;;         (setq-local codeium/editor_options/tab_size 4)))
+
+  ;; You can overwrite all the codeium configs!
+  ;; for example, we recommend limiting the string sent to codeium for better performance
+  (defun my-codeium/document/text ()
+    (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
+  ;; if you change the text, you should also change the cursor_offset
+  ;; warning: this is measured by UTF-8 encoded bytes
+  (defun my-codeium/document/cursor_offset ()
+    (codeium-utf8-byte-length
+     (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
+  (setq codeium/document/text 'my-codeium/document/text)
+  (setq codeium/document/cursor_offset 'my-codeium/document/cursor_offset)
+
+  (when-let ((codeium/metadata/api_key (auth-source-pass-get 'secret "api.codeium.com")))
+    (codeium-init))
+  )
 
 ;;;_ , color-moccur
 
@@ -5234,6 +5372,28 @@ If region is active, apply to active region instead."
                   cape-file)
                 cape-dabbrev-min-length 5)))
 
+(use-package codeium-mode-cape
+  :no-require t
+  :straight nil
+  :after (cape codeium)
+  :hook (codeium-mode . my/setup-cape-codeium)
+  :config
+  (defalias 'cape-codeium
+    (cape-capf-super
+     (cape-capf-silent
+      (when (bound-and-true-p my/codeium-is-enabled)
+        (cape-capf-properties #'codeium-completion-at-point
+                              :annotation-function
+                              #'(lambda (_) (propertize
+                                        "  Codeium"
+                                        'face font-lock-comment-face)))))))
+  (defun my/codeium-capf ()
+    "add codeium to capf"
+    (add-to-list 'completion-at-point-functions
+                 #'cape-codeium))
+
+  :hook ((prog-mode . #'my/codeium-capf)))
+
 (use-package cape
   :bind (("C-c p p" . completion-at-point) ;; capf
          ("C-c p t" . complete-tag)        ;; etags
@@ -5252,18 +5412,39 @@ If region is active, apply to active region instead."
          ("C-c p &" . cape-sgml)
          ("C-c p r" . cape-rfc1345))
   :config
+  (defalias 'my/capf-eglot+et-al
+    (cape-capf-super
+     (cape-capf-silent
+      (when (bound-and-true-p my/codeium-is-enabled)
+        (cape-capf-properties #'codeium-completion-at-point
+                              :annotation-function
+                              #'(lambda (_) (propertize "  Codeium"
+                                                   'face font-lock-comment-face))
+                              :company-kind (lambda (_) 'magic))))
+     (cape-capf-buster #'eglot-completion-at-point 'equal)
+     (cape-capf-properties #'cape-dabbrev
+                           :annotation-function
+                           #'(lambda (_) (propertize " Dabbrev"
+                                                'face font-lock-comment-face)))
+     ;; if line gets too chatty
+     (cape-capf-silent
+      (cape-capf-properties #'cape-line
+                            :annotation-function
+                            #'(lambda (_) (propertize " Line"
+                                                 'face font-lock-comment-face))))))
+
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file)
   ;;(add-to-list 'completion-at-point-functions #'cape-history)
-  ;;(add-to-list 'completion-at-point-functions #'cape-keyword)
+  (add-to-list 'completion-at-point-functions #'cape-keyword)
   ;;(add-to-list 'completion-at-point-functions #'cape-tex)
   ;;(add-to-list 'completion-at-point-functions #'cape-sgml)
   ;;(add-to-list 'completion-at-point-functions #'cape-rfc1345)
   ;;(add-to-list 'completion-at-point-functions #'cape-abbrev)
-  ;;(add-to-list 'completion-at-point-functions #'cape-ispell)
+  (add-to-list 'completion-at-point-functions #'cape-ispell)
   ;;(add-to-list 'completion-at-point-functions #'cape-dict)
-  ;;(add-to-list 'completion-at-point-functions #'cape-symbol)
-  ;;(add-to-list 'completion-at-point-functions #'cape-line)
+  (add-to-list 'completion-at-point-functions #'cape-symbol)
+  (add-to-list 'completion-at-point-functions #'cape-line)
 
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify)
@@ -5333,7 +5514,9 @@ If region is active, apply to active region instead."
    ([remap Info-search] . consult-info)
    ;; C-x bindings in `ctl-x-map'
    ("C-x M-:" . consult-complex-command)     ;; orig. repeat-complex-command
-   ("C-x b" . consult-buffer)                ;; orig. switch-to-buffer
+   ([remap switch-to-buffer] . consult-buffer)            ;; orig. switch-to-buffer
+   ;; ("C-x b" . consult-buffer)
+   ;; orig. switch-to-buffer
    ("C-x 4 b" . consult-buffer-other-window) ;; orig. switch-to-buffer-other-window
    ("C-x 5 b" . consult-buffer-other-frame)  ;; orig. switch-to-buffer-other-frame
    ("C-x r b" . consult-bookmark)            ;; orig. bookmark-jump
@@ -5462,6 +5645,11 @@ If region is active, apply to active region instead."
 (use-package consult-eglot
   :after consult eglot
   :defer t)
+
+(use-package consult-eglot-embark
+  :after eglot
+  :config
+  (consult-eglot-embark-mode +1))
 
 (use-package consult-projectile
   :straight (consult-projectile
@@ -6216,7 +6404,34 @@ Install the doc if it's not installed."
                 (setq eldoc-documentation-functions
                       (cons #'flymake-eldoc-function
                             (remove #'flymake-eldoc-function
-                                    eldoc-documentation-functions))))))
+                                    eldoc-documentation-functions)))))
+  ;; eglot, just to validate with just eglot
+  (defun my/cape-eglot(&optional interactive)
+    (interactive (list t))
+    (when interactive
+      ;; if also testing copilot, clear their overlay before showing capf popup
+      (when (bound-and-true-p copilot-mode) (copilot-clear-overlay))
+      (cape-capf-buster (cape-interactive #'eglot-completion-at-point) 'equal)))
+  (keymap-set eglot-mode-map "C-c p g" #'my/cape-eglot)
+
+  ;; Since merging eglot and others, assign a key binding to test
+  ;; can remove if feel good
+  (defun my/cape-eglot+et-al(&optional interactive)
+    (interactive (list t))
+    (when interactive
+      ;; if also testing copilot, clear their overlay before showing capf popup
+      (when (bound-and-true-p copilot-mode) (copilot-clear-overlay))
+      (cape-interactive #'my/capf-eglot+et-al)))
+  (keymap-set eglot-mode-map "C-c p z" #'my/cape-eglot+et-al)
+
+  (defun my/eglot-capf-config()
+    (setq-local completion-category-overrides '((file (styles partial-completion)))
+                completion-category-defaults nil
+                completion-styles '(orderless partial-completion basic)
+                ;; add in file first, capf will know when in file mode
+                completion-at-point-functions (list #'cape-file #'my/capf-eglot+et-al)))
+
+  (add-hook 'eglot-managed-mode-hook #'my/eglot-capf-config))
 
 (use-package eglot-booster
   :straight (:host github :repo "jdtsmith/eglot-booster")
@@ -7467,24 +7682,56 @@ display, depending on the window manager)."
   :unless noninteractive
   :bind ("M-g m" . goto-last-change))
 
-
 (use-package gptel
   ;; https://github.com/karthink/gptel?tab=readme-ov-file#manual
+  :commands (gptel gptel-send)
+  :bind (:prefix-map
+         gptel-cmd-map
+         :prefix "C-x C"
+         ("C" . gptel)
+         ("a" . gptel-abort)
+         ("s" . gptel-send))
+  :hook (gptel-mode . visual-line-mode)
   :custom
-  ()
+  (gptel-default-mode 'org-mode)
+  (gptel-model "gpt-4-1106-preview")
+  (gptel-api-key (auth-source-pass-get 'secret "chat.openai.com"))
   :config
-  ;; (gptel-make-azure "Azure-1"           ;Name, whatever you'd like
-  ;;                   :protocol "https"   ;Optional -- https is the default
-  ;;                   :host "YOUR_RESOURCE_NAME.openai.azure.com"
-  ;;                   :endpoint "/openai/deployments/YOUR_DEPLOYMENT_NAME/chat/completions?api-version=2023-05-15" ;or equivalent
-  ;;                   :stream t           ;Enable streaming responses
-  ;;                   :key #'gptel-api-key
-  ;;                   :models '("gpt-3.5-turbo" "gpt-4"))
+  ;; (gptel-model "claude-3-opus-20240229")
+  (gptel-directives
+   '((default . "You are a large language model living in Emacs and a helpful assistant. Respond concisely.")
+     (english . "I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified A0-level words and sentences with more beautiful and elegant, upper level English words and sentences. Keep the meaning same, but make them more literary. I want you to only reply the correction, the improvements and nothing else, do not write explanations.")
+     (spanish . "I want you to act as an Latin-American Spanish translator, spelling corrector and improver. I will speak to you in English, and you will translate it and answer in the corrected and improved version of my text, in Latin-American Spanish. I want you to replace my simplified A0-level words and sentences with more beautiful and elegant, upper level Latin-American  Spanish words and sentences. Keep the meaning same, but make them more literary and clear. I want you to only reply the correction, the improvements and nothing else, do not write explanations.")
+     (persian . "I want you to act as an Farsi translator, spelling corrector and improver. I will speak to you in English, and you will translate it and answer in the corrected and improved version of my text, in Farsi. I want you to replace my simplified A0-level words and sentences with more beautiful and elegant, upper level Farsi words and sentences. Keep the meaning same, but make them more literary and clear. I want you to only reply the correction, the improvements and nothing else, do not write explanations.")
+     (romanien . "I want you to act as a Romanian translator, spelling corrector and improver. I will speak to you in English, and you will translate it and answer in the corrected and improved version of my text, in Romanian. I want you to replace my simplified A0-level words and sentences with more beautiful and elegant, upper level Romanian words and sentences. Keep the meaning same, but make them more literary and clear. I want you to only reply the correction, the improvements and nothing else, do not write explanations.")
+     (programming . "The user is a programmer with very limited time. You treat their time as precious. You do not repeat obvious things, including their query. You are as concise as possible in responses. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")
+     (positive-programming . "Your goal is to help the user become an amazing computer programmer. You are positive and encouraging. You love see them learn. You do not repeat obvious things, including their query. You are as concise in responses. You always guide the user go one level deeper and help them see patterns. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")
+     (travel-guide . "I want you to act as a travel guide. I will write you my location and you will suggest a place to visit near my location. In some cases, I will also give you the type of places I will visit. You will also suggest me places of similar type that are close to my first location.")
+     (seminar-organizer . "You are a seminar organizer, you plan and put together meetings where people can come together and share ideas, plan, and learn about how to facilitate larger groups. You present your information in a kindly yet efficient manner,and use precise language to make details very clear for those who read your letters.")
+     (persian-translator . "You are a translator from English into the Persian language for the Bahá’í World Centre. You take great care to be accurate and meaningful in your translations, while using the commonly accepted terms found in letters from Shoghi Effendi and the Universal House of Justice. You prize clarity but also value beauty and elegant in what you write. However, the goal is to communicate meaning, and not to attempt to sound lofty or poetic. You are concise yet expressive, profound yet not heavy-handed."))))
 
-  ;; :key can be a function that returns the API key.
-  ;; (gptel-make-gemini "Gemini" :key "YOUR_GEMINI_API_KEY" :stream t)
-  )
+(use-package gptel-openai
+  :straight nil
+  :after gptel
+  :custom
+  (gptel-api-key (auth-source-pass-get 'secret "chat.openai.com")))
                                         ;
+(use-package gptel-transient
+  :straight nil
+  :after gptel
+  :config
+  (when (ignore-errors (transient-get-suffix 'gptel-menu "RET"))
+    (transient-suffix-put 'gptel-menu "RET" :key "<return>")))
+
+(use-package gptel-curl
+  :straight nil
+  :after gptel
+  :config
+  (defconst gptel-curl--common-args
+    '("--location" "--silent" "--compressed"
+      "-XPOST" "-y300" "-Y1" "-D-")
+    "Arguments always passed to Curl for gptel queries."))
+
 
 ;;_ , grab-x-link
 
@@ -7657,7 +7904,11 @@ display, depending on the window manager)."
 
 (require 'hilit-chg)
 (global-highlight-changes-mode t)
-(set-face-attribute 'highlight-changes nil :background "gray23" :foreground 'unspecified)
+(set-face-attribute 'highlight-changes nil
+                    :background (ct-lessen
+                                 (face-attribute 'default :background)
+                                 10)
+                    :foreground 'unspecified)
 (use-package hilit-chg
   :bind ("M-o C" . highlight-changes-mode))
 
@@ -7744,12 +7995,22 @@ display, depending on the window manager)."
   :config
   (global-hl-line-mode +1))
 
-;;;_ , htmlize
+(use-package hl-todo
+  :custom (hl-todo-highlight-punctuation ":")
+  :config (global-hl-todo-mode))
 
-;; (use-package htmlize
-;;   )
-
-;;;_ , hydra
+(use-package holymotion
+  :disabled t
+  :straight (holymotion :type git
+                        :host github
+                        :repo "Overdr0ne/holymotion"
+                        :branch "main")
+  :config
+  ;; define some custom motions, I'm using smartparens here
+  (holymotion-make-motion
+   holymotion-forward-sexp #'sp-forward-sexp)
+  (holymotion-make-motion
+   holymotion-backward-sexp #'sp-backward-sexp))
 
 (use-package hydra
   :config (setq hydra-hint-display-type 'posframe))
@@ -8318,7 +8579,11 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (lin-global-mode +1))
 
-;;;_ , lisp-mode
+(use-package listen
+  :disabled t
+  :straight '(:type git :host github :repo "alphapapa/listen.el"))
+
+;;_ , lisp-mode
 
 (use-package lisp-mode
   :straight nil
@@ -8775,6 +9040,23 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (add-to-list 'completion-at-point-functions 'native-complete-at-point)
   (with-eval-after-load 'shell
     (native-complete-setup-bash)))
+
+(use-package nerd-icons)
+
+(use-package nerd-icons-completion
+  :straight (nerd-icons-completion :type git :host github :repo "rainstormstudio/nerd-icons-completion")
+  :config
+  (nerd-icons-completion-mode)
+  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
+
+(use-package nerd-icons-dired
+  :straight (nerd-icons-dired :type git :host github :repo "rainstormstudio/nerd-icons-dired")
+  :hook
+  (dired-mode . nerd-icons-dired-mode))
+
+(use-package nerd-icons-ibuffer
+  :straight (nerd-icons-ibuffer :type git :host github :repo "seagle0128/nerd-icons-ibuffer")
+  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 ;;;_ , nroff-mode
 
@@ -9350,9 +9632,9 @@ means save all with no questions."
      windmove-swap-states-left
      windmove-swap-states-up
      windmove-swap-states-down
-     tab-new
-     tab-close
-     tab-next
+     ;; tab-new
+     ;; tab-close
+     ;; tab-next
      org-next-visible-heading
      org-previous-visible-heading
      org-forward-heading-same-level
@@ -9388,37 +9670,37 @@ means save all with no questions."
 
 ;;;_ , python-mode
 
-(use-package python
-  :mode ("\\.py\\'" . python-mode)
-  :interpreter ("python" . python-mode)
-  :custom
-  (python-fill-docstring-style 'symmetric)
+(use-package python-mode
+  :mode "\\.py\\'"
+  :interpreter "python"
+  :bind (:map python-mode-map
+              ("C-c c")
+              ("C-c C-z" . python-shell))
+  :preface
+  (defvar python-mode-initialized nil)
+
+  (defun my-python-mode-hook ()
+    (unless python-mode-initialized
+      (setq python-mode-initialized t)
+
+      (info-lookup-add-help
+       :mode 'python-mode
+       :regexp "[a-zA-Z_0-9.]+"
+       :doc-spec
+       '(("(python)Python Module Index" )
+         ("(python)Index"
+          (lambda
+            (item)
+            (cond
+             ((string-match
+               "\\([A-Za-z0-9_]+\\)() (in module \\([A-Za-z0-9_.]+\\))" item)
+              (format "%s.%s" (match-string 2 item)
+                      (match-string 1 item)))))))))
+
+    (set (make-local-variable 'parens-require-spaces) nil)
+    (setq indent-tabs-mode nil))
   :config
-  (progn
-    (defvar python-mode-initialized nil)
-
-    (defun my-python-mode-hook ()
-      (setq fill-column 72)
-      (unless python-mode-initialized
-        (setq python-mode-initialized t)
-
-        (info-lookup-add-help
-         :mode 'python-mode
-         :regexp "[a-zA-Z_0-9.]+"
-         :doc-spec
-         '(("(python)Python Module Index")
-           ("(python)Index"
-            (lambda
-              (item)
-              (cond
-               ((string-match
-                 "\\([A-Za-z0-9_]+\\)() (in module \\([A-Za-z0-9_.]+\\))" item)
-                (format "%s.%s" (match-string 2 item)
-                        (match-string 1 item)))))))))
-
-      (bind-key "C-c C-z" 'python-shell python-mode-map)
-      (unbind-key "C-c c" python-mode-map))
-    (add-hook 'python-mode-hook 'my-python-mode-hook)))
+  (add-hook 'python-mode-hook #'my-python-mode-hook))
 
 (use-package python-black
   :after python
@@ -9788,10 +10070,10 @@ means save all with no questions."
                       :font "Roboto Condensed"
                       :width 'condensed)
   (define-key slack-mode-map "@"
-    (defun my-slack-message-embed-mention ()
-      (interactive)
-      (call-interactively #'slack-message-embed-mention)
-      (insert " ")))
+              (defun my-slack-message-embed-mention ()
+                (interactive)
+                (call-interactively #'slack-message-embed-mention)
+                (insert " ")))
 
   (when-let* ((dir (ensure-user-dir "slack"))
               (file (expand-file-name "teams.el" dir))
@@ -9876,6 +10158,12 @@ means save all with no questions."
   :config
   (global-treesit-auto-mode +1))
 
+(use-package treesit-jump
+  :straight (:host github :repo "dmille56/treesit-jump" :files ("*.el" "treesit-queries"))
+  :config
+  ;; Optional: add some queries to filter out of results (since they can be too cluttered sometimes)
+  (setq treesit-jump-queries-filter-list '("inner" "test" "param")))
+
 ;;;_ , slime
 
 (use-package slime
@@ -9956,6 +10244,9 @@ means save all with no questions."
 
 (use-package sqlite3
   :defer t)
+
+(use-package sqlite-mode-extras
+  :hook ((sqlite-mode . sqlite-extras-minor-mode)))
 
 (use-package sqlup-mode
   :defer t
