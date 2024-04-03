@@ -4811,7 +4811,7 @@ If region is active, apply to active region instead."
   :disabled t)
 
 (use-package bazel
-  :straight (emacs-bazel-mode :host github :repo "bazel-build/emacs-bazel-mode"))
+  :straight (emacs-bazel-mode :host github :repo "bazelbuild/emacs-bazel-mode"))
 
 ;;;_ , bbdb
 
@@ -5392,7 +5392,7 @@ If region is active, apply to active region instead."
     (add-to-list 'completion-at-point-functions
                  #'cape-codeium))
 
-  :hook ((prog-mode . #'my/codeium-capf)))
+  :hook (prog-mode . #'my/codeium-capf))
 
 (use-package cape
   :bind (("C-c p p" . completion-at-point) ;; capf
@@ -5964,12 +5964,6 @@ Install the doc if it's not installed."
 
 (use-package dired-git
   :hook (dired-mode-hook . #'dired-git-mode))
-
-(use-package cc-dired-sort-by
-  :disabled t                           ; prog-mode not defined
-  :after dired
-  :straight nil
-  :load-path "cc-dired-sort-by.el")
 
 (use-package dired-imenu
   :after dired)
@@ -7578,14 +7572,14 @@ display, depending on the window manager)."
 (use-package git-gutter
   :if (not (display-graphic-p))
   :diminish git-gutter-mode
-  :hook ('prog-mode . 'git-gutter-mode))
+  :hook (prog-mode . git-gutter-mode))
 
 ;;;_ , git-gutter-fringe
 
 (use-package git-gutter-fringe
   :if (display-graphic-p)
   :diminish git-gutter-mode
-  :hook ('prog-mode . 'git-gutter-mode))
+  :hook (prog-mode . git-gutter-mode))
 
 ;;;_ ; git-timemachine
 
@@ -9703,6 +9697,7 @@ means save all with no questions."
   (add-hook 'python-mode-hook #'my-python-mode-hook))
 
 (use-package python-black
+  :disabled t                           ; too black, too strong
   :after python
   :hook (python-mode . python-black-on-save-mode-enable-dwim))
 
