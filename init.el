@@ -552,7 +552,7 @@ Meant to be added to `occur-hook'."
   :bind (;; ("M-C"   . jump-to-org-agenda)
          ;; ("C-c o c" . org-capture)
          ;; overloaded
-         x        ;; ("M-M"   . org-inline-note)
+         ;; ("M-M"   . org-inline-note)
          ;; ("C-c a" . org-agenda)
          ;; ("C-c C-h" . org-babel-remove-result)
          ("C-c S" . org-store-link)
@@ -5014,14 +5014,14 @@ If region is active, apply to active region instead."
                              (aggressive-indent-mode -1)
                              (lispy-mode +1)))
   :config
-  (add-hook 'cider-repl-mode-hook #'paredit-mode)
   ;; use lsp
   ;; (add-hook 'cider-mode-hook
   ;;           (lambda ()
   ;;             (remove-hook 'completion-at-point-functions #'cider-complete-at-point t)))
   :hook ((cider-mode . mpenet/cider-capf)
          (cider-repl-mode . mpenet/cider-capf)
-         (cider-repl-mode . company-mode))
+         (cider-repl-mode . company-mode)
+         (cider-repl-mode . paredit-mode))
   :bind (:map
          cider-mode-map
          ("C-c C-d" . cider-debug-defun-at-point)
