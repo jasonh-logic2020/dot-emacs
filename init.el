@@ -1,9 +1,9 @@
 ;;; init.el -- set up running environment
 
-;;; Commentary:
+;;;; Commentary:
 ;; Sadly, my opus.
 
-;;;_.  Initialization
+;;;; Initialization
 
 ;; This assumes common-emacs-directory has been created. The steps are:
 
@@ -25,7 +25,7 @@
 ;; again for the changes to take effect. In fact, reboot. It is not enough
 ;; for one user to log out and back in.
 
-;;; Code:
+;;;; Code:
 
 ;; using straight instead of package
 ;; (defconst package-archives
@@ -45,6 +45,7 @@
 ;; (defconst common-emacs-directory user-emacs-directory)
 
 (defun report-time-since-load (&optional suffix)
+  "Log elapsedtime with label SUFFIX."
   (message "Loading init...done (%.3fs)%s"
            (float-time (time-subtract (current-time) emacs-start-time))
            suffix))
@@ -68,6 +69,7 @@
 ;;                 "data")))
 
 (defun user-data (dir)
+  "Which DIR should contain config data?"
   (expand-file-name dir user-emacs-directory))
 
 (defconst user-number (- (user-uid) 1000))
@@ -84,6 +86,7 @@
       org-settings (convert-standard-filename
                     (expand-file-name "org-settings.el" user-emacs-directory)))
 
+;;;; Theme
 (set-frame-font "Deja Vu Sans Mono 8" nil t)
 
 (use-package modus-themes
@@ -221,19 +224,6 @@ Meant to be added to `occur-hook'."
      (rename-buffer (format "*Occur: %s %s*" search-term buffer-name) t))))
 (add-hook 'occur-hook #'hoagie-rename-and-select-occur-buffer)
 
-;; (when install-run
-;;   (setq use-package-always-ensure t))
-
-;; (unless noninteractive
-;;   (message "Loading %s..." load-file-name))
-
-;; (use-package diminish                     :demand t)
-;; (use-package bind-key)
-
-;;;_ , use-package extensions
-
-;; (use-package quelpa-use-package
-;;   :defer t)
 
 (use-package el-patch)
 
@@ -264,7 +254,7 @@ Meant to be added to `occur-hook'."
   (no-littering-var-directory
    (ensure-user-dir "data/")))
 
-;;;_ , system-wide modifications
+;;; System-wide Modifications
 ;; (require 'dired-x)
 ;; (require 'epa)
 ;; (require 'time)
@@ -442,7 +432,7 @@ Meant to be added to `occur-hook'."
   ;; nsm.el
   (nsm-settings-file (user-data "network-security.data"))
 
-  ;; treesit
+  ;;; treesit
   (treesit-language-source-alist
    '((bash "https://github.com/tree-sitter/tree-sitter-bash")
      (clojure "https://github.com/sogaiu/tree-sitter-clojure")
@@ -555,12 +545,14 @@ Meant to be added to `occur-hook'."
 
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
+;;; org
+
 (use-package org
   :mode ("\\.org" . org-mode)
   :bind (;; ("M-C"   . jump-to-org-agenda)
          ;; ("C-c o c" . org-capture)
-;;; overloaded
-         ;; ("M-M"   . org-inline-note)
+         ;; overloaded
+         x        ;; ("M-M"   . org-inline-note)
          ;; ("C-c a" . org-agenda)
          ;; ("C-c C-h" . org-babel-remove-result)
          ("C-c S" . org-store-link)
@@ -580,9 +572,9 @@ Meant to be added to `occur-hook'."
   (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images)
   (add-hook 'org-font-lock-set-keywords-hook
             #'org-dont-underline-indents 'append)
-  (add-to-list 'auto-insert-alist
-               '(("\\.org\\'" . "Org mode")
-                 . ["snippet.org" autoinsert-yas-expand]))
+  ;; (add-to-list 'auto-insert-alist
+  ;;              '(("\\.org\\'" . "Org mode")
+  ;;                . ["snippet.org" autoinsert-yas-expand]))
   ;; (progn
   ;;   ;; Set up blog for export as an Org-mode project.
   ;;   ;; (setq org-publish-project-alist
@@ -1803,7 +1795,6 @@ To use this function, add it to `org-agenda-finalize-hook':
   )
 
 (use-package org-modern
-  :defer t
   :after '(org)
   :custom (org-startup-indented t)
   :hook ((org-mode . #'org-modern-mode)
@@ -3010,7 +3001,7 @@ Remove from `kill-buffer-hook', and also remove this function
 		      (let ((buffer-file-name (buffer-name)))
 			(set-auto-mode)))))
 
-;;;_ , Utility macros and functions
+;;; Utility macros and functions
 
 (defun largest-window-matching (pred)
   "Return largest window in current frame matching PRED."
@@ -3035,10 +3026,6 @@ Remove from `kill-buffer-hook', and also remove this function
 (defun quickping (host)
   "Return ping time for HOST."
   (= 0 (call-process "/bin/ping" nil nil nil "-c1" "-W50" "-q" host)))
-
-(defsubst hook-into-modes (func &rest modes)
-  "Hook multiple modes at once.  FUNC and MODES are self-explanatory."
-  (dolist (mode-hook modes) (add-hook mode-hook func)))
 
 (eval-and-compile
   (define-key ctl-x-map "\C-i"
@@ -3202,6 +3189,7 @@ Single Capitals as you type."
 
 (use-package set-scroll-margin
   :unless noninteractive
+  :no-require t
   :straight nil
   :preface
   (defun set-scroll-margin ()
@@ -3209,11 +3197,6 @@ Single Capitals as you type."
     (interactive)
     (setq-local scroll-margin (/ (window-height) 4)))
   :commands (set-scroll-margin)
-  :hook (after-init . (lambda () (hook-into-modes #'set-scroll-margin
-                                             prog-mode
-                                             text-mode
-                                             dired-mode
-                                             tabulated-list-mode)))
   :hook ((prog-mode
           text-mode
           dired-mode
@@ -3701,7 +3684,7 @@ tools."
   "Return default gnome profile."
   (shell-command-to-string "dconf list /org/gnome/terminal/legacy/profiles:/"))
 
-;;;_ , Enable disabled commands
+;;; Enable disabled commands
 
 (setq disabled-command-function nil) ;; enable all commands
 
@@ -4835,7 +4818,7 @@ If region is active, apply to active region instead."
                             "*straight-process*" "*Native-compile-Log*"
                             "*elfeed-log*" "*Feather dashboard*"
                             "*Warnings*")))
-;;;_ , beginend
+;;; beginend
 
 (use-package beginend
   ;; BULK-ENSURE :ensure t
@@ -4855,7 +4838,7 @@ If region is active, apply to active region instead."
                    :height 70
                    :italic t))))
 
-;;;_ , bm
+;;; bm
 
 ;; not compatible with ivy
 
@@ -4863,10 +4846,6 @@ If region is active, apply to active region instead."
   :bind (("C-c b b" . bm-toggle)
          ("C-c b n" . bm-next)
          ("C-c b p" . bm-previous))
-  :commands (bm-repository-load
-             bm-buffer-save
-             bm-buffer-save-all
-             bm-buffer-restore)
   :hook
   (after-init        . bm-repository-load)
   (find-file         . bm-buffer-restore)
@@ -4882,7 +4861,8 @@ If region is active, apply to active region instead."
   (bm-cycle-all-buffers t)
   (bm-highlight-style 'bm-highlight-only-fringe)
   (bm-in-lifo-order t)
-  (bm-repository-file (user-data "bm-repository")))
+  (bm-repository-file (xuser-data "bm-repository"))
+  (bm-restore-repository-on-load t))
 
 (use-package bookmark
   :straight nil
@@ -5010,7 +4990,7 @@ If region is active, apply to active region instead."
    "g" #'copilot-mode))
 
 
-;;;_ , cider
+;;; cider
 
 (use-package cider
   :after (clojure-mode cape)
@@ -5039,18 +5019,6 @@ If region is active, apply to active region instead."
   ;; (add-hook 'cider-mode-hook
   ;;           (lambda ()
   ;;             (remove-hook 'completion-at-point-functions #'cider-complete-at-point t)))
-  (defun +eglot-completion-at-point ()
-    (when (boundp 'eglot-completion-at-point)
-      (funcall 'eglot-completion-at-point)))
-
-  (defalias 'cape-cider-eglot
-    (cape-capf-super #'cider-complete-at-point
-                     #'+eglot-completion-at-point))
-
-  (defun mpenet/cider-capf ()
-    (add-to-list 'completion-at-point-functions
-                 #'cape-cider-eglot))
-
   :hook ((cider-mode . mpenet/cider-capf)
          (cider-repl-mode . mpenet/cider-capf)
          (cider-repl-mode . company-mode))
@@ -5081,7 +5049,7 @@ If region is active, apply to active region instead."
 ;; :hook (cider-repl-mode . #'lispy-mode)
 ;; :hook (cider-repl-mode . #'sotclojure-mode)
 
-;;;_ , clj-refactor
+;;; clj-refactor
 
 (use-package clj-refactor
   :unless noninteractive
@@ -5157,7 +5125,6 @@ If region is active, apply to active region instead."
   (color-identifiers-coloring-method 'hash)
   :hook (after-init . (lambda () (global-color-identifiers-mode +1))))
 
-;; we recommend using use-package to organize your init.el
 (use-package codeium
   ;; if you use straight
   :straight '(:type git :host github :repo "Exafunction/codeium.el")
@@ -5412,26 +5379,26 @@ If region is active, apply to active region instead."
          ("C-c p &" . cape-sgml)
          ("C-c p r" . cape-rfc1345))
   :config
-  (defalias 'my/capf-eglot+et-al
-    (cape-capf-super
-     (cape-capf-silent
-      (when (bound-and-true-p my/codeium-is-enabled)
-        (cape-capf-properties #'codeium-completion-at-point
-                              :annotation-function
-                              #'(lambda (_) (propertize "  Codeium"
-                                                   'face font-lock-comment-face))
-                              :company-kind (lambda (_) 'magic))))
-     (cape-capf-buster #'eglot-completion-at-point 'equal)
-     (cape-capf-properties #'cape-dabbrev
-                           :annotation-function
-                           #'(lambda (_) (propertize " Dabbrev"
-                                                'face font-lock-comment-face)))
-     ;; if line gets too chatty
-     (cape-capf-silent
-      (cape-capf-properties #'cape-line
-                            :annotation-function
-                            #'(lambda (_) (propertize " Line"
-                                                 'face font-lock-comment-face))))))
+  ;; (defalias 'my/capf-eglot+et-al
+  ;;   (cape-capf-super
+  ;;    (cape-capf-silent
+  ;;     (when (bound-and-true-p my/codeium-is-enabled)
+  ;;       (cape-capf-properties #'codeium-completion-at-point
+  ;;                             :annotation-function
+  ;;                             #'(lambda (_) (propertize "  Codeium"
+  ;;                                                  'face font-lock-comment-face))
+  ;;                             :company-kind (lambda (_) 'magic))))
+  ;;    (cape-capf-buster #'eglot-completion-at-point 'equal)
+  ;;    (cape-capf-properties #'cape-dabbrev
+  ;;                          :annotation-function
+  ;;                          #'(lambda (_) (propertize " Dabbrev"
+  ;;                                               'face font-lock-comment-face)))
+  ;;    ;; if line gets too chatty
+  ;;    (cape-capf-silent
+  ;;     (cape-capf-properties #'cape-line
+  ;;                           :annotation-function
+  ;;                           #'(lambda (_) (propertize " Line"
+  ;;                                                'face font-lock-comment-face))))))
 
   (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file)
@@ -5449,20 +5416,6 @@ If region is active, apply to active region instead."
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-silent)
   (advice-add 'pcomplete-completions-at-point :around #'cape-wrap-purify)
   )
-
-(use-package elisp-mode-cape
-  :no-require t
-  :straight nil
-  :after (cape elisp-mode)
-  :hook (emacs-lisp-mode . my/setup-elisp)
-  :preface
-  (defun my/setup-elisp ()
-    (setq-local completion-at-point-functions
-                `(,(cape-super-capf
-                    #'elisp-completion-at-point
-                    #'cape-dabbrev)
-                  cape-file)
-                cape-dabbrev-min-length 5)))
 
 (use-package marginalia
   :after vertico
@@ -6597,14 +6550,14 @@ Install the doc if it's not installed."
   (progn
     (add-hook 'emacs-lisp-mode-hook (lambda () (elisp-slime-nav-mode t)))))
 
-;;;_ , elmacro
+;;; elmacro
 (use-package elmacro
   ;; BULK-ENSURE :ensure t
   :diminish elmacro-mode
   :config
   (elmacro-mode 1))
 
-;;;_ , eloud
+;;; eloud
 (use-package eloud
   :disabled t
   ;; BULK-ENSURE :ensure t
@@ -6617,7 +6570,7 @@ Install the doc if it's not installed."
 (use-package ement
   :straight (ement :host github :repo "alphapapa/ement.el"))
 
-;;;_ , emojify
+;;; emojify
 
 (use-package emojify
   :if (and (display-graphic-p)
@@ -6628,6 +6581,11 @@ Install the doc if it's not installed."
   ;; ((text-mode tabulated-list-mode)
   ;;  #'emojify-mode)
   )
+
+;;; empv
+
+(use-package empv
+  :straight (:host github :repo "isamert/empv.el"))
 
 ;;;_ , erc
 
@@ -8024,22 +7982,22 @@ display, depending on the window manager)."
   (remove-hook 'temp-buffer-show-hook #'hkey-help-show)
 
   (defact visit-haskell-definition ()
-    "Go to the definition of a symbol in Haskell."
-    (interactive)
-    (condition-case err
-        (call-interactively #'haskell-mode-jump-to-def-or-tag)
-      (error
-       (call-interactively #'dumb-jump-go))))
+          "Go to the definition of a symbol in Haskell."
+          (interactive)
+          (condition-case err
+              (call-interactively #'haskell-mode-jump-to-def-or-tag)
+            (error
+             (call-interactively #'dumb-jump-go))))
 
   (defib haskell-definition-link ()
-    "Go to the definition of a symbol in Haskell."
-    (and (eq major-mode 'haskell-mode)
-         (hact #'visit-haskell-definition)))
+         "Go to the definition of a symbol in Haskell."
+         (and (eq major-mode 'haskell-mode)
+              (hact #'visit-haskell-definition)))
 
   (defib gnus-article-urls-link ()
-    "Visit the URLs in a Gnus article."
-    (and (eq major-mode 'gnus-summary-mode)
-         (hact #'gnus-article-browse-urls))))
+         "Visit the URLs in a Gnus article."
+         (and (eq major-mode 'gnus-summary-mode)
+              (hact #'gnus-article-browse-urls))))
 
 ;;;_ , ibuffer
 
@@ -9115,12 +9073,17 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (add-to-list 'completion-styles 'substring)
   (add-to-list 'completion-styles 'orderless))
 
+(use-package outli
+  :straight (:host github :repo "jdtsmith/outli" )
+  :after lispy
+  :bind (:map outli-mode-map ; convenience key to get back to containing heading
+              ("C-c C-p" . (lambda () (interactive) (outline-back-to-heading))))
+  :hook ((prog-mode text-mode) . outli-mode))
+
 ;;;_ , outline
 
 (use-package outline
-  :commands outline-minor-mode
-  :hook ((LaTeX-mode
-          prog-mode) . #'outline-minor-mode))
+  :commands outline-minor-mode)
 
 (use-package outorg
   :after org
@@ -9128,14 +9091,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :bind ("C-c C-'" . outorg-edit-as-org)
   :config
   (require 'outshine))
-
-;;;_ , outshine
-
-(use-package outshine
-  :after outorg
-  :config
-  (outshine-mode +1)
-  (use-package navi-mode))
 
 ;;;_ , pabbrev
 
@@ -10782,7 +10737,7 @@ means save all with no questions."
          ("C-h x s" . xray-symbol)
          ("C-h x w" . xray-window)))
 
-;;;_ , yasnippet
+;;; yasnippet
 
 (use-package yasnippet
   :demand t
@@ -10826,7 +10781,7 @@ means save all with no questions."
   :after (consult yasnippet))
 
 
-;;;_ , yatemplate
+;;; yatemplate
 
 (use-package yatemplate
   :disabled t
@@ -10844,7 +10799,7 @@ means save all with no questions."
   :mode (("\\.yml\\'" . yaml-mode)
          ("\\.yaml$" . yaml-mode)))
 
-;;;_ , yankpad
+;;; yankpad
 
 (use-package yankpad
   :disabled t
@@ -10884,7 +10839,7 @@ means save all with no questions."
    `(("audio.local" .
       (7797 t ((freenode . ("ewatcher/freenode" ""))))))))
 
-;;;_. Post initialization
+;;; Post initialization
 
 (report-time-since-load)
 
