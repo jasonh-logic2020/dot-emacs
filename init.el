@@ -254,7 +254,7 @@ Meant to be added to `occur-hook'."
   (no-littering-var-directory
    (ensure-user-dir "data/")))
 
-;;; System-wide Modifications
+;;;; System-wide Modifications
 ;; (require 'dired-x)
 ;; (require 'epa)
 ;; (require 'time)
@@ -528,20 +528,21 @@ Meant to be added to `occur-hook'."
                                              face minibuffer-prompt)
  native-comp-async-report-warnings-errors nil)
 
-(auto-insert-mode               1) ; Insert templates in new files
-(column-number-mode             1) ; Show column number
-(electric-quote-mode            1) ; Easier “quote” typing
-(fset 'yes-or-no-p      'y-or-n-p) ; Make "yes/no" prompts "y/n"
-(global-auto-revert-mode       +1) ; Reload files after modification
-(global-prettify-symbols-mode   1) ; Pretty symbols (e.g. lambda => λ)
-(global-subword-mode            1) ; Better editing of camelCasedWords
-(menu-bar-mode                 -1) ; No menu bar
-(tool-bar-mode                 -1) ; Don't show tool bar
-(prefer-coding-system      'utf-8) ; Always prefer UTF-8
-(scroll-bar-mode               -1) ; No scroll bar
-(show-paren-mode                1) ; Highlight matching parenthesis
-(desktop-save-mode              1) ; remember open files
-(save-place-mode                1) ; Remember per-file positions
+(auto-insert-mode                 1) ; Insert templates in new files
+(column-number-mode               1) ; Show column number
+(electric-quote-mode              1) ; Easier “quote” typing
+(fset 'yes-or-no-p        'y-or-n-p) ; Make "yes/no" prompts "y/n"
+(global-auto-revert-mode         +1) ; Reload files after modification
+(global-prettify-symbols-mode     1) ; Pretty symbols (e.g. lambda => λ)
+(global-subword-mode              1) ; Better editing of camelCasedWords
+(global-display-line-numbers-mode 1) ; Line numbers in every buffer
+(menu-bar-mode                   -1) ; No menu bar
+(tool-bar-mode                   -1) ; Don't show tool bar
+(prefer-coding-system        'utf-8) ; Always prefer UTF-8
+(scroll-bar-mode                 -1) ; No scroll bar
+(show-paren-mode                  1) ; Highlight matching parenthesis
+(desktop-save-mode                1) ; remember open files
+(save-place-mode                  1) ; Remember per-file positions
 
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
@@ -9124,7 +9125,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (paradox-enable))
 
-;;;_ , paredit
+;;; paredit
 
 (use-package paredit
   :unless noninteractive
@@ -9140,7 +9141,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           inferior-emacs-lisp-mode
           emacs-lisp-mode
           lisp-interaction-mode
-          python-mode
           json-mode) . #'paredit-mode))
 
 (use-package paredit-eldoc
@@ -9184,12 +9184,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :custom
   (parinfer-extensions
    '(defaults       ; should be included.
-      pretty-parens  ; different paren styles for different modes.
-      ;; evil           ; If you use Evil.
-      lispy          ; If you use Lispy. With this extension, you should install Lispy and do not enable lispy-mode directly.
-      paredit        ; Introduce some paredit commands.
-      smart-tab      ; C-b & C-f jump positions and smart shift with tab & S-tab.
-      smart-yank)))   ; Yank behavior depend on mode.
+     pretty-parens  ; different paren styles for different modes.
+     ;; evil           ; If you use Evil.
+     lispy          ; If you use Lispy. With this extension, you should install Lispy and do not enable lispy-mode directly.
+     paredit        ; Introduce some paredit commands.
+     smart-tab      ; C-b & C-f jump positions and smart shift with tab & S-tab.
+     smart-yank)))   ; Yank behavior depend on mode.
 
 ;;;_ , pass
 
@@ -9617,7 +9617,7 @@ means save all with no questions."
 
 (use-package puppet-mode)
 
-;;;_ , python-mode
+;;; python-mode
 
 (use-package python-mode
   :mode "\\.py\\'"
@@ -9625,6 +9625,7 @@ means save all with no questions."
   :bind (:map python-mode-map
               ("C-c c")
               ("C-c C-z" . python-shell))
+  :hook (python-mode . electric-pair-mode)
   :preface
   (defvar python-mode-initialized nil)
 
@@ -9656,13 +9657,13 @@ means save all with no questions."
   :after python
   :hook (python-mode . python-black-on-save-mode-enable-dwim))
 
-;;;_ , quickrun
+;;; quickrun
 
 (use-package quickrun
   :defer t
   :bind ("C-c C-M-r" . quickrun))
 
-;;;_ , rainbow-mode
+;;; rainbow-mode
 
 (use-package rainbow-delimiters
   :unless noninteractive
@@ -9672,7 +9673,7 @@ means save all with no questions."
 (use-package rainbow-mode
   :commands rainbow-mode)
 
-;;;_ , recentf
+;;; recentf
 
 (use-package recentf
   :demand t
@@ -9726,7 +9727,7 @@ means save all with no questions."
   :defer t
   :bind ("C-x C-c" . mak::restart-emacs-or-release-file))
 
-;;;_ , ruby-mode
+;;; ruby-mode
 
 (use-package ruby-mode
   :defer t
@@ -9856,7 +9857,7 @@ means save all with no questions."
   :config
   (save-place-mode +1))
 
-;;;_ , sed-mode
+;;; sed-mode
 
 (use-package sed-mode)
 
