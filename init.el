@@ -10552,6 +10552,8 @@ means save all with no questions."
   :commands virtual-auto-fill-mode)
 
 (use-package vterm
+  :disabled t                           ;causing segfaults during build on
+                                        ;some machines
   :hook (vterm-mode . (lambda () (disable-mouse-mode -1))))
 
 ;;;_ , w3m
