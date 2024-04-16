@@ -1,5 +1,4 @@
-;;; init.el -- set up running environment
-
+;;; init.el -- set up running environment -*- lexical-binding: t -*-
 ;;;; Commentary:
 ;; Sadly, my opus.
 
@@ -43,6 +42,9 @@
 ;; (defconst user-emacs-directory "~/.Emacs.d/")
 ;; (defconst common-elpa-directory user-emacs-directory)
 ;; (defconst common-emacs-directory user-emacs-directory)
+
+(setq gc-cons-percentage 0.5
+      gc-cons-threshold (* 128 1024 1024))
 
 (defun report-time-since-load (&optional suffix)
   "Log elapsedtime with label SUFFIX."
@@ -90,20 +92,20 @@
 (set-frame-font "Deja Vu Sans Mono 8" nil t)
 
 (use-package modus-themes
-  :init
-  (progn
-    (setq modus-themes-bold-constructs t)
-    (setq modus-themes-org-blocks 'greyscale)
-    (setq modus-themes-italic-constructs t)
-
-    (setq modus-themes-headings
-          '((1 . (1.6))
-            (2 . (background 1.5))
-            (3 . (background bold 1.2))
-            (4 . (1.1))
-            (t . ())))
-
-    (load-theme 'modus-vivendi t)))
+  :custom
+  (modus-themes-bold-constructs t)
+  (modus-themes-italic-constructs t)
+  (modus-themes-org-blocks 'gray-background)
+  (modus-themes-paren-match '(intense))
+  (modus-themes-mode-line '(borderless))
+  (modus-themes-headings
+   '((1 . (1.6))
+     (2 . (background 1.5))
+     (3 . (background bold 1.2))
+     (4 . (1.1))
+     (t . ())))
+  :config
+  (load-theme 'modus-vivendi t))
 
 (eval-and-compile
 
@@ -1421,6 +1423,8 @@ end tell" (match-string 1))))
   (org-x-redmine-title-prefix-match-function org-x-redmine-title-prefix-match)
   )
 
+;;;; org-agenda
+
 (use-package org-agenda
   :straight nil
   :commands org-agenda-list
@@ -1795,6 +1799,8 @@ To use this function, add it to `org-agenda-finalize-hook':
     (org-fit-agenda-window))
   )
 
+;;;; org-modern
+
 (use-package org-modern
   :after '(org)
   :custom (org-startup-indented t)
@@ -1806,13 +1812,15 @@ To use this function, add it to `org-agenda-finalize-hook':
                               (setq prettify-symbols-alist nil)
                               (prettify-symbols-mode -1)))))
 
+;;;; org-tag-beautify
+
 (use-package org-tag-beautify
   :disabled t
   :after org
   :custom (org-tag-beautify-data-dir (ensure-user-dir "org-tag-beautify"))
   :init (org-tag-beautify-mode +1))
 
-;; ;;;_ , org-projectile
+;;;; org-projectile
 
 (use-package org-structure-hydra
   :after '(org hydra)
@@ -1878,6 +1886,8 @@ prepended to the element after the #+HEADER: tag."
     '("not" "#+BEGIN_NOTES\n?\n#+END_NOTES")
     org-structure-template-alist))
 
+;;;; org-bullets
+
 (use-package org-bullets
   :unless noninteractive
   :after '(org)
@@ -1886,12 +1896,18 @@ prepended to the element after the #+HEADER: tag."
                   (lambda ()
                     (org-bullets-mode +1))))
 
+;;;; org-seek
+
 (use-package org-seek
   :after org
   :commands (org-seek-string org-seek-regexp org-seek-headlines))
 
+;;;; org-autolist
+
 (use-package org-autolist
   :after '(org))
+
+;;;; org-ref
 
 (use-package org-ref
   :disabled t
@@ -1906,12 +1922,16 @@ prepended to the element after the #+HEADER: tag."
           org-ref-pdf-directory
           (expand-file-name "bibtex-pdfs/" projectile-project-root))))
 
+;;;; org-sliced-images
+
 (use-package org-sliced-images
-  :disabled t   ;; package not found
+  :disabled t ;; package not found
   :config
   (defalias 'org-remove-inline-images #'org-sliced-images-remove-inline-images)
   (defalias 'org-toggle-inline-images #'org-sliced-images-toggle-inline-images)
   (defalias 'org-display-inline-images #'org-sliced-images-display-inline-images))
+
+;;;; org-board
 
 (use-package org-board
   :after '(org projectile)
@@ -2036,8 +2056,12 @@ prepended to the element after the #+HEADER: tag."
     (or (outline-next-heading)
         (goto-char (point-max)))))
 
+;;; anki-editor
+
 (use-package anki-editor
   :commands anki-editor-submit)
+
+;;; calfw
 
 (use-package calfw
   :bind (("C-c A" . my-calendar)
@@ -2094,11 +2118,19 @@ prepended to the element after the #+HEADER: tag."
         cfw:fchar-top-left-corner  ?┏
         cfw:fchar-top-right-corner ?┓))
 
-(use-package ob-diagrams
+;;;; org-bookmark-heading
+
+(use-package org-bookmark-heading
   :after '(org))
 
-(use-package ob-restclient
-  :after '(org))
+;;;; org-crypt
+
+(use-package org-crypt
+  :straight nil
+  :bind (:map org-mode-map
+              ("C-c C-x C-/" . org-decrypt-entry)))
+
+;;;; org-babel
 
 (use-package org-babel
   :straight nil
@@ -2119,13 +2151,117 @@ prepended to the element after the #+HEADER: tag."
                                      org-babel-load-languages))
       ad-do-it)))
 
-(use-package org-bookmark-heading
+;;;;; ob-diagrams
+
+(use-package ob-diagrams
   :after '(org))
 
-(use-package org-crypt
-  :straight nil
-  :bind (:map org-mode-map
-              ("C-c C-x C-/" . org-decrypt-entry)))
+;;;;; ob-restclient
+
+(use-package ob-restclient
+  :after '(org))
+
+;;;;; ob-async
+
+(use-package ob-async
+  :after org
+  :defer t)
+
+;;;;; ob-http
+
+(use-package ob-http
+  :after org
+  :defer t)
+
+;;;;; ob-kotlin
+
+(use-package ob-kotlin
+  :after org
+  :defer t)
+
+;;;;; ob-go
+
+(use-package ob-go
+  :after org
+  :defer t)
+
+;;;;; ob-sql-mode
+
+(use-package ob-sql-mode
+  :after org
+  :defer t)
+
+;;;;; ob-redi
+
+(use-package ob-redi
+  :disabled t ;; repo vanished
+  :after org
+  :defer t)
+
+;;;;; ob-restclient
+
+(use-package ob-restclient
+  :after org
+  :defer t)
+
+;;;;; ob-tmux
+
+(use-package ob-tmux
+  :after org
+  :defer t
+  :custom
+  (org-babel-default-header-args:tmux
+   '((:results . "silent")       ;
+     (:session . "default")      ; The default tmux session to send code to
+     (:socket  . nil)            ; The default tmux socket to communicate with
+     (:terminal . "gnome-terminal")))
+  (org-babel-tmux-session-prefix "ob-")
+  (org-babel-tmux-location (executable-find "tmux")))
+
+;;;;; ob-translate
+
+(use-package ob-translate
+  :after org
+  :defer t)
+
+;;;; org-tree-slide
+
+(use-package org-tree-slide
+  :after org
+  :commands org-tree-slide-mode
+  :custom
+  (org-image-actual-width nil)
+  :bind (:map org-tree-slide-mode-map
+              (("C-c n" . org-tree-slide-move-next-tree)
+               ("C-c p" . org-tree-slide-move-previous-tree))))
+
+;;;;; org-tree-slide-pauses
+
+(use-package org-tree-slide-pauses
+  :after org-tree-slide)
+
+;;;; org-projectile
+
+(use-package org-projectile
+  :unless noninteractive
+  :after org
+  :bind (("C-c C-n p" . org-projectile:project-todo-completing-read)
+         ("C-c c" . org-capture))
+  :config
+  (org-projectile-per-project)
+  (setq org-projectile-per-project-filepath "notes.org")
+  (setq org-agenda-files (append org-agenda-files (org-projectile-todo-files)))
+  (setq org-projectile:projects-file
+        "~/.emacs.d/org/projects.org")
+  (add-to-list 'org-capture-templates
+               (org-projectile:project-todo-entry "p")))
+
+;;;; org-generate
+
+(use-package org-generate
+  :after '(org))
+
+;;;; org-gcal
 
 (use-package org-gcal
   :disabled t
@@ -2149,8 +2285,7 @@ prepended to the element after the #+HEADER: tag."
           ("sacramento.lsa1914@gmail.com" .
            "~/Documents/tasks/Sacramento.org"))))
 
-(use-package org-generate
-  :after '(org))
+;;;; org-mime
 
 (use-package org-mime
   :after '(org)
@@ -2171,13 +2306,19 @@ prepended to the element after the #+HEADER: tag."
                "pre" (format "color: %s; background-color: %s; padding: 0.5em;"
                              "#E6E1DC" "#232323")))))
 
+;;;; org-noter
+
 (use-package org-noter
   ;; jww (2020-01-16): This package requires a newer version of Org.
   :disabled t
   :commands org-noter)
 
+;;;; org-opml
+
 (use-package org-opml
   :disabled t)
+
+;;;; org-pdfview
 
 (use-package org-pdfview
   :after '(org)
@@ -2187,8 +2328,12 @@ prepended to the element after the #+HEADER: tag."
   (add-to-list 'org-file-apps
                '("\\.pdf::\\([[:digit:]]+\\)\\'" . org-pdfview-open)))
 
+;;;; org-protocol
+
 (use-package org-protocol
   :straight nil)
+
+;;;; orca
 
 (use-package orca
   :after '(org)
@@ -2204,8 +2349,10 @@ prepended to the element after the #+HEADER: tag."
            "~/Dropbox/org/ent.org"
            "\\* Articles"))))
 
+;;;; org-prettify-source-block
+
 (use-package org-prettify-source-block
-  :disabled t  ;; in favor of org-modern
+  :disabled t ;; in favor of org-modern
   :straight nil
   :unless noninteractive
   :after org
@@ -2305,6 +2452,8 @@ prepended to the element after the #+HEADER: tag."
   :commands (org-prettify-source-block-mode)
   :hook (org-mode . (lambda () (org-prettify-source-block-mode +1))))
 
+;;;; org-habit
+
 (use-package org-habit
   :straight nil
   :after org-agenda
@@ -2321,6 +2470,8 @@ prepended to the element after the #+HEADER: tag."
   (org-habit-ready-face ((((background light)) (:background "#4df946"))))
   (org-habit-ready-future-face ((((background light)) (:background "#acfca9")))))
 
+;;;; org-rainbow-tags
+
 (use-package org-rainbow-tags
   :disabled t
   ;; :straight (:host github :repo "KaratasFurkan/org-rainbow-tags")
@@ -2331,10 +2482,14 @@ prepended to the element after the #+HEADER: tag."
   :hook
   (org-mode . org-rainbow-tags-mode))
 
+;;;; org-rich-yank
+
 (use-package org-rich-yank
   :defer 5
   :bind (:map org-mode-map
               ("C-M-y" . org-rich-yank)))
+
+;;;; org-super-agenda
 
 (use-package org-super-agenda
   :after '(org)
@@ -2367,10 +2522,19 @@ prepended to the element after the #+HEADER: tag."
   :config
   (org-super-agenda-mode))
 
+;;;; org-treescope
+
 (use-package org-treescope
   :after '(org)
   :custom (org-treescope-query-userbuffer "~/path/to/projects.org")
   :bind (("C-c M-t" . org-treescope)))
+
+;;;; git-link
+
+(use-package git-link
+  :bind (("C-c Y" . git-link)))
+
+;;;; org-velocity
 
 (use-package org-velocity
   :bind ("C-, C-." . org-velocity)
@@ -2391,6 +2555,8 @@ prepended to the element after the #+HEADER: tag."
   (org-velocity-use-completion t)
   )
 
+;;;; org-web-tools
+
 (use-package org-web-tools
   :bind (("C-, C-y" . my-org-insert-url)
          ("C-, C-M-y" . org-web-tools-insert-web-page-as-entry))
@@ -2410,11 +2576,17 @@ prepended to the element after the #+HEADER: tag."
             (message "Added pasteboard link to URL property"))
         (insert link)))))
 
+;;;; orgit
+
 (use-package orgit
   :disabled t)
 
+;;;; orgnav
+
 (use-package orgnav
   :after '(org))
+
+;;;; org-jira
 
 (use-package org-jira
   :straight (org-jira :host github :repo "ahungry/org-jira")
@@ -2701,95 +2873,38 @@ prepended to the element after the #+HEADER: tag."
     (org-jira-hydra/body))
   )
 
-(use-package ob-async
-  :after org
-  :defer t)
-
-(use-package ob-http
-  :after org
-  :defer t)
-
-(use-package ob-kotlin
-  :after org
-  :defer t)
-
-(use-package ob-go
-  :after org
-  :defer t)
-
-(use-package ob-sql-mode
-  :after org
-  :defer t)
-
-(use-package ob-redi
-  :disabled t ;; repo vanished
-  :after org
-  :defer t)
-
-(use-package ob-restclient
-  :after org
-  :defer t)
-
-(use-package ob-tmux
-  :after org
-  :defer t
-  :custom
-  (org-babel-default-header-args:tmux
-   '((:results . "silent")   ;
-     (:session . "default")   ; The default tmux session to send code to
-     (:socket  . nil)            ; The default tmux socket to communicate with
-     (:terminal . "gnome-terminal")))
-  (org-babel-tmux-session-prefix "ob-")
-  (org-babel-tmux-location (executable-find "tmux")))
-
-(use-package org-tree-slide
-  :after org
-  :commands org-tree-slide-mode
-  :custom
-  (org-image-actual-width nil)
-  :bind (:map org-tree-slide-mode-map
-              (("C-c n" . org-tree-slide-move-next-tree)
-               ("C-c p" . org-tree-slide-move-previous-tree))))
-
-(use-package org-tree-slide-pauses
-  :after org-tree-slide)
-
-(use-package ob-translate
-  :after org
-  :defer t)
-
-(use-package ox-ioslide
-  :after org
-  :defer t)
-
-(use-package org-projectile
-  :unless noninteractive
-  :after org
-  :bind (("C-c C-n p" . org-projectile:project-todo-completing-read)
-         ("C-c c" . org-capture))
-  :config
-  (org-projectile-per-project)
-  (setq org-projectile-per-project-filepath "notes.org")
-  (setq org-agenda-files (append org-agenda-files (org-projectile-todo-files)))
-  (setq org-projectile:projects-file
-        "~/.emacs.d/org/projects.org")
-  (add-to-list 'org-capture-templates
-               (org-projectile:project-todo-entry "p")))
+;;;; poly-noweb
 
 (use-package poly-noweb
   :defer t
   :after org)
 
+;;;; poly-org
+
 (use-package poly-org
   :defer t
   :after org)
+
+;;;; org-superstar
 
 (use-package org-superstar
   :disabled t
   :hook (org-mode . (lambda () (org-superstar-mode +1))))
 
+;;;; orgtbl-aggregate
+
 (use-package orgtbl-aggregate
   :after '(org))
+
+;;;; ox (org export)
+
+;;;;; ox-ioslide
+
+(use-package ox-ioslide
+  :after org
+  :defer t)
+
+;;;;; ox-gfm
 
 (use-package ox-gfm
   :after '(org)
@@ -2797,21 +2912,28 @@ prepended to the element after the #+HEADER: tag."
   ;; :commands ox-gfm-export-to-markdown
   )
 
+;;;;; ox-jira
+
 (use-package ox-jira
   :commands ox-jira-export-as-jira)
 
-(use-package git-link
-  :bind (("C-c Y" . git-link)))
+;;;;; ox-slack
 
 (use-package ox-slack
   :commands org-slack-export-to-clipboard-as-slack)
 
+;;;;; ox-pandoc
+
 (use-package ox-pandoc
   :disabled t)
+
+;;;;; ox-texinfo-plus
 
 (use-package ox-texinfo-plus
   :straight (:host github :repo "tarsius/ox-texinfo-plus")
   :defer t)
+
+;;;;; ox-odt
 
 (use-package ox-odt
   :disabled t
@@ -2828,6 +2950,8 @@ prepended to the element after the #+HEADER: tag."
                      (org-odt--translate-list-tables tree backend info)
                    tree))))
 
+;;;; org-roam
+
 (use-package org-roam
   :disabled t
   :hook
@@ -2840,6 +2964,8 @@ prepended to the element after the #+HEADER: tag."
                ("C-c n g" . org-roam-show-graph))
               :map org-mode-map
               (("C-c n i" . org-roam-insert))))
+
+;;;; yankpad
 
 (use-package yankpad
   :defer 10
@@ -2854,146 +2980,151 @@ prepended to the element after the #+HEADER: tag."
   ;; (add-to-list 'hippie-expand-try-functions-list #'yankpad-expand)
   )
 
-(if window-system
-    (add-hook 'after-init-hook #'toggle-frame-maximized))
+;; (if window-system
+;;     (add-hook 'after-init-hook #'toggle-frame-maximized))
 
 ;; Automatically create any nonexistent parent directories when
 ;; finding a file. If the buffer for the new file is killed without
 ;; being saved, then offer to delete the created directory or
 ;; directories.
 
-(defun my-find-file-automatically-create-directory
-    (find-file filename &optional wildcards)
-  "Advice for FIND-FILE' to create missing path elements.
+(use-package automatically-create-directories
+  :no-require t
+  :straight nil
+  :unless noninteractive
+  :preface
+  (defun my-find-file-automatically-create-directory
+      (find-file filename &optional wildcards)
+    "Advice for FIND-FILE' to create missing path elements.
 Missing directories from topmost root to leaf in FILENAME will be
 created as necessary. WILDCARDS are passed through when present
 It also sets a buffer-local variable so that the user will be
 prompted to delete the newly created directories if they kill the
 buffer without saving it."
-  ;; The variable `dirs-to-delete' is a list of the directories that
-  ;; will be automatically created by `make-directory'. We will want
-  ;; to offer to delete these directories if the user kills the buffer
-  ;; without saving it.
-  (let ((dirs-to-delete ()))
-    ;; If the file already exists, we don't need to worry about
-    ;; creating any directories.
-    (unless (file-exists-p filename)
-      ;; It's easy to figure out how to invoke `make-directory',
-      ;; because it will automatically create all parent directories.
-      ;; We just need to ask for the directory immediately containing
-      ;; the file to be created.
-      (let* ((dir-to-create (file-name-directory filename))
-             ;; However, to find the exact set of directories that
-             ;; might need to be deleted afterward, we need to iterate
-             ;; upward through the directory tree until we find a
-             ;; directory that already exists, starting at the
-             ;; directory containing the new file.
-             (current-dir dir-to-create))
-        ;; If the directory containing the new file already exists,
-        ;; nothing needs to be created, and therefore nothing needs to
-        ;; be destroyed, either.
-        (while (not (file-exists-p current-dir))
-          ;; Otherwise, we'll add that directory onto the list of
-          ;; directories that are going to be created.
-          (push current-dir dirs-to-delete)
-          ;; Now we iterate upwards one directory. The
-          ;; `directory-file-name' function removes the trailing slash
-          ;; of the current directory, so that it is viewed as a file,
-          ;; and then the `file-name-directory' function returns the
-          ;; directory component in that path (which means the parent
-          ;; directory).
-          (setq current-dir (file-name-directory
-                             (directory-file-name current-dir))))
-        ;; Only bother trying to create a directory if one does not
-        ;; already exist.
-        (unless (file-exists-p dir-to-create)
-          ;; Make the necessary directory and its parents.
-          (make-directory dir-to-create 'parents))))
-    ;; Call the original `find-file', now that the directory
-    ;; containing the file to found exists.
-    (funcall find-file filename wildcards)
-    ;; If there are directories we want to offer to delete later, we
-    ;; have more to do.
-    (when dirs-to-delete
-      ;; Since we already called `find-file', we're now in the buffer
-      ;; for the new file. That means we can transfer the list of
-      ;; directories to possibly delete later into a buffer-local
-      ;; variable. But we pushed new entries onto the beginning of
-      ;; `dirs-to-delete', so now we have to reverse it (in order to
-      ;; later offer to delete directories from innermost to
-      ;; outermost).
-      (setq-local my-dirs-to-delete (reverse dirs-to-delete))
-      ;; Now we add a buffer-local hook to offer to delete those
-      ;; directories when the buffer is killed, but only if it's
-      ;; appropriate to do so (for instance, only if the directories
-      ;; still exist and the file still doesn't exist).
-      (add-hook 'kill-buffer-hook
-                #'my-kill-buffer-delete-directory-if-appropriate
-                'append 'local)
-      ;; The above hook removes itself when it is run, but that will
-      ;; only happen when the buffer is killed (which might never
-      ;; happen). Just for cleanliness, we automatically remove it
-      ;; when the buffer is saved. This hook also removes itself when
-      ;; run, in addition to removing the above hook.
-      (add-hook 'after-save-hook
-                #'my-remove-kill-buffer-delete-directory-hook
-                'append 'local))))
+    ;; The variable `dirs-to-delete' is a list of the directories that
+    ;; will be automatically created by `make-directory'. We will want
+    ;; to offer to delete these directories if the user kills the buffer
+    ;; without saving it.
+    (let ((dirs-to-delete ()))
+      ;; If the file already exists, we don't need to worry about
+      ;; creating any directories.
+      (unless (file-exists-p filename)
+        ;; It's easy to figure out how to invoke `make-directory',
+        ;; because it will automatically create all parent directories.
+        ;; We just need to ask for the directory immediately containing
+        ;; the file to be created.
+        (let* ((dir-to-create (file-name-directory filename))
+               ;; However, to find the exact set of directories that
+               ;; might need to be deleted afterward, we need to iterate
+               ;; upward through the directory tree until we find a
+               ;; directory that already exists, starting at the
+               ;; directory containing the new file.
+               (current-dir dir-to-create))
+          ;; If the directory containing the new file already exists,
+          ;; nothing needs to be created, and therefore nothing needs to
+          ;; be destroyed, either.
+          (while (not (file-exists-p current-dir))
+            ;; Otherwise, we'll add that directory onto the list of
+            ;; directories that are going to be created.
+            (push current-dir dirs-to-delete)
+            ;; Now we iterate upwards one directory. The
+            ;; `directory-file-name' function removes the trailing slash
+            ;; of the current directory, so that it is viewed as a file,
+            ;; and then the `file-name-directory' function returns the
+            ;; directory component in that path (which means the parent
+            ;; directory).
+            (setq current-dir (file-name-directory
+                               (directory-file-name current-dir))))
+          ;; Only bother trying to create a directory if one does not
+          ;; already exist.
+          (unless (file-exists-p dir-to-create)
+            ;; Make the necessary directory and its parents.
+            (make-directory dir-to-create 'parents))))
+      ;; Call the original `find-file', now that the directory
+      ;; containing the file to found exists.
+      (funcall find-file filename wildcards)
+      ;; If there are directories we want to offer to delete later, we
+      ;; have more to do.
+      (when dirs-to-delete
+        ;; Since we already called `find-file', we're now in the buffer
+        ;; for the new file. That means we can transfer the list of
+        ;; directories to possibly delete later into a buffer-local
+        ;; variable. But we pushed new entries onto the beginning of
+        ;; `dirs-to-delete', so now we have to reverse it (in order to
+        ;; later offer to delete directories from innermost to
+        ;; outermost).
+        (setq-local my-dirs-to-delete (reverse dirs-to-delete))
+        ;; Now we add a buffer-local hook to offer to delete those
+        ;; directories when the buffer is killed, but only if it's
+        ;; appropriate to do so (for instance, only if the directories
+        ;; still exist and the file still doesn't exist).
+        (add-hook 'kill-buffer-hook
+                  #'my-kill-buffer-delete-directory-if-appropriate
+                  'append 'local)
+        ;; The above hook removes itself when it is run, but that will
+        ;; only happen when the buffer is killed (which might never
+        ;; happen). Just for cleanliness, we automatically remove it
+        ;; when the buffer is saved. This hook also removes itself when
+        ;; run, in addition to removing the above hook.
+        (add-hook 'after-save-hook
+                  #'my-remove-kill-buffer-delete-directory-hook
+                  'append 'local)))
 
-;; Add the advice that we just defined.
-(advice-add #'find-file :around
-            #'my-find-file-automatically-create-directory)
+    ;; Add the advice that we just defined.
+    (advice-add #'find-file :around
+                #'my-find-file-automatically-create-directory)
 
-(defun my-kill-buffer-delete-directory-if-appropriate ()
-  "Offer to delete directories created by This hook.
+    (defun my-kill-buffer-delete-directory-if-appropriate ()
+      "Offer to delete directories created by This hook.
 the directory containing the file for the current buffer
 automatically, then offer to delete it. Otherwise, do nothing.
 Also clean up related hooks."
-  (when (and
-         ;; Stop if there aren't any directories to delete (shouldn't
-         ;; happen).
-         my-dirs-to-delete
-         ;; Stop if `my-dirs-to-delete' somehow got set to
-         ;; something other than a list (shouldn't happen).
-         (listp my-dirs-to-delete)
-         ;; Stop if the current buffer doesn't represent a
-         ;; file (shouldn't happen).
-         buffer-file-name
-         ;; Stop if the buffer has been saved, so that the file
-         ;; actually exists now. This might happen if the buffer were
-         ;; saved without `after-save-hook' running.
-         (not (file-exists-p buffer-file-name)))
-    (cl-dolist (dir-to-delete my-dirs-to-delete)
-      ;; Ignore any directories that no longer exist or are malformed.
-      ;; We don't return immediately if there's a nonexistent
-      ;; directory, because it might still be useful to offer to
-      ;; delete other (parent) directories that should be deleted. But
-      ;; this is an edge case.
-      (when (and (stringp dir-to-delete)
-                 (file-exists-p dir-to-delete))
-        ;; Only delete a directory if the user is OK with it.
-        (if (y-or-n-p (format "Also delete directory `%s'? "
-                              ;; The `directory-file-name' function
-                              ;; removes the trailing slash.
-                              (directory-file-name dir-to-delete)))
-            (delete-directory dir-to-delete)
-          ;; If the user doesn't want to delete a directory, then they
-          ;; obviously don't want to delete any of its parent
-          ;; directories, either.
-          (cl-return)))))
-  ;; It shouldn't be necessary to remove this hook, since the buffer
-  ;; is getting killed anyway, but just in case...
-  (my-remove-kill-buffer-delete-directory-hook))
+      (when (and
+             ;; Stop if there aren't any directories to delete (shouldn't
+             ;; happen).
+             my-dirs-to-delete
+             ;; Stop if `my-dirs-to-delete' somehow got set to
+             ;; something other than a list (shouldn't happen).
+             (listp my-dirs-to-delete)
+             ;; Stop if the current buffer doesn't represent a
+             ;; file (shouldn't happen).
+             buffer-file-name
+             ;; Stop if the buffer has been saved, so that the file
+             ;; actually exists now. This might happen if the buffer were
+             ;; saved without `after-save-hook' running.
+             (not (file-exists-p buffer-file-name)))
+        (cl-dolist (dir-to-delete my-dirs-to-delete)
+          ;; Ignore any directories that no longer exist or are malformed.
+          ;; We don't return immediately if there's a nonexistent
+          ;; directory, because it might still be useful to offer to
+          ;; delete other (parent) directories that should be deleted. But
+          ;; this is an edge case.
+          (when (and (stringp dir-to-delete)
+                     (file-exists-p dir-to-delete))
+            ;; Only delete a directory if the user is OK with it.
+            (if (y-or-n-p (format "Also delete directory `%s'? "
+                                  ;; The `directory-file-name' function
+                                  ;; removes the trailing slash.
+                                  (directory-file-name dir-to-delete)))
+                (delete-directory dir-to-delete)
+              ;; If the user doesn't want to delete a directory, then they
+              ;; obviously don't want to delete any of its parent
+              ;; directories, either.
+              (cl-return)))))
+      ;; It shouldn't be necessary to remove this hook, since the buffer
+      ;; is getting killed anyway, but just in case...
+      (my-remove-kill-buffer-delete-directory-hook)))
 
-(defun my-remove-kill-buffer-delete-directory-hook ()
-  "Unhook `my-kill-buffer-delete-directory-if-appropriate'.
+  (defun my-remove-kill-buffer-delete-directory-hook ()
+    "Unhook `my-kill-buffer-delete-directory-if-appropriate'.
 Remove from `kill-buffer-hook', and also remove this function
  from `after-save-hook'."
-  (remove-hook 'kill-buffer-hook
-               #'my-kill-buffer-delete-directory-if-appropriate
-               'local)
-  (remove-hook 'after-save-hook
-               #'my-remove-kill-buffer-delete-directory-hook
-               'local))
+    (remove-hook 'kill-buffer-hook
+                 #'my-kill-buffer-delete-directory-if-appropriate
+                 'local)
+    (remove-hook 'after-save-hook
+                 #'my-remove-kill-buffer-delete-directory-hook
+                 'local)))
 
 ;; set major mode of unsaved buffer to file extension
 (setq-default major-mode
@@ -3159,6 +3290,7 @@ abort completely with `C-g'."
 
 (use-package dubcaps-mode
   :unless noninteractive
+  :no-require t
   :straight nil
   :preface
   (defun dcaps-to-scaps ()
@@ -3814,15 +3946,6 @@ tools."
 (bind-key "M-!" 'async-shell-command)
 (bind-key "M-'" 'insert-pair)
 ;;(bind-key "M-\"" 'insert-pair)
-
-;;;; obsoleted by aggressive-indent
-;; (defun align-code (beg end &optional arg)
-;;   (interactive "rP")
-;;   (if (null arg)
-;;       (align beg end)
-;;     (let ((end-mark (copy-marker end)))
-;;       (indent-region beg end-mark nil)
-;;       (align beg end-mark))))
 
 ;; (bind-key "M-[" 'align-code)
 
@@ -6309,7 +6432,7 @@ Install the doc if it's not installed."
             (insert text))
           (ediff-buffers expected got))))))
 
-;;;_ , edit-indirect
+;;; edit-indirect
 
 (use-package edit-indirect
   :bind ("C-c ’" . indirect-region))
@@ -6325,11 +6448,13 @@ Install the doc if it's not installed."
 (use-package lsp-pyright
   :ensure t)
 
+;;; eglot
+
 (use-package eglot
   :commands eglot
   :custom
   (eglot-autoshutdown t)
-  :config
+  :preface
   (if (executable-find "pip")
       (unless (executable-find "pyright-python-langserver")
         (shell-command "pip install pyright"))
@@ -6338,7 +6463,7 @@ Install the doc if it's not installed."
     (unless (executable-find "pylsp")
       (shell-command "pip install pylsp"))
     )
-
+  :config
   (setq read-process-output-max (* 1024 1024))
   (add-to-list 'eglot-server-programs
                `(python-mode
@@ -6379,7 +6504,8 @@ Install the doc if it's not installed."
                 ;; add in file first, capf will know when in file mode
                 completion-at-point-functions (list #'cape-file #'my/capf-eglot+et-al)))
 
-  (add-hook 'eglot-managed-mode-hook #'my/eglot-capf-config))
+  (add-hook 'eglot-managed-mode-hook #'my/eglot-capf-config)
+  :hook (python-mode . eglot-ensure))
 
 (use-package eglot-booster
   :straight (:host github :repo "jdtsmith/eglot-booster")
@@ -6568,8 +6694,20 @@ Install the doc if it's not installed."
   :init
   (elpy-enable))
 
+;;; ement
+
 (use-package ement
   :straight (ement :host github :repo "alphapapa/ement.el"))
+
+;;; elsa
+
+(use-package elsa
+  :defer t)
+
+(use-package flycheck-elsa
+  :disabled t
+  :after flycheck
+  :hook (emacs-lisp-mode . #'flycheck-elsa-setup))
 
 ;;; emojify
 
@@ -7663,18 +7801,24 @@ display, depending on the window manager)."
      (seminar-organizer . "You are a seminar organizer, you plan and put together meetings where people can come together and share ideas, plan, and learn about how to facilitate larger groups. You present your information in a kindly yet efficient manner,and use precise language to make details very clear for those who read your letters.")
      (persian-translator . "You are a translator from English into the Persian language for the Bahá’í World Centre. You take great care to be accurate and meaningful in your translations, while using the commonly accepted terms found in letters from Shoghi Effendi and the Universal House of Justice. You prize clarity but also value beauty and elegant in what you write. However, the goal is to communicate meaning, and not to attempt to sound lofty or poetic. You are concise yet expressive, profound yet not heavy-handed."))))
 
+;;; gptel-openai
+
 (use-package gptel-openai
   :straight nil
   :after gptel
   :custom
   (gptel-api-key (auth-source-pass-get 'secret "chat.openai.com")))
-                                        ;
+
+;;; gptel-transient
+
 (use-package gptel-transient
   :straight nil
   :after gptel
   :config
   (when (ignore-errors (transient-get-suffix 'gptel-menu "RET"))
     (transient-suffix-put 'gptel-menu "RET" :key "<return>")))
+
+;;; gptel-curl
 
 (use-package gptel-curl
   :straight nil
@@ -7686,12 +7830,12 @@ display, depending on the window manager)."
     "Arguments always passed to Curl for gptel queries."))
 
 
-;;_ , grab-x-link
+;;; grab-x-link
 
 (use-package grab-x-link
   :defer t)
 
-;;;_ , grep
+;;; grep
 
 (use-package grep+
   :defer t
@@ -7722,10 +7866,12 @@ display, depending on the window manager)."
      'grep-find-command
      '("find . -type f -print0 | xargs -P4 -0 egrep -nH -e " . 52))))
 
+;;; groovy-mode
+
 (use-package groovy-mode
   :mode ("Jenkinsfile" . groovy-mode))
 
-;;;_ , gtags
+;;; gtags
 
 (use-package gtags
   :defer t
@@ -7759,7 +7905,7 @@ display, depending on the window manager)."
       :config
       (bind-key "M-," 'helm-gtags-resume gtags-mode-map))))
 
-;;;_ , gud
+;;; gud
 
 (use-package gud
   :commands gud-gdb
@@ -7783,12 +7929,12 @@ display, depending on the window manager)."
     (bind-key "<f11>" 'gud-step)
     (bind-key "S-<f11>" 'gud-finish)))
 
-;;;_ , haskell-mode
+;;; haskell-mode
 
 (use-package haskell-mode
   :config)
 
-;;;_ , header2
+;;; header2
 
 (use-package header2
   ;; TBD no package but exists on emacsmirror
@@ -7834,7 +7980,7 @@ display, depending on the window manager)."
 ;;   :bind (:map help-mode-map
 ;;               ("<tab>" . forward-button)))
 
-;; ;;;_ , helpful
+;;; helpful
 
 (use-package helpful
   :bind
@@ -7845,7 +7991,7 @@ display, depending on the window manager)."
    ("C-h F" . helpful-function)
    ("C-h C" . helpful-command)))
 
-;;;_ , hi-lock
+;;; hi-lock
 
 (use-package hi-lock
   :straight nil
@@ -7853,7 +7999,7 @@ display, depending on the window manager)."
          ("M-o r" . highlight-regexp)
          ("M-o w" . highlight-phrase)))
 
-;;;_ , hilit-chg
+;;; hilit-chg
 
 (require 'hilit-chg)
 (global-highlight-changes-mode t)
@@ -7865,12 +8011,12 @@ display, depending on the window manager)."
 (use-package hilit-chg
   :bind ("M-o C" . highlight-changes-mode))
 
-;;;_ , highlight-sexp
+;;; highlight-sexp
 
 ;; (use-package highlight-sexp
 ;;   :disabled t)
 
-;;;_ , hippie-expand
+;;; hippie-expand
 
 (use-package hippie-exp
   :unless noninteractive
@@ -7932,6 +8078,8 @@ display, depending on the window manager)."
      try-complete-lisp-symbol-partially
      try-complete-lisp-symbol)))
 
+;;; hl-indent-scope
+
 (use-package hl-indent-scope
   :disabled t
   :commands (hl-indent-scope-mode)
@@ -7944,13 +8092,19 @@ display, depending on the window manager)."
           python-mode
           emacs-lisp-mode) . hl-indent-scope-mode))
 
+;;; hl-line
+
 (use-package hl-line
   :config
   (global-hl-line-mode +1))
 
+;;; hl-todo
+
 (use-package hl-todo
   :custom (hl-todo-highlight-punctuation ":")
   :config (global-hl-todo-mode))
+
+;;; holymotion
 
 (use-package holymotion
   :disabled t
@@ -7965,10 +8119,12 @@ display, depending on the window manager)."
   (holymotion-make-motion
    holymotion-backward-sexp #'sp-backward-sexp))
 
+;;; hydra
+
 (use-package hydra
   :config (setq hydra-hint-display-type 'posframe))
 
-;;;_ , hyperbole
+;;; hyperbole
 
 (use-package hyperbole
   :disabled t
@@ -8000,7 +8156,7 @@ display, depending on the window manager)."
          (and (eq major-mode 'gnus-summary-mode)
               (hact #'gnus-article-browse-urls))))
 
-;;;_ , ibuffer
+;;; ibuffer
 
 (use-package ibuffer-projectile
   :disabled t
@@ -8013,7 +8169,7 @@ display, depending on the window manager)."
               (unless (eq ibuffer-sorting-mode 'alphabetic)
                 (ibuffer-do-sort-by-alphabetic)))))
 
-;;;_ , ibuffer
+;;; ibuffer
 
 (use-package ibuffer
   :bind ("C-x C-b" . ibuffer)
@@ -8106,11 +8262,14 @@ display, depending on the window manager)."
             #'(lambda ()
                 (ibuffer-switch-to-saved-filter-groups "default"))))
 
+;;; iedit
+
 (use-package iedit
   :bind (("C-x ," . iedit-mode)))
 
 (provide 'init-iedit)
-;;;_ , ido
+
+;;; ido
 
 (use-package ido
   ;; disabled in favor of ivy-mode
@@ -8179,9 +8338,12 @@ display, depending on the window manager)."
 
     (bind-key "C-x 5 t" 'ido-switch-buffer-tiny-frame)))
 
-;;;_ , ielm
+;;; ielm
 
 (use-package ielm
+  :unless noninteractive
+  :no-require t
+  :straight nil
   :commands ielm
   :bind (:map ielm-map ("<return>" . my-ielm-return))
   :config
@@ -8199,7 +8361,7 @@ display, depending on the window manager)."
             (call-interactively #'ielm-return))
         (call-interactively #'paredit-newline)))))
 
-;;;_ , iflipb
+;;; iflipb
 
 (use-package iflipb
   :disabled t
@@ -8246,7 +8408,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
                     (eq last-command 'my-iflipb-previous-buffer))
                 my-iflipb-ing-internal)))))
 
-;;;_ , image-file
+;;; image-file
 
 (use-package image-file
   :straight nil
@@ -8260,7 +8422,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (run-clojure "lein figwheel"))
   :hook ('clojurescript-mode-hook . #'inf-clojure-minor-mode))
 
-;;;_ , impatient-mode
+;;; impatient-mode
 
 (use-package impatient-mode
   :defer t
@@ -8278,14 +8440,27 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
       (httpd-start))
     (initialize-impatient-mode)))
 
+;;; indent-bars
+
 (use-package indent-bars
   :straight (indent-bars :type git :host github :repo "jdtsmith/indent-bars")
+  :custom
+  (indent-bars-treesit-support t)
+  (indent-bars-no-descend-string t)
+  (indent-bars-treesit-ignore-blank-lines-types '("module"))
+  (indent-bars-treesit-wrap '((python argument_list parameters ; for
+                                      ;; python, as an example
+				      list list_comprehension
+				      dictionary dictionary_comprehension
+				      parenthesized_expression subscript)))
   :hook ((python-mode yaml-mode) . indent-bars-mode))
 
-;;;_ , info
+;;; info
 
 (use-package info
   :autoload Info-goto-node)
+
+;;; info-look
 
 (use-package info-look
   :init
@@ -8302,6 +8477,14 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 ;; ;; (use-package info-look
 ;; ;;   :commands info-lookup-add-help)
+
+;;; insert-pair-edit
+
+(use-package insert-pair-edit
+  :disabled t
+  :bind ("M-(" . 'ipe-insert-pair-edit))
+
+;;; isearch
 
 (use-package isearch
   :straight nil
@@ -8326,10 +8509,14 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (other-window 1)
     (call-interactively 'isearch-forward)))
 
+;;; cc-isearch-menu
+
 (use-package cc-isearch-menu
   :disabled t                           ;broken melpa recipe
   :bind (:map isearch-mode-map
               ("C-v" . cc-isearch-menu-transient)))
+
+;;; jira-markup-mode
 
 (use-package jira-markup-mode
   :commands (jira-markup-mode)
@@ -8339,12 +8526,17 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
               (word-wrap t)))
   (add-hook 'jira-markup-mode-hook #'turn-on-orgtbl))
 
-(use-package journalctl-mode)
+;;; journalctl-mode
 
-;;;_ , JS-mode
+(use-package journalctl-mode
+  )
+
+;;; js2-mode
 
 (use-package js2-mode
   :mode "\\.js\\'")
+
+;;; julia-mode
 
 (use-package julia-mode
   :defer t
@@ -8361,8 +8553,9 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (setq inferior-julia-program-name "/usr/bin/julia")
     (add-to-list 'julia-mode-hook 'cg/command-line-keybindings)
     ;; (add-to-list 'inferior-ess-mode-hook 'cg/command-line-keybindings)
-    )
-  )
+    ))
+
+;;; ess-julia.el
 
 (use-package ess-julia.el
   :disabled t
@@ -8377,14 +8570,15 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (progn
     (require 'ess-site)
     (setq inferior-julia-program-name "/usr/bin/julia")
-    (setq ess-tracebug-prefix "\M-c") ; define debug-mode starting key
-    (setq ess-use-tracebug t)         ; tracebug is called for R
+    (setq ess-tracebug-prefix "\M-c")   ; define debug-mode starting key
+    (setq ess-use-tracebug t)           ; tracebug is called for R
                                         ; AND JULIA!!
     (setq ess-tracebug-inject-source-p t)
     (add-to-list 'julia-mode-hook 'cg/command-line-keybindings)
     ;; (add-to-list 'inferior-ess-mode-hook 'cg/command-line-keybindings)
-    )
-  )
+    ))
+
+;;; julia-snail
 
 (use-package julia-snail
   :after julia-mode
@@ -8406,8 +8600,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
                    ;; actions:
                    (display-buffer-reuse-window display-buffer-pop-up-window)))))
 
+;;; just-mode
+
 (use-package just-mode
   :unless noninteractive)
+
+;;; key-chord
 
 (use-package key-chord
   :defer t
@@ -8417,10 +8615,16 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (setq key-chord-two-keys-delay 0.1))
 
+;;; keycast
+
 (use-package keycast)
+
+;;; keypression
 
 (use-package keypression
   :commands key-chord-mode)
+
+;;; kind-icon
 
 (use-package kind-icon
   :after corfu
@@ -8447,13 +8651,13 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   ;; function unless you use something similar
   (add-hook 'kb/themes-hooks #'(lambda () (interactive) (kind-icon-reset-cache))))
 
-;;;_ , kotlin-mode
+;;; kotlin-mode
 
 (use-package kotlin-mode
   ;; BULK-ENSURE :ensure t
   :mode "\\.kt\\'")
 
-;;;_ , kubernetes
+;;; kubel
 
 (use-package kubel
   :defer t
@@ -8463,7 +8667,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :defer t
   :commands (kubernetes-overview))
 
-;;;_ , ledger
+;;; ledger
 
 (use-package ledger-mode
   ;; BULK-ENSURE :ensure t
@@ -8520,23 +8724,29 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
             (insert account))
           (forward-line))))))
 
+;;; flycheck-ledger
+
 (use-package flycheck-ledger
   :after ledger-mode)
 
-;;;_ , lice
+;;; lice
 
 (use-package lice
   :defer t)
+
+;;; lin
 
 (use-package lin
   :config
   (lin-global-mode +1))
 
+;;; listen
+
 (use-package listen
   :disabled t
   :straight '(:type git :host github :repo "alphapapa/listen.el"))
 
-;;_ , lisp-mode
+;;; lisp-mode
 
 (use-package lisp-mode
   :straight nil
@@ -8561,6 +8771,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
         (2 font-lock-function-name-face
            nil t))))))
 
+;;; lispy
+
 (use-package lispy
   :unless noninteractive
   :custom
@@ -8571,8 +8783,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           lisp-mode
           scheme-mode) . #'lispy-mode))
 
+;;; lively
+
 (use-package lively
-  :bind ("C-x M-e" . lively));(current-time-string)
+  :bind ("C-x M-e" . lively))           ;(current-time-string)
+
+;;; loopy
 
 (use-package loopy
   :config
@@ -8580,11 +8796,17 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (require 'loopy-pcase)
   (require 'loopy-seq))
 
+;;; loopy-dash
+
 (use-package loopy-dash
   :after (loopy)
   :demand t)
 
+;;; edebug
+
 (use-package edebug)
+
+;;; eldoc
 
 (use-package eldoc
   :diminish
@@ -8592,26 +8814,38 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (eldoc-echo-area-use-multiline-p nil)
   :hook (prog-mode . eldoc-mode))
 
+;;; eldoc-overlay
+
 (use-package eldoc-overlay
   :disabled t ;; too visually jarring.
   :diminish ""
   :config
   (global-eldoc-overlay-mode +1))
 
+;;; cldoc
+
 (use-package cldoc
   :commands (cldoc-mode turn-on-cldoc-mode)
   :diminish cldoc-mode)
 
+;;; elisp-depend
+
 (use-package elisp-depend
   :commands elisp-depend-print-dependencies)
 
+;;; elisp-docstring-mode
+
 (use-package elisp-docstring-mode
   :commands elisp-docstring-mode)
+
+;;; elisp-slime-nav
 
 (use-package elisp-slime-nav
   :diminish
   :commands (elisp-slime-nav-mode
              elisp-slime-nav-find-elisp-thing-at-point))
+
+;;; elmacro
 
 (use-package elmacro
   :bind (("C-c M" . elmacro-mode)
@@ -8620,6 +8854,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package ert
   :commands ert-run-tests-interactively
   :bind ("C-c e t" . ert-run-tests-interactively))
+
+;;; elint
 
 (use-package elint
   :commands 'elint-initialize
@@ -8637,19 +8873,23 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (add-to-list 'elint-standard-variables 'emacs-major-version)
     (add-to-list 'elint-standard-variables 'window-system)))
 
+;;; sotlisp
+
 (use-package sotlisp)
 
-;;;_ , llvm-mode
+;;; llvm-mode
 
 (use-package llvm-mode
   :disabled t
   :mode ("\\.ll\\'" . llvm-mode))
 
-;;;_ , log4j-mode
+;;; log4j-mode
 
 (use-package log4j-mode
   :disabled t
   :mode ("\\.log\\'" . log4j-mode))
+
+;;; lsp-bridge
 
 (use-package lsp-bridge
   :straight '(lsp-bridge :type git
@@ -8662,16 +8902,22 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :init
   (global-lsp-bridge-mode))
 
+;;; lsp-java
+
 (use-package lsp-java
   :disabled t)
+
+;;; lsp-treemacs
 
 (use-package lsp-treemacs
   :disabled t)
 
+;;; lsp-ui
+
 (use-package lsp-ui
   :commands lsp-ui-mode)
 
-;;;_ , lua-mode
+;;; lua-mode
 
 (use-package lua-mode
   :defer t
@@ -8685,13 +8931,13 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           lua-default-application "lua5.3")
     (add-to-list 'auto-mode-alist '("\\.nse$" . lua-mode))))
 
-;;;_ , macrostep
+;;; macrostep
 
 (use-package macrostep
   :defer t
   :bind ("C-c e m" . macrostep-expand))
 
-;;;_ , magit
+;;; magit
 
 (use-package magit
   :unless noninteractive
@@ -8716,8 +8962,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
       (interactive)
       (start-process "git-monitor" (current-buffer) "~/bin/git-monitor"))))
 
+;;; magit-todos
+
 (use-package magit-todos
   :after magit)
+
+;;; magit-topgit
 
 (use-package magit-topgit
   :after magit
@@ -8725,6 +8975,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package magit-filenotify
   :after magit)
+
+;;; magithub
 
 (use-package magithub
   :disabled t
@@ -8735,11 +8987,13 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :custom
   (magithub-clone-default-directory "~"))
 
-;;;_ , markdown-mode
+;;; markdown-mode
 
-(use-package markdown-mode
-  :mode ("\\.md\\'" . markdown-mode)
-  :defer t)
+(use-package markdown-ts-mode
+  :mode ("\\.md\\'" . markdown-ts-mode)
+  :defer 't
+  :config
+  (add-to-list 'treesit-language-source-alist '(markdown "https://github.com/ikatyang/tree-sitter-markdown" "master" "src")))
 
 ;; (use-package markdown-preview-mode
 ;;   :after markdown-mode
@@ -8748,11 +9002,13 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;         (list (concat "https://github.com/dmarcotte/github-markdown-preview/"
 ;;                       "blob/master/data/css/github.css"))))
 
+;;; mastodon
+
 (use-package mastodon
   :config
   (mastodon-discover))
 
-;;;_ , meghanada
+;;; meghanada
 
 (use-package meghanada
   ;; BULK-ENSURE :ensure t
@@ -8773,14 +9029,18 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (unless (f-exists? (meghanada--locate-server-jar))
     (meghanada-install-server)))
 
-;; ;;;_ , minimap
+;; ;;; minimap
 
 (use-package minimap
   :defer t
   :bind ("M-o m" . minimap-mode))
 
+;;; moccur-edit
+
 (use-package moccur-edit
   :after color-moccur)
+
+;;; move-lines
 
 (use-package move-lines
   :straight nil
@@ -8799,7 +9059,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (transpose-lines 1)
     (previous-line 1)))
 
-;;;_ , mule
+;;; mule
 
 (use-package mule
   :straight nil
@@ -8809,7 +9069,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (set-terminal-coding-system 'utf-8)
     (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING))))
 
-;;;_ , multi-term
+;;; multi-term
 
 (use-package multi-term
   :bind (("C-c t" . multi-term-next)
@@ -8866,6 +9126,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (defadvice term-process-pager (after term-process-rebind-keys activate)
     (define-key term-pager-break-map  "\177" 'term-pager-back-page)))
 
+;;; multi-vterm
+
 (use-package multi-vterm
   :bind ("C-<f9>" . multi-vterm)
   :custom (multi-vterm-buffer-name "vterm")
@@ -8898,7 +9160,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (advice-add #'multi-vterm-project-root :override
                 #'my-multi-vterm-project-root)))
 
-;;;_ , multiple-cursors
+;;; multiple-cursors
 
 (use-package multiple-cursors
   :after selected
@@ -8959,12 +9221,16 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
     (interactive)
     (activate-mark)))
 
+;;; mc-calc
+
 (use-package mc-calc
   :after multiple-cursors
   :bind (("<C-m> = c" . mc-calc)
          ("<C-m> = =" . mc-calc-eval)
          ("<C-m> = g" . mc-calc-grab)
          ("<C-m> = b" . mc-calc-copy-to-buffer)))
+
+;;; mc-extras
 
 (use-package mc-extras
   :after multiple-cursors
@@ -8978,15 +9244,21 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
          ("<C-m> |"     . mc/move-to-column)
          ("<C-m> ~"     . mc/compare-chars)))
 
+;;; mc-freeze
+
 (use-package mc-freeze
   :straight nil
   :after multiple-cursors
   :bind ("<C-m> f" . mc/freeze-fake-cursors-dwim))
 
+;;; mc-rect
+
 (use-package mc-rect
   :straight nil
   :after multiple-cursors
   :bind ("<C-m> ]" . mc/rect-rectangle-to-multiple-cursors))
+
+;;; native-complete
 
 (use-package native-complete
   :config
@@ -8994,7 +9266,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (with-eval-after-load 'shell
     (native-complete-setup-bash)))
 
-(use-package nerd-icons)
+;;; nerd-icons
+
+(use-package nerd-icons
+  )
+
+;;; nerd-icons-completion
 
 (use-package nerd-icons-completion
   :straight (nerd-icons-completion :type git :host github :repo "rainstormstudio/nerd-icons-completion")
@@ -9002,16 +9279,20 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
+;;; nerd-icons-dired
+
 (use-package nerd-icons-dired
   :straight (nerd-icons-dired :type git :host github :repo "rainstormstudio/nerd-icons-dired")
   :hook
   (dired-mode . nerd-icons-dired-mode))
 
+;;; nerd-icons-ibuffer
+
 (use-package nerd-icons-ibuffer
   :straight (nerd-icons-ibuffer :type git :host github :repo "seagle0128/nerd-icons-ibuffer")
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
-;;;_ , nroff-mode
+;;; nroff-mode
 
 (use-package nroff-mode
   :commands nroff-mode
@@ -9032,7 +9313,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
               #'(lambda ()
                   (add-hook 'after-save-hook 'update-nroff-timestamp nil t)))))
 
-;;;_ , nxml-mode
+;;; nxml-mode
 
 (use-package nxml-mode
   :straight nil
@@ -9054,7 +9335,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
     (bind-key "C-H" 'tidy-xml-buffer nxml-mode-map)))
 
-;; ;;;_ , orca
+;;; omnisharp
 
 (use-package omnisharp
   :custom
@@ -9066,6 +9347,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (add-to-list 'company-backends #'company-omnisharp)
   (add-to-list 'auto-mode-alist '("\\.cs$" . csharp-mode)))
 
+;;; orderless
+
 (use-package orderless
   :custom
   (completion-category-defaults nil)
@@ -9074,6 +9357,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (add-to-list 'completion-styles 'substring)
   (add-to-list 'completion-styles 'orderless))
 
+;;; outli
+
 (use-package outli
   :straight (:host github :repo "jdtsmith/outli" )
   :after lispy
@@ -9081,10 +9366,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
               ("C-c C-p" . (lambda () (interactive) (outline-back-to-heading))))
   :hook ((prog-mode text-mode) . outli-mode))
 
-;;;_ , outline
+;;; outline
 
 (use-package outline
   :commands outline-minor-mode)
+
+;;; outorg
 
 (use-package outorg
   :after org
@@ -9093,13 +9380,14 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (require 'outshine))
 
-;;;_ , pabbrev
+;;; pabbrev
 
 (use-package pabbrev
   :commands pabbrev-mode
   :diminish pabbrev-mode)
 
-;;;_ ; paradox
+;;; paradox
+
 (use-package paradox
   :commands paradox-list-packages
   :custom
@@ -9143,6 +9431,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           lisp-interaction-mode
           json-mode) . #'paredit-mode))
 
+;;; paredit-eldoc
+
 (use-package paredit-eldoc
   :straight nil
   :no-require t
@@ -9151,23 +9441,27 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (eldoc-add-command 'paredit-backward-delete
                      'paredit-close-round))
 
+;;; paredit-everywhere
+
 (use-package paredit-everywhere
   :diminish paredit-everywhere-mode
   :config
   (add-hook 'prog-mode-hook 'paredit-everywhere-mode))
 
-;;;_ , paren
+;;; mic-paren
 
 (use-package mic-paren
   :config
   (paren-activate))
+
+;;; paren
 
 (use-package paren
   :straight nil
   :init
   (show-paren-mode 1))
 
-;;;_ ; parinfer
+;;; parinfer
 
 (use-package parinfer
   :disabled t
@@ -9191,13 +9485,15 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
      smart-tab      ; C-b & C-f jump positions and smart shift with tab & S-tab.
      smart-yank)))   ; Yank behavior depend on mode.
 
-;;;_ , pass
+;;; pass
 
 (use-package pass
   :straight nil
   :commands (pass pass-view-mode)
   :mode ("\\.passwords/.*\\.gpg\\'" . pass-view-mode)
   :hook (pass-view-mode . #'pass-view--prepare-otp))
+
+;;; password-store
 
 (use-package password-store
   :commands (password-store-insert
@@ -9223,6 +9519,8 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
                              password login password-store-executable
                              (shell-quote-argument entry)))))))
 
+;;; password-store-otp
+
 (use-package password-store-otp
   :defer t
   :config
@@ -9246,12 +9544,14 @@ append it to ENTRY."
       (when (not password-store-otp-screenshots-path)
         (delete-file qr-image-filename)))))
 
+;;; pcomplete
+
 (use-package pcomplete
   :defer t
   :custom
   (pcomplete-compare-entry-function 'file-newer-than-file-p))
 
-;;;_ , persistent-scratch
+;;; my-scratch
 
 (use-package my-scratch
   :disabled t
@@ -9275,6 +9575,8 @@ append it to ENTRY."
   (add-hook 'after-init-hook #'my-scratch-restore))
 ;; This is not a real package so don't load it
 
+;;; persistent-scratch
+
 (use-package persistent-scratch
   :after org-mode
   :unless noninteractive
@@ -9283,6 +9585,8 @@ append it to ENTRY."
    persistent-scratch-save-file
    (locate-user-emacs-file "my.org"))
   (persistent-scratch-setup-default))
+
+;;; pdf-tools
 
 (use-package pdf-tools
   :magic ("%PDF" . pdf-view-mode)
@@ -9297,13 +9601,13 @@ append it to ENTRY."
     (require pkg))
   (pdf-tools-install))
 
+;;; per-window-point
+
 (use-package per-window-point
   :demand t
   :commands pwp-mode
   :config
   (pwp-mode +1))
-
-;;;_ , perspective
 
 (defvar saved-window-configuration nil)
 
@@ -9322,15 +9626,21 @@ append it to ENTRY."
           (delete-window)
         (bury-buffer)))))
 
+;;; phi-search
+
 (use-package phi-search
   :custom
   (phi-search-limit 100000))
+
+;;; phi-search-mc
 
 (use-package phi-search-mc
   :after (phi-search multiple-cursors)
   :config
   (phi-search-mc/setup-keys)
   (add-hook 'isearch-mode-mode #'phi-search-from-isearch-mc/setup-keys))
+
+;;; plantuml-mode
 
 (use-package plantuml-mode
   :mode "\\.plantuml\\'"
@@ -9341,9 +9651,12 @@ append it to ENTRY."
 (use-package poporg
   :bind ("C-x C-;" . poporg-dwim))
 
-(use-package posframe)
+;;; posframe
 
-;;;_ , pp-c-l
+(use-package posframe
+  )
+
+;;; pp-c-l
 
 (use-package pp-c-l
   :disabled t
@@ -9353,6 +9666,8 @@ append it to ENTRY."
 ;; company-statistics seems good enough?
 
 ;; (use-package predictive)
+
+;;; prescient
 
 (use-package prescient
   :after corfu
@@ -9368,12 +9683,14 @@ append it to ENTRY."
   (setq corfu-sort-function #'prescient-sort)
   (setq corfu-sort-override-function #'prescient-sort))
 
+;;; prism
+
 (use-package prism
   :disabled t
   :hook ((lisp-mode clojure-mode json-mode) . prism-mode)
   :hook ((lisp-mode python-mode) . prism-whitespace-mode))
 
-;;;_ , projectile
+;;; projectile
 
 (use-package project
   :bind ( :map project-prefix-map
@@ -9428,12 +9745,16 @@ means save all with no questions."
            (pred (lambda () (memq (current-buffer) project-buffers))))
       (funcall-interactively #'save-some-buffers arg pred))))
 
+;;; project-x
+
 (use-package project-x
   :straight (:host github :repo "karthink/project-x")
   :after project
   :config
-  (setq project-x-save-interval 600)  ;Save project state every 10 min
+  (setq project-x-save-interval 600)    ;Save project state every 10 min
   (project-x-mode +1))
+
+;;; projectile
 
 (use-package projectile
   :disabled t
@@ -9466,6 +9787,8 @@ means save all with no questions."
        (advice-add 'magit-branch-and-checkout
                    :after #'my-projectile-invalidate-cache)))
   (projectile-mode +1))
+
+;;; counsel-projectile
 
 (use-package counsel-projectile
   :disabled t
@@ -9523,6 +9846,8 @@ means save all with no questions."
   (progn
     (counsel-projectile-mode +1)))
 
+;;; helm-projectile
+
 (use-package helm-projectile
   :disabled t
   :after projectile
@@ -9530,11 +9855,13 @@ means save all with no questions."
   (progn
     (helm-projectile-on)))
 
+;;; projectile-speedbar
+
 (use-package projectile-speedbar
   :disabled t ;; causes error on init
   :after projectile)
 
-;;;_ , ps-print
+;;; ps-print
 
 (use-package ps-print
   :defer t
@@ -9554,6 +9881,8 @@ means save all with no questions."
       (call-process (executable-find "open") nil nil nil temp-file)))
   :config
   (setq ps-print-region-function 'ps-spool-to-pdf))
+
+;;; pulsar
 
 (use-package pulsar
   :config
@@ -9602,6 +9931,7 @@ means save all with no questions."
   :config
   (pulsar-global-mode +1))
 
+;;; puni
 
 (use-package puni
   :defer t
@@ -9652,6 +9982,8 @@ means save all with no questions."
   :config
   (add-hook 'python-mode-hook #'my-python-mode-hook))
 
+;;; python-black
+
 (use-package python-black
   :disabled t                           ; too black, too strong
   :after python
@@ -9701,6 +10033,8 @@ means save all with no questions."
   :config
   (recentf-mode 1))
 
+;;; repl-toggle
+
 (use-package repl-toggle
   :custom
   (rtog/mode-repl-alist
@@ -9711,7 +10045,7 @@ means save all with no questions."
   :config
   (repl-toggle-mode))
 
-;;;_ , restart-emacs
+;;; restart-emacs
 
 (defun mak::restart-emacs-or-release-file ()
   "Optionally restart EMACS."
@@ -9742,6 +10076,8 @@ means save all with no questions."
          ("Guardfile$" . ruby-mode))
   :interpreter ("ruby" . ruby-mode))
 
+;;;; rbenv
+
 (use-package rbenv
   :after ruby-mode
   :config
@@ -9752,19 +10088,27 @@ means save all with no questions."
      rbenv-show-active-ruby-in-modeline nil)
     (global-rbenv-mode)))
 
+;;;; ruby-tools
+
 (use-package ruby-tools
   :after ruby-mode)
+
+;;;; rhtml-mode
 
 (use-package rhtml-mode
   :after ruby-mode
   :mode (("\\.rhtml$" . rhtml-mode)
          ("\\.html\\.erb$" . rhtml-mode)))
 
+;;;; rinari
+
 (use-package rinari
   :after ruby-mode
   :config
   (global-rinari-mode 1)
   :config (setq ruby-insert-encoding-magic-comment nil))
+
+;;;; rspec-mode
 
 (use-package rspec-mode
   :after ruby-mode
@@ -9777,6 +10121,8 @@ means save all with no questions."
       (let ((shell-file-name "/bin/bash"))
         ad-do-it))))
 
+;;;; robe
+
 (use-package robe
   :after ruby-mode
   :config
@@ -9784,6 +10130,8 @@ means save all with no questions."
     (add-hook 'ruby-mode-hook 'robe-mode)
     (with-eval-after-load 'company
       (add-to-list 'company-backends 'company-robe))))
+
+;;;; enh-ruby-mode
 
 (use-package enh-ruby-mode
   :after ruby-mode
@@ -9794,12 +10142,14 @@ means save all with no questions."
 
 (setenv "JRUBY_OPTS" "--2.0")
 
+;;;; yard-mode
+
 (use-package yard-mode
   :config
   (progn
     (add-hook 'ruby-mode-hook 'yard-mode)))
 
-;;;_ , ryo-modal
+;;; ryo-modal
 
 (use-package ryo-modal
   :commands ryo-modal-mode
@@ -9828,7 +10178,7 @@ means save all with no questions."
    ("k" previous-line)
    ("l" forward-char)))
 
-;;;_ , savehist
+;;; savehist
 
 (use-package savehist
   :unless noninteractive
@@ -9861,16 +10211,18 @@ means save all with no questions."
 
 (use-package sed-mode)
 
-;;;_ , select-themes
+;;; select-themes
 
 (use-package select-themes)
 
-;;;_ , selected
+;;; serenade
 
 (use-package serenade-mode
   :disabled t
   :straight (serenade-mode :type git :host github
                            :repo "justin-roche/serenade-mode"))
+
+;;; selected
 
 (use-package selected
   :diminish selected-minor-mode
@@ -9885,7 +10237,7 @@ means save all with no questions."
   :config
   (selected-global-mode +1))
 
-;;;_ , sh-script
+;;; sh-script
 
 (use-package sh-script
   :defer t
@@ -9902,16 +10254,18 @@ means save all with no questions."
 
     (add-hook 'shell-mode-hook 'initialize-sh-script)))
 
-;;;_ , sh-toggle
+;;; sh-toggle
 
 (use-package sh-toggle
   :disabled t
   :bind ("C-x C-z" . shell-toggle))
 
+;;; shx
+
 (use-package shx
   :hook (shell-mode . shx-mode))
 
-;;;_ , shackle
+;;; shackle
 
 (use-package shackle
   :disabled t
@@ -9984,7 +10338,7 @@ means save all with no questions."
   :bind (("C-c +" . shift-number-up)
          ("C-c -" . shift-number-down)))
 
-;;;_ , slack
+;;; slack
 
 (use-package slack
   :disabled t
@@ -10065,11 +10419,15 @@ means save all with no questions."
   (setq slack-message-custom-notifier #'my-slack-message-notifier
         slack-message-custom-delete-notifier #'my-slack-message-notifier))
 
+;;; spell-fu
+
 (use-package spell-fu
   :disabled t
   :unless noninteractive
   :config
   (global-spell-fu-mode +1))
+
+;;; spotify
 
 (let ((spotify-credentials
        (expand-file-name "credentials.el"
@@ -10084,22 +10442,32 @@ means save all with no questions."
       (eval-buffer))
     ))
 
+;;; ssh-agency
+
 (use-package ssh-agency)
+
+;;; tracking
 
 (use-package tracking
   :defer t
   :config
   (define-key tracking-mode-map [(control ?c) space] #'tracking-next-buffer))
 
+;;; typescript-mode
+
 (use-package typescript-mode
   :custom
   (typescript-indent-level 2))
+
+;;; tide
 
 (use-package tide
   :diminish tide-mode
   :after typescript-mode
   :config
   (add-hook 'typescript-mode-hook #'tide-setup))
+
+;;; treesit-auto
 
 (use-package treesit-auto
   :preface
@@ -10109,13 +10477,15 @@ means save all with no questions."
   :config
   (global-treesit-auto-mode +1))
 
+;;; treesit-jump
+
 (use-package treesit-jump
   :straight (:host github :repo "dmille56/treesit-jump" :files ("*.el" "treesit-queries"))
   :config
   ;; Optional: add some queries to filter out of results (since they can be too cluttered sometimes)
   (setq treesit-jump-queries-filter-list '("inner" "test" "param")))
 
-;;;_ , slime
+;;; slime
 
 (use-package slime
   :commands slime
@@ -10134,14 +10504,14 @@ means save all with no questions."
                      (ensure-user-dir "slime/")) t)
   (slime-startup-animation nil))
 
-;;;_ , smart-backspace
+;;; smart-backspace
 
 (use-package smart-backspace
   :disabled t
   :hook (prog-mode . #'(lambda ()
                          (local-set-key "<backspace>" 'smart-backspace))))
 
-;;;_ , smart-compile
+;;; smart-compile
 
 (use-package smart-compile
   :disabled t
@@ -10165,22 +10535,13 @@ means save all with no questions."
 
     (bind-key "M-O" 'show-compilation)))
 
-;;;_ , smart-tabs-mode
+;;; smart-tabs-mode
 
 (use-package smart-tabs-mode
   :defer t
   :commands smart-tabs-mode)
 
-;;;_ , solaire-mode
-
-(use-package solaire-mode
-  :config
-  (solaire-mode)
-  (add-hook 'after-change-major-mode-hook 'turn-on-solaire-mode))
-
-;;;_ , solarized-theme
-
-;;;_ , sparql-mode
+;;; sparql-mode
 
 (use-package sparql-mode
   :mode ("\\.sparql\\'" . sparql-mode))
@@ -10191,13 +10552,17 @@ means save all with no questions."
 ;;   :unless noninteractive
 ;;   )
 
-;;;_ , sqlup
+;;; sqlite3
 
 (use-package sqlite3
   :defer t)
 
+;;;; sqlite-mode-extras
+
 (use-package sqlite-mode-extras
   :hook ((sqlite-mode . sqlite-extras-minor-mode)))
+
+;;; sqlup-mode
 
 (use-package sqlup-mode
   :defer t
@@ -10208,24 +10573,23 @@ means save all with no questions."
     ;; Capitalize keywords in an interactive session (e.g. psql)
     (add-hook 'sql-interactive-mode-hook 'sqlup-mode)))
 
-;;;_ , sr-speedbar
+;;; sr-speedbar
 
 (use-package sr-speedbar
   :unless noninteractive)
 
-(use-package string-inflection
-  :bind ("C-c `" . string-inflection-all-cycle))
-
-;;;_ , stopwatch
+;;; stopwatch
 
 (use-package stopwatch
   :straight (:host github :repo "blue0513/stopwatch")
   :bind ("<f8>" . stopwatch))
 
-(use-package string-inflection
-  :bind ("C-c `" . string-inflection-toggle))
+;;; string-inflection
 
-;;;_ , symbol-overlay
+(use-package string-inflection
+  :bind ("C-c `" . string-inflection-all-cycle))
+
+;;; symbol-overlay
 
 (use-package symbol-overlay
   :diminish
@@ -10296,17 +10660,19 @@ means save all with no questions."
 ;;   :hook (prog-mode . #'symbol-overlay-mode)
 ;;   :diminish symbol-overlay-mode)
 
-;;;_ , systemd
+;;; systemd
 
 (use-package systemd
   :mode ("\\.automount\\'\\|\\.busname\\'\\|\\.mount\\'\\|\\.service\\'\\|\\.slice\\'\\|\\.socket\\'\\|\\.target\\'\\|\\.timer\\'\\|\\.link\\'\\|\\.netdev\\'\\|\\.network\\'\\|\\.override\\.conf.*\\'" . systemd-mode))
 
-;;;_ , tagedit
+;;; tagedit
 
 (use-package tagedit
   :config
   (tagedit-add-paredit-like-keybindings)
-  :hook ('html-mode . (lambda () (tagedit-mode 1))))
+  :hook ('html-mode . (lambda () (tagedit-mode +1))))
+
+;;; tempel
 
 (use-package tempel
   ;; Require trigger prefix before template name when completing.
@@ -10347,12 +10713,16 @@ means save all with no questions."
   ;; (global-tempel-abbrev-mode)
   )
 
+;;; terraform-mode
+
 (use-package terraform-mode)
+
+;;; typescript-mode
 
 (use-package typescript-mode
   :mode "\.ts\\'")
 
-;;;_ , texinfo
+;;; texinfo
 
 (use-package texinfo
   :defines texinfo-section-list
@@ -10386,6 +10756,8 @@ means save all with no questions."
                 (nth 1 entry)
               5)))))))
 
+;;; text-mode
+
 (use-package text-mode
   :straight nil
   :defer t
@@ -10398,11 +10770,11 @@ means save all with no questions."
                  (ignore-errors
                    (diminish 'auto-fill-function)))))
 
-;;;_ , todochiku
+;;; todochiku
 
 ;; (use-package todochiku)
 
-;;;_ , tramp
+;;; tramp
 
 (use-package tramp
   :defer t
@@ -10417,21 +10789,27 @@ means save all with no questions."
   ;; Setting this with `:custom' does not take effect.
   (setq tramp-persistency-file-name (user-data "tramp")))
 
+;;; transient
+
 (use-package transient
   :defer t
   :custom
   (transient-history-file (user-data "transient/history.el"))
   (transient-values-file (user-data "transient/values.el")))
 
+;;; transpose-mark
+
 (use-package transpose-mark
   :commands (transpose-mark
              transpose-mark-line
              transpose-mark-region))
 
+;;; undo-propose
+
 (use-package undo-propose
   :commands undo-propose)
 
-;;;_ , uniquify
+;;; uniquify
 
 (use-package uniquify
   :straight nil
@@ -10443,25 +10821,37 @@ means save all with no questions."
   ;; don't muck with special buffers
   (uniquify-ignore-buffers-re "^\\*"))
 
+;;; uuidgen
+
 (use-package uuidgen
   :commands (insert-uuid-cid))
 
-;;;_ , all-the-icons
+;;; unicode-fonts
 
 (use-package unicode-fonts
   :init (unicode-fonts-setup))
 
+;;; all-the-icons)
+
 (use-package all-the-icons)
+
+;;; all-the-icons-completion
 
 (use-package all-the-icons-completion
   :config
   :after all-the-icons
   (all-the-icons-completion-mode))
 
+;;; all-the-icons-dired
+
 (use-package all-the-icons-dired
   :hook (dired-mode . (lambda () (all-the-icons-dired-mode +1))))
 
+;;; vc-backup
+
 (use-package vc-backup)
+
+;;; vdiff
 
 (use-package vdiff
   :commands (vdiff-files
@@ -10471,13 +10861,19 @@ means save all with no questions."
 
 ;;;_ , volatile highlights - temporarily highlight changes from pasting etc
 
+;;; volatile-highlights
+
 (use-package volatile-highlights
   :unless noninteractive
   :diminish " 🌋"
   :config
   (volatile-highlights-mode t))
 
+;;; verb
+
 (use-package verb)
+
+;;; vertico
 
 (use-package vertico
   :init
@@ -10498,6 +10894,8 @@ means save all with no questions."
   (setq read-file-name-completion-ignore-case t
         read-buffer-completion-ignore-case t
         completion-ignore-case t))
+
+;;;; vertico-directory
 
 (use-package vertico-directory
   :after vertico
@@ -10543,21 +10941,24 @@ means save all with no questions."
 ;;         '(;; show grep results in a dedicated buffer:
 ;;           (consult-ripgrep buffer))))
 
+;;; visual-fill-column
+
 (use-package visual-fill-column
   :commands visual-fill-column-mode)
 
-(use-package virtual-auto-fill
-  :commands virtual-auto-fill-mode)
+;;; virtual-auto-fill
 
 (use-package virtual-auto-fill
   :commands virtual-auto-fill-mode)
+
+;;; vterm
+;; remember to install =libvterm= and =libvterm-devel= or the build will cause
+;; emacs to core dump
 
 (use-package vterm
-  :disabled t                           ;causing segfaults during build on
-                                        ;some machines
   :hook (vterm-mode . (lambda () (disable-mouse-mode -1))))
 
-;;;_ , w3m
+;;; w3m
 
 (use-package w3m
   :commands (w3m-browse-url w3m-find-file)
@@ -10575,7 +10976,7 @@ means save all with no questions."
   (wgrep-auto-save-buffer t)
   (wgrep-enable-key "��"))
 
-;;;_ , which-key
+;;; which-key
 
 (use-package which-func
   :straight nil
@@ -10587,7 +10988,7 @@ means save all with no questions."
   :config
   (which-key-mode))
 
-;;;_ , whitespace
+;;; whitespace
 
 (use-package whitespace
   :diminish (global-whitespace-mode
@@ -10647,6 +11048,8 @@ means save all with no questions."
     (remove-hook 'find-file-hooks 'whitespace-buffer)
     (remove-hook 'kill-buffer-hook 'whitespace-buffer)))
 
+;;; whitespace-cleanup-mode
+
 (use-package whitespace-cleanup-mode
   :demand t
   :diminish
@@ -10654,7 +11057,7 @@ means save all with no questions."
   :config
   (global-whitespace-cleanup-mode 1))
 
-;;;_ , window-purpose
+;;; window-purpose
 
 (use-package window-purpose
   :init
@@ -10680,7 +11083,7 @@ means save all with no questions."
 
 ;; :hook (after-init . #'turn-on-purpose-mode)
 
-;;;_ , winner
+;;; winner
 
 (use-package winner
   :unless noninteractive
@@ -10691,7 +11094,7 @@ means save all with no questions."
   (winner-mode 1))
 
 
-;;;_ , write-room
+;;; write-room
 
 (defun write-room ()
   "Make a frame without any bling."
@@ -10721,11 +11124,17 @@ means save all with no questions."
           fill-column 65)
     (set-window-margins (selected-window) 50 50)))
 
+;;; wdired
+
 (use-package wdired
   :straight nil
   :config (setq wdired-allow-to-change-permissions t))
 
+;;; wgrep
+
 (use-package wgrep)
+
+;;; xray
 
 (use-package xray
   :bind (("C-h x b" . xray-buffer)
@@ -10770,9 +11179,13 @@ means save all with no questions."
   :config
   (yas-load-directory (emacs-path "snippets")))
 
+;;; yasnippet-snippets
+
 (use-package yasnippet-snippets
   :after yasnippet
   )
+
+;;; yasnippet-org
 
 (use-package yasnippet-org
   :straight nil
@@ -10796,7 +11209,7 @@ means save all with no questions."
   :config
   (yatemplate-fill-alist))
 
-;;;_ , yaml-mode
+;;; yaml-mode
 
 (use-package yaml-mode
   :mode (("\\.yml\\'" . yaml-mode)
@@ -10817,6 +11230,8 @@ means save all with no questions."
   ;; If you want to complete snippets using company-mode
   (add-to-list 'company-backends #'company-yankpad))
 
+;;; yeetube
+
 (use-package yeetube
   :straight '(yeetube :type git
 	              :host nil
@@ -10833,6 +11248,7 @@ means save all with no questions."
   ;;          )
   )
 
+;;; znc
 
 (use-package znc
   :disabled t
