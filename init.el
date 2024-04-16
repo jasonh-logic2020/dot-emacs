@@ -10956,6 +10956,7 @@ means save all with no questions."
 ;; emacs to core dump
 
 (use-package vterm
+  :disabled t
   :hook (vterm-mode . (lambda () (disable-mouse-mode -1))))
 
 ;;; w3m
