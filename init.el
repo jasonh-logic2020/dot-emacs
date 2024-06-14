@@ -2156,6 +2156,57 @@ prepended to the element after the #+HEADER: tag."
 (use-package ob-diagrams
   :after '(org))
 
+;;;;; ob-mermaid
+(use-package ob-mermaid
+  :ensure t
+  :config
+  (setq ob-mermaid-use-wrapper t)
+  (setq ob-mermaid-cli-path "/PATH/TO/WRAPPER/SCRIPT.sh")
+  (defun org-babel-execute:mermaid (body params)
+    (let* ((out-file (or (cdr (assoc :file params))
+                         (error "mermaid requires a \":file\" header argument")))
+	   (theme (cdr (assoc :theme params)))
+	   (width (cdr (assoc :width params)))
+	   (height (cdr (assoc :height params)))
+	   (background-color (cdr (assoc :background-color params)))
+	   (mermaid-config-file (cdr (assoc :mermaid-config-file params)))
+	   (css-file (cdr (assoc :css-file params)))
+	   (pupeteer-config-file (cdr (assoc :pupeteer-config-file params)))
+           (temp-file (org-babel-temp-file "mermaid-"))
+           (mmdc (or ob-mermaid-cli-path
+                     (executable-find "mmdc")
+                     (error "`ob-mermaid-cli-path' is not set and mmdc is not in `exec-path'")))
+           (cmd (concat (unless ob-mermaid-use-wrapper
+                          (concat (shell-quote-argument (expand-file-name mmdc))
+                                  " -i "
+                                  (org-babel-process-file-name temp-file)
+                                  " -o "
+                                  (org-babel-process-file-name out-file)))
+		        (when theme
+			  (concat " -t " theme))
+		        (when background-color
+			  (concat " -b " background-color))
+		        (when width
+			  (concat " -w " width))
+		        (when height
+			  (concat " -H " height))
+		        (when mermaid-config-file
+			  (concat " -c " (org-babel-process-file-name mermaid-config-file)))
+		        (when css-file
+			  (concat " -C " (org-babel-process-file-name css-file)))
+                        (when pupeteer-config-file
+                          (concat " -p " (org-babel-process-file-name pupeteer-config-file))))))
+      (unless (file-executable-p mmdc)
+        ;; cannot happen with `executable-find', so we complain about
+        ;; `ob-mermaid-cli-path'
+        (error "Cannot find or execute %s, please check `ob-mermaid-cli-path'" mmdc))
+      (with-temp-file temp-file (insert body))
+      (message "%s" cmd)
+      (if ob-mermaid-use-wrapper
+          (shell-command (format "cat %s | %s %s -o %s" temp-file mmdc cmd out-file))
+        (org-babel-eval cmd ""))
+      nil)))
+
 ;;;;; ob-restclient
 
 (use-package ob-restclient
@@ -4875,7 +4926,6 @@ If region is active, apply to active region instead."
   (setf (alist-get ?\; avy-dispatch-alist) 'avy-action-flyspell))
 
 (use-package avy-zap
-  :straight nil
   :bind (("M-z" . avy-zap-up-to-char-dwim)
          ("M-Z" . avy-zap-to-char-dwim)))
 
