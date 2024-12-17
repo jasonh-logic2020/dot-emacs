@@ -26,25 +26,7 @@
 
 ;;;; Code:
 
-;; using straight instead of package
-;; (defconst package-archives
-;;   '(("melpa-stable" . "https://stable.melpa.org/packages/")
-;;     ("melpa" . "https://melpa.org/packages/")
-;;     ("elpa" . "https://elpa.gnu.org/packages/")))
-
-;; (defvar package-check-signature nil)
-
-;; (require 'cl-lib)
-;; (defvar install-run nil)
-;; (when install-run
-;;   (package-initialize))
-;; ;; best guess single-user setup
-;; (defconst user-emacs-directory "~/.Emacs.d/")
-;; (defconst common-elpa-directory user-emacs-directory)
-;; (defconst common-emacs-directory user-emacs-directory)
-
-(setq gc-cons-percentage 0.5
-      gc-cons-threshold (* 128 1024 1024))
+(defconst emacs-start-time (current-time))
 
 (defun report-time-since-load (&optional suffix)
   "Log elapsedtime with label SUFFIX."
@@ -55,6 +37,67 @@
 (add-hook 'after-init-hook
           #'(lambda () (report-time-since-load " [after-init]"))
           t)
+
+(defvar file-name-handler-alist-old file-name-handler-alist)
+
+(add-hook 'after-init-hook
+          `(lambda ()
+             (setq file-name-handler-alist file-name-handler-alist-old
+                   gc-cons-threshold 800000
+                   gc-cons-percentage 0.1)
+             (message "calling garbage-collect")
+             (garbage-collect) t))
+
+(setq  package-enable-at-startup        t
+       file-name-handler-alist          nil
+       file-name-handler-alist          nil
+       message-log-max                  16384
+       gc-cons-threshold                most-positive-fixnum
+       gc-cons-percentage               0.6
+       auto-window-vscroll              nil
+       load-prefer-newer                t
+       large-file-warning-threshold     10000000)
+
+(setq load-prefer-newer t)
+;; (load (expand-file-name "local-preinit.el" user-emacs-directory) 'no-error)
+(setq package-check-signature nil)
+(unless (and (boundp 'package--initialized) package--initialized)
+  ;; don't set gnu/org/melpa if the site-local or local-preinit have
+  ;; done so (e.g. firewalled corporate environments)
+  (require 'package)
+  (setq
+   package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
+                      ("non-gnu" . "https://elpa.nongnu.org/nongnu/")
+                      ("melpa-stable" . "https://stable.melpa.org/packages/")
+                      ("melpa" . "https://melpa.org/packages/"))
+   package-archive-priorities '(("gnu" . 5)
+                                ("non-gnu" . 3)
+                                ("melpa-stable" . 2)
+                                ("melpa" . 1))))
+(package-initialize)
+(setq custom-file (expand-file-name "settings.el" user-emacs-directory))
+(load custom-file 'noerror 'nomessage)
+
+(setopt use-package-verbose t
+        use-package-always-ensure nil)
+
+(unless (package-installed-p 'vc-use-package)
+  (package-vc-install "https://github.com/slotThe/vc-use-package"))
+(require 'use-package)
+(require 'vc-use-package)
+
+
+
+(message "package-use-dir: %s" package-user-dir)
+(message "user-emacs-directory: %s" user-emacs-directory)
+
+(use-package bind-key)
+;; (use-package no-littering)
+(use-package use-package-ensure-system-package)
+
+
+(setq gc-cons-percentage 0.5
+      gc-cons-threshold (* 128 1024 1024))
 
 (eval-and-compile
   (defsubst emacs-path (path)
@@ -81,12 +124,14 @@
 (defvar dot-gnus)
 (defvar org-settings)
 
-(setq custom-file (convert-standard-filename
-                   (expand-file-name "settings.el" user-emacs-directory))
-      dot-gnus (convert-standard-filename
-                (expand-file-name "dot-gnus.el" user-emacs-directory))
-      org-settings (convert-standard-filename
-                    (expand-file-name "org-settings.el" user-emacs-directory)))
+;; (setq custom-file (convert-standard-filename
+;;                    (expand-file-name "settings.el" user-emacs-directory))
+;;       dot-gnus (convert-standard-filename
+;;                 (expand-file-name "dot-gnus.el" user-emacs-directory))
+;;       org-settings (convert-standard-filename
+;;                     (expand-file-name "org-settings.el" user-emacs-directory)))
+
+(message "package user dir:" package-user-dir)
 
 ;;;; Theme
 (set-frame-font "Deja Vu Sans Mono 8" nil t)
@@ -227,7 +272,8 @@ Meant to be added to `occur-hook'."
 (add-hook 'occur-hook #'hoagie-rename-and-select-occur-buffer)
 
 
-(use-package el-patch)
+(use-package el-patch
+  :disabled t)
 
 (use-package use-package-chords
   :config (key-chord-mode 1))
@@ -261,7 +307,7 @@ Meant to be added to `occur-hook'."
 ;; (require 'epa)
 ;; (require 'time)
 ;; (require 'epa-file)
-
+;; (require 'linum)
 ;; (epa-file-enable)
 
 (use-package epg
@@ -276,7 +322,7 @@ Meant to be added to `occur-hook'."
  major-mode             'org-mode) ; Org-mode as default mode
 
 (use-package emacs
-  :straight nil
+  :ensure nil
   :bind* ("<C-return>" . other-window)
   :custom
   ;; C source code
@@ -390,7 +436,6 @@ Meant to be added to `occur-hook'."
   (kill-do-not-save-duplicates t)
   (kill-ring-max 500)
   (kill-whole-line t)
-  (line-number-mode t)
   (mail-user-agent 'gnus-user-agent)
   (next-line-add-newlines nil)
   (save-interprogram-paste-before-kill t)
@@ -537,7 +582,6 @@ Meant to be added to `occur-hook'."
 (global-auto-revert-mode         +1) ; Reload files after modification
 (global-prettify-symbols-mode     1) ; Pretty symbols (e.g. lambda => λ)
 (global-subword-mode              1) ; Better editing of camelCasedWords
-(global-display-line-numbers-mode 1) ; Line numbers in every buffer
 (menu-bar-mode                   -1) ; No menu bar
 (tool-bar-mode                   -1) ; Don't show tool bar
 (prefer-coding-system        'utf-8) ; Always prefer UTF-8
@@ -552,6 +596,7 @@ Meant to be added to `occur-hook'."
 
 (use-package org
   :mode ("\\.org" . org-mode)
+  :after hydra
   :bind (;; ("M-C"   . jump-to-org-agenda)
          ;; ("C-c o c" . org-capture)
          ;; overloaded
@@ -675,15 +720,15 @@ Meant to be added to `occur-hook'."
 
   ;; org journal
 
-  (defhydra hydra-org (:color blue :timeout 12 :columns 4)
-    "Org commands"
-    ("i" (lambda () (interactive) (org-clock-in '(4))) "Clock in")
-    ("o" org-clock-out "Clock out")
-    ("q" org-clock-cancel "Cancel a clock")
-    ("<f10>" org-clock-in-last "Clock in the last task")
-    ("j" (lambda () (interactive) (org-clock-goto '(4))) "Go to a clock")
-    ("m" make-this-message-into-an-org-todo-item "Flag and capture this message"))
-  (global-set-key (kbd "<f10>") 'hydra-org/body)
+  ;; (defhydra hydra-org (:color blue :timeout 12 :columns 4)
+  ;;   "Org commands"
+  ;;   ("i" (lambda () (interactive) (org-clock-in '(4))) "Clock in")
+  ;;   ("o" org-clock-out "Clock out")
+  ;;   ("q" org-clock-cancel "Cancel a clock")
+  ;;   ("<f10>" org-clock-in-last "Clock in the last task")
+  ;;   ("j" (lambda () (interactive) (org-clock-goto '(4))) "Go to a clock")
+  ;;   ("m" make-this-message-into-an-org-todo-item "Flag and capture this message"))
+  ;; (global-set-key (kbd "<f10>") 'hydra-org/body)
 
   (defun get-journal-file-today ()
     "Return filename for today's journal entry."
@@ -1426,7 +1471,7 @@ end tell" (match-string 1))))
 ;;;; org-agenda
 
 (use-package org-agenda
-  :straight nil
+  :ensure nil
   :commands org-agenda-list
   :bind* (("M-C"   . jump-to-org-agenda)
           ("C-c a" . org-agenda))
@@ -1824,38 +1869,38 @@ To use this function, add it to `org-agenda-finalize-hook':
 
 (use-package org-structure-hydra
   :after '(org hydra)
-  :straight nil
+  :ensure nil
   :commands (my/org-insert-structure)
   :bind (:map org-mode-map ("<" . 'my/org-insert-structure))
   :preface
-  (defhydra hydra-org-template (:color blue :hint nil)
-    "
- _c_enter  _q_uote     _e_macs-lisp    _L_aTeX:
- _l_atex   _E_xample   _p_erl          _i_ndex:
- _a_scii   _v_erse     _P_erl tangled  _I_NCLUDE:
- _s_rc     _n_ote      plant_u_ml      _H_TML:
- _h_tml    ^ ^         ^ ^             _A_SCII:
-"
-    ("s" (hot-expand "<s"))
-    ("E" (hot-expand "<e"))
-    ("q" (hot-expand "<q"))
-    ("v" (hot-expand "<v"))
-    ("n" (hot-expand "<not"))
-    ("c" (hot-expand "<c"))
-    ("l" (hot-expand "<l"))
-    ("h" (hot-expand "<h"))
-    ("a" (hot-expand "<a"))
-    ("L" (hot-expand "<L"))
-    ("i" (hot-expand "<i"))
-    ("e" (hot-expand "<s" "emacs-lisp"))
-    ("p" (hot-expand "<s" "perl"))
-    ("u" (hot-expand "<s" "plantuml :file CHANGE.png"))
-    ("P" (hot-expand "<s" "perl" ":results output :exports both :shebang \"#!/usr/bin/env perl\"\n"))
-    ("I" (hot-expand "<I"))
-    ("H" (hot-expand "<H"))
-    ("A" (hot-expand "<A"))
-    ("<" self-insert-command "ins")
-    ("o" nil "quit"))
+  ;;   (defhydra hydra-org-template (:color blue :hint nil)
+  ;;     "
+  ;;  _c_enter  _q_uote     _e_macs-lisp    _L_aTeX:
+  ;;  _l_atex   _E_xample   _p_erl          _i_ndex:
+  ;;  _a_scii   _v_erse     _P_erl tangled  _I_NCLUDE:
+  ;;  _s_rc     _n_ote      plant_u_ml      _H_TML:
+  ;;  _h_tml    ^ ^         ^ ^             _A_SCII:
+  ;; "
+  ;;     ("s" (hot-expand "<s"))
+  ;;     ("E" (hot-expand "<e"))
+  ;;     ("q" (hot-expand "<q"))
+  ;;     ("v" (hot-expand "<v"))
+  ;;     ("n" (hot-expand "<not"))
+  ;;     ("c" (hot-expand "<c"))
+  ;;     ("l" (hot-expand "<l"))
+  ;;     ("h" (hot-expand "<h"))
+  ;;     ("a" (hot-expand "<a"))
+  ;;     ("L" (hot-expand "<L"))
+  ;;     ("i" (hot-expand "<i"))
+  ;;     ("e" (hot-expand "<s" "emacs-lisp"))
+  ;;     ("p" (hot-expand "<s" "perl"))
+  ;;     ("u" (hot-expand "<s" "plantuml :file CHANGE.png"))
+  ;;     ("P" (hot-expand "<s" "perl" ":results output :exports both :shebang \"#!/usr/bin/env perl\"\n"))
+  ;;     ("I" (hot-expand "<I"))
+  ;;     ("H" (hot-expand "<H"))
+  ;;     ("A" (hot-expand "<A"))
+  ;;     ("<" self-insert-command "ins")
+  ;;     ("o" nil "quit"))
 
   (defun hot-expand (str &optional mod header)
     "Expand org template.
@@ -2126,14 +2171,14 @@ prepended to the element after the #+HEADER: tag."
 ;;;; org-crypt
 
 (use-package org-crypt
-  :straight nil
+  :ensure nil
   :bind (:map org-mode-map
               ("C-c C-x C-/" . org-decrypt-entry)))
 
 ;;;; org-babel
 
 (use-package org-babel
-  :straight nil
+  :ensure nil
   :no-require
   :after ob-restclient
   :config
@@ -2158,7 +2203,6 @@ prepended to the element after the #+HEADER: tag."
 
 ;;;;; ob-mermaid
 (use-package ob-mermaid
-  :ensure t
   :config
   (setq ob-mermaid-use-wrapper t)
   (setq ob-mermaid-cli-path "/PATH/TO/WRAPPER/SCRIPT.sh")
@@ -2369,20 +2413,59 @@ prepended to the element after the #+HEADER: tag."
 (use-package org-opml
   :disabled t)
 
-;;;; org-pdfview
+;;;; org-noter
 
-(use-package org-pdfview
-  :after '(org)
+(use-package org-noter
   :config
-  (delete '("\\.pdf\\'" . default) org-file-apps)
-  (add-to-list 'org-file-apps '("\\.pdf\\'" . org-pdfview-open))
-  (add-to-list 'org-file-apps
-               '("\\.pdf::\\([[:digit:]]+\\)\\'" . org-pdfview-open)))
+  ;; Your org-noter config ........
+  )
+
+;;;; org-pdftools
+
+(use-package org-pdftools
+  :hook (org-mode . org-pdftools-setup-link))
+
+;;;; org-noter-pdftools
+
+(use-package org-noter-pdftools
+  :disabled t
+  :after org-noter
+  :config
+  ;; Add a function to ensure precise note is inserted
+  (defun org-noter-pdftools-insert-precise-note (&optional toggle-no-questions)
+    (interactive "P")
+    (org-noter--with-valid-session
+     (let ((org-noter-insert-note-no-questions (if toggle-no-questions
+                                                   (not org-noter-insert-note-no-questions)
+                                                 org-noter-insert-note-no-questions))
+           (org-pdftools-use-isearch-link t)
+           (org-pdftools-use-freepointer-annot t))
+       (org-noter-insert-note (org-noter--get-precise-info)))))
+
+  ;; fix https://github.com/weirdNox/org-noter/pull/93/commits/f8349ae7575e599f375de1be6be2d0d5de4e6cbf
+  (defun org-noter-set-start-location (&optional arg)
+    "When opening a session with this document, go to the current location.
+With a prefix ARG, remove start location."
+    (interactive "P")
+    (org-noter--with-valid-session
+     (let ((inhibit-read-only t)
+           (ast (org-noter--parse-root))
+           (location (org-noter--doc-approx-location (when (called-interactively-p 'any) 'interactive))))
+       (with-current-buffer (org-noter--session-notes-buffer session)
+         (org-with-wide-buffer
+          (goto-char (org-element-property :begin ast))
+          (if arg
+              (org-entry-delete nil org-noter-property-note-location)
+            (org-entry-put nil org-noter-property-note-location
+                           (org-noter--pretty-print-location location))))))))
+  (with-eval-after-load 'pdf-annot
+    (add-hook 'pdf-annot-activate-handler-functions #'org-noter-pdftools-jump-to-note)))
+
 
 ;;;; org-protocol
 
 (use-package org-protocol
-  :straight nil)
+  :ensure nil)
 
 ;;;; orca
 
@@ -2404,7 +2487,7 @@ prepended to the element after the #+HEADER: tag."
 
 (use-package org-prettify-source-block
   :disabled t ;; in favor of org-modern
-  :straight nil
+  :ensure nil
   :unless noninteractive
   :after org
   :preface
@@ -2506,7 +2589,7 @@ prepended to the element after the #+HEADER: tag."
 ;;;; org-habit
 
 (use-package org-habit
-  :straight nil
+  :ensure nil
   :after org-agenda
   :custom
   (org-habit-preceding-days 42)
@@ -2525,7 +2608,7 @@ prepended to the element after the #+HEADER: tag."
 
 (use-package org-rainbow-tags
   :disabled t
-  ;; :straight (:host github :repo "KaratasFurkan/org-rainbow-tags")
+  ;; :ensure (:host github :repo "KaratasFurkan/org-rainbow-tags")
   :custom
   (org-rainbow-tags-face-attributes
    ;; Default is '(:foreground color :weight 'bold)
@@ -2585,26 +2668,6 @@ prepended to the element after the #+HEADER: tag."
 (use-package git-link
   :bind (("C-c Y" . git-link)))
 
-;;;; org-velocity
-
-(use-package org-velocity
-  :bind ("C-, C-." . org-velocity)
-  :custom
-  '(org-velocity-always-use-bucket t)
-  '(org-velocity-bucket "~/doc/tasks/notes.org")
-  '(org-velocity-capture-templates
-    '(("v" "Velocity" entry
-       (file "~/doc/tasks/notes.org")
-       "* NOTE %:search
-%i%?
-:PROPERTIES:
-:ID:       %(shell-command-to-string \"uuidgen\"):CREATED:  %U
-:END:" :prepend t)))
-  (org-velocity-exit-on-match nil)
-  (org-velocity-force-new t)
-  (org-velocity-search-method 'regexp)
-  (org-velocity-use-completion t)
-  )
 
 ;;;; org-web-tools
 
@@ -2640,8 +2703,8 @@ prepended to the element after the #+HEADER: tag."
 ;;;; org-jira
 
 (use-package org-jira
-  :straight (org-jira :host github :repo "ahungry/org-jira")
   :defer t
+  :after hydra
   :commands (org-jira-hydra org-jira-select-board org-jira-select-spring)
   :custom (org-jira-property-overrides '("CUSTOM_ID" "self"))
   :bind (:map evil-normal-state-map ("SPC j" . org-jira-hydra))
@@ -2978,21 +3041,15 @@ prepended to the element after the #+HEADER: tag."
 (use-package ox-pandoc
   :disabled t)
 
-;;;;; ox-texinfo-plus
-
-(use-package ox-texinfo-plus
-  :straight (:host github :repo "tarsius/ox-texinfo-plus")
-  :defer t)
-
 ;;;;; ox-odt
 
 (use-package ox-odt
   :disabled t
-  :straight (org-mode-ox-odt
-             :type git
-             :host github
-             :repo "kjambunathan/org-mode-ox-odt"
-             :branch "master")
+  :ensure (org-mode-ox-odt
+           :type git
+           :host github
+           :repo "kjambunathan/org-mode-ox-odt"
+           :branch "master")
   :config
   (add-to-list 'org-export-filter-parse-tree-functions
                (defun org-odt--translate-list-tables (tree backend info)
@@ -3041,7 +3098,7 @@ prepended to the element after the #+HEADER: tag."
 
 (use-package automatically-create-directories
   :no-require t
-  :straight nil
+  :ensure nil
   :unless noninteractive
   :preface
   (defun my-find-file-automatically-create-directory
@@ -3254,13 +3311,12 @@ abort completely with `C-g'."
 (use-package anaphora      :defer t)
 (use-package apiwrap       :defer t)
 (use-package asoc
-  :defer t
-  :straight (asoc :host github :repo "troyp/asoc.el"))
+  :vc (:fetcher "github" :repo "troyp/asoc.el"))
 (use-package async         :defer t)
 (use-package button-lock   :defer t)
 (use-package ctable        :defer t)
 (use-package ct
-  :straight (ct :host github :repo "neeasade/ct.el" :branch "master"))
+  :vc (:fetcher "github" :repo "neeasade/ct.el"))
 (use-package dash          :defer t)
 (use-package deferred      :defer t)
 (use-package diminish      )
@@ -3299,16 +3355,15 @@ abort completely with `C-g'."
 (use-package noflet        :defer t)
 (use-package oauth2        :defer t)
 (use-package ov            :defer t)
-(use-package packed        :defer t)
+(use-package elx           :defer t)
 (use-package parent-mode   :defer t)
 (use-package parsebib      :defer t)
 (use-package parsec        :defer t)
 (use-package peval         :defer t
-  :straight (peval :host github :repo "Wilfred/peval"))
+  :vc (:fetcher "github" :repo "Wilfred/peval"))
 (use-package pfuture       :defer t)
 (use-package pkg-info      :defer t)
 (use-package popup         :defer t)
-(use-package popup-pos-tip :defer t)
 (use-package popwin        :defer t)
 (use-package pos-tip       :defer t)
 (use-package request       :defer t)
@@ -3316,10 +3371,15 @@ abort completely with `C-g'."
 (use-package s             :defer t)
 (use-package simple-httpd  :defer t)
 (use-package spinner       :defer t)
+;;; stopwatch
+
+(use-package stopwatch
+  :vc (:fetcher "github" :repo "blue0513/stopwatch")
+  :bind ("<f8>" . stopwatch))
 (use-package tablist       :defer t)
 (use-package uuidgen       :defer t)
 (use-package web           :defer t)
-(use-package web-server    :defer t :straight nil)
+(use-package web-server    :defer t :ensure nil)
 (use-package websocket     :defer t)
 (use-package with-editor   :defer t)
 (use-package xml-rpc       :defer t)
@@ -3327,7 +3387,7 @@ abort completely with `C-g'."
 
 (use-package crm-prompt
   :unless noninteractive
-  :straight nil
+  :ensure nil
   :no-require t
   :preface
   (defun crm-indicator (args)
@@ -3342,7 +3402,7 @@ abort completely with `C-g'."
 (use-package dubcaps-mode
   :unless noninteractive
   :no-require t
-  :straight nil
+  :ensure nil
   :preface
   (defun dcaps-to-scaps ()
     "Convert word in DOuble CApitals to Single Capitals."
@@ -3374,7 +3434,7 @@ Single Capitals as you type."
 (use-package set-scroll-margin
   :unless noninteractive
   :no-require t
-  :straight nil
+  :ensure nil
   :preface
   (defun set-scroll-margin ()
     "Make scroll margins a quarter of the window height."
@@ -3388,7 +3448,7 @@ Single Capitals as you type."
 
 (use-package display-buffer-alist
   :unless noninteractive
-  :straight nil
+  :ensure nil
   :no-require t
   :preface
   (defun prot-common-window-small-p ()
@@ -3629,7 +3689,7 @@ call NAME as a function."
 
 (use-package start-per-user-server
   :unless noninteractive
-  :straight nil
+  :ensure nil
   :defer 5
   :preface
   (require 'server)
@@ -4392,7 +4452,7 @@ Upon exiting the recursive edit (with\\[exit-recursive-edit] (exit)
 (bind-key "C-c [" 'align-regexp)
 
 (use-package comment-line-or-region
-  :straight nil
+  :ensure nil
   :unless noninteractive
   :preface
   (defun endless/comment-line-or-region (n)
@@ -4673,7 +4733,7 @@ If region is active, apply to active region instead."
 
 (use-package abbrev
   ;; internal
-  :straight nil
+  :ensure nil
   :diminish t
   :preface
   (defun define-abbrev-sedlike (text)
@@ -4761,18 +4821,6 @@ If region is active, apply to active region instead."
   (alert-play-volume 0.2)
   (alert-play-command "play"))
 
-;;;_ , ascii
-
-(use-package ascii
-  :bind ("C-c e A" . ascii-toggle)
-  :commands (ascii-on ascii-off ascii-toggle)
-  :preface
-  (defun ascii-toggle ()
-    (interactive)
-    (if ascii-display
-        (ascii-off)
-      (ascii-on))))
-
 ;;;_ , archive-region
 
 (use-package archive-region
@@ -4789,7 +4837,8 @@ If region is active, apply to active region instead."
    "Major modes for URLs.")
   (atomic-chrome-server-ghost-text-port (+ 4000 user-number))
   :config
-  (atomic-chrome-start-server))
+  (unwind-protect
+      (atomic-chrome-start-server)))
 
 (use-package auth-source-pass
   :disabled t
@@ -4827,7 +4876,7 @@ If region is active, apply to active region instead."
   (global-auto-revert-mode t))
 
 (use-package autoinsert
-  :straight nil
+  :ensure nil
   :defer t
   :bind (("C-c i a" . auto-insert))
   :config
@@ -4892,7 +4941,7 @@ If region is active, apply to active region instead."
   (setf (alist-get ?  avy-dispatch-alist) 'avy-action-mark-to-char))
 
 (use-package avy-embark
-  :straight nil
+  :ensure nil
   :no-require t
   :after (avy embark)
   :preface
@@ -4909,7 +4958,7 @@ If region is active, apply to active region instead."
   (setf (alist-get ?. avy-dispatch-alist) 'avy-action-embark))
 
 (use-package avy-flyspell
-  :straight nil
+  :ensure nil
   :no-require t
   :after avy
   :functions (flyspell-auto-correct-word)
@@ -4940,7 +4989,8 @@ If region is active, apply to active region instead."
 ;;;_ , backup-each-save
 
 (use-package backup-each-save
-  :commands backup-each-save
+  :unless noninteractive
+  :no-require t
   :preface
   (defun my-make-backup-file-name (file)
     (make-backup-file-name-1 (expand-file-name (file-truename file))))
@@ -4961,14 +5011,14 @@ If region is active, apply to active region instead."
   (setq backup-each-save-filter-function 'backup-each-save-filter
         backup-enable-predicate 'my-dont-backup-files-p))
 
+
 (use-package backup-walker
   :commands backup-walker-start)
 
-(use-package bazel
-  :disabled t)
+(use-package bazel)
 
-(use-package bazel
-  :straight (emacs-bazel-mode :host github :repo "bazelbuild/emacs-bazel-mode"))
+;; (use-package bazel
+;;   :ensure (:url "https://github.com/bazelbuild/emacs-bazel-mode"))
 
 ;;;_ , bbdb
 
@@ -4990,8 +5040,8 @@ If region is active, apply to active region instead."
   (beframe-global-buffers '("*scratch*" "*Messages*" "*ielm*" "*vterm*"
                             "*elfeed-search*" "*straight-byte-compilation*"
                             "*straight-process*" "*Native-compile-Log*"
-                            "*elfeed-log*" "*Feather dashboard*"
-                            "*Warnings*")))
+                            "*elfeed-log*" "*Warnings*")))
+
 ;;; beginend
 
 (use-package beginend
@@ -5002,7 +5052,6 @@ If region is active, apply to active region instead."
 
 (use-package blamer
   :after posframe
-  :straight (blamer :host github :repo "artawower/blamer.el")
   :custom
   (blamer-idle-time 0.3)
   (blamer-min-offset 70)
@@ -5035,11 +5084,11 @@ If region is active, apply to active region instead."
   (bm-cycle-all-buffers t)
   (bm-highlight-style 'bm-highlight-only-fringe)
   (bm-in-lifo-order t)
-  (bm-repository-file (xuser-data "bm-repository"))
+  (bm-repository-file (user-data "bm-repository"))
   (bm-restore-repository-on-load t))
 
 (use-package bookmark
-  :straight nil
+  :ensure nil
   :defer t
   :bind
   ("<f4>" . (lambda () (interactive) (bookmark-set "SAVED")))
@@ -5048,7 +5097,7 @@ If region is active, apply to active region instead."
   (bookmark-default-file (emacs-path "bookmarks")))
 
 (use-package browse-url
-  :straight nil
+  :ensure nil
   :defer t
   :config
   (setq browse-url-generic-program (or (executable-find "firefox")
@@ -5058,7 +5107,7 @@ If region is active, apply to active region instead."
   :commands browse-kill-ring)
 
 (use-package calc
-  :straight nil
+  :ensure nil
   :defer t
   :custom
   (math-additional-units
@@ -5079,14 +5128,14 @@ If region is active, apply to active region instead."
   (math-units-table nil))
 
 (use-package calendar
-  :straight nil
+  :ensure nil
   :custom
   (calendar-mark-holidays-flag t)
   (calendar-date-style 'iso)
   (diary-file (emacs-path "diary")))
 
 (use-package cal-dst
-  :straight nil
+  :ensure nil
   :custom
   (calendar-daylight-time-zone-name "PDT")
   (calendar-standard-time-zone-name "PST")
@@ -5124,28 +5173,45 @@ If region is active, apply to active region instead."
            (lambda () (not (org-in-src-block-p))))))
   (global-captain-mode +1))
 
-(use-package casual
-  :disabled t
-  :after transient
-  :commands (casual-mode)
-  :bind (:map calc-mode-map
-              ("C-o" . #'casual-main-menu)))
+;;; casual
 
-(use-package shell-maker
-  :straight (:host github :repo "xenodium/chatgpt-shell"
-                   :files ("shell-maker.el")))
+(use-package casual-calc
+  :bind (:map calc-mode-map ("C-o" . casual-calc-tmenu)))
+
+(use-package casual-info
+  :bind (:map Info-mode-map ("C-o" . casual-info-tmenu)))
+
+(use-package casual-dired
+  :bind (:map dired-mode-map ("C-o" . casual-dired-tmenu)))
+
+(use-package casual-avy
+  :bind ("M-g a" . casual-avy-tmenu))
+
+(use-package casual-isearch
+  :bind (:map isearch-mode-map ("<f2>" . casual-isearch-tmenu)))
+
+(require 'ibuffer)
+(use-package casual-ibuffer
+  :bind (:map ibuffer-mode-map
+              ("C-o" . casual-ibuffer-tmenu)
+              ("F" . casual-ibuffer-filter-tmenu)
+              ("s" . casual-ibuffer-sortby-tmenu)))
+
+(require 're-builder)
+(use-package casual-re-builder
+  :bind (:map reb-mode-map
+              ("C-o" . casual-re-builder-tmenu)))
+
+(use-package shell-maker)
 
 (use-package chatgpt-shell
   :requires shell-maker
   :custom
   (chatgpt-shell-openai-key
-   (auth-source-pick-first-password :host "api.openai.com"))
-  :straight (:host github :repo "xenodium/chatgpt-shell"
-                   :files ("chatgpt-shell.el")))
+   (auth-source-pick-first-password :host "api.openai.com")))
 
 (use-package chatgpt-shell
   :disabled t                           ; when using =package=
-  :ensure t
   :custom
   ((chatgpt-shell-api-url-base "https://api.chatgpt.domain.com")
    (chatgpt-shell-openai-key
@@ -5155,7 +5221,7 @@ If region is active, apply to active region instead."
 
 (use-package copilot
   :disabled t
-  :straight (:type git :host github :repo zerofx/copilot.el :branch master)
+  :vc (:fetcher "github" :repo "zerofx/copilot.el")
   :hook (prog-mode . copilot-mode)
   :init
   (my/toggle-map
@@ -5301,7 +5367,7 @@ If region is active, apply to active region instead."
 
 (use-package codeium
   ;; if you use straight
-  :straight '(:type git :host github :repo "Exafunction/codeium.el")
+  :vc (:fetcher "github" :repo "Exafunction/codeium.el")
   ;; otherwise, make sure that the codeium.el file is on load-path
   :custom
   (codeium/metadata/api_key "a2fd01b4-12f8-4843-9412-491259476c40")
@@ -5326,55 +5392,54 @@ If region is active, apply to active region instead."
                                       ("dis"))
                       "abled"))))
 
-  ;; use globally
-  ;; (add-to-list 'completion-at-point-functions #'codeium-completion-at-point)
-  ;; or on a hook
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local completion-at-point-functions '(codeium-completion-at-point))))
+  ;; use globally (add-to-list 'completion-at-point-functions
+  ;; #'codeium-completion-at-point) or on a hook (add-hook 'python-mode-hook
+  ;; (lambda () (setq-local completion-at-point-functions
+  ;; '(codeium-completion-at-point))))
 
-  ;; if you want multiple completion backends, use cape (https://github.com/minad/cape):
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local completion-at-point-functions
-  ;;             (list (cape-super-capf #'codeium-completion-at-point #'lsp-completion-at-point)))))
-  ;; an async company-backend is coming soon!
+  ;; if you want multiple completion backends, use cape
+  ;; (https://github.com/minad/cape): (add-hook 'python-mode-hook (lambda ()
+  ;; (setq-local completion-at-point-functions (list (cape-super-capf
+  ;; #'codeium-completion-at-point #'lsp-completion-at-point))))) an async
+  ;; company-backend is coming soon!
 
-  ;; codeium-completion-at-point is autoloaded, but you can
-  ;; optionally set a timer, which might speed up things as the
-  ;; codeium local language server takes ~0.2s to start up
-  ;; (add-hook 'emacs-startup-hook
-  ;;  (lambda () (run-with-timer 0.1 nil #'codeium-init)))
+  ;; codeium-completion-at-point is autoloaded, but you can optionally set a
+  ;; timer, which might speed up things as the codeium local language server
+  ;; takes ~0.2s to start up (add-hook 'emacs-startup-hook (lambda ()
+  ;; (run-with-timer 0.1 nil #'codeium-init)))
 
   ;; :defer t ;; lazy loading, if you want
   :config
   (setq use-dialog-box nil) ;; do not use popup boxes
 
-  ;; if you don't want to use customize to save the api-key
-  ;; (setq codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+  ;; if you don't want to use customize to save the api-key (setq
+  ;; codeium/metadata/api_key "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 
   ;; get codeium status in the modeline
   (setq codeium-mode-line-enable
         (lambda (api) (not (memq api '(CancelRequest Heartbeat AcceptCompletion)))))
   (add-to-list 'mode-line-format '(:eval (car-safe codeium-mode-line)) t)
-  ;; alternatively for a more extensive mode-line
-  ;; (add-to-list 'mode-line-format '(-50 "" codeium-mode-line) t)
+  ;; alternatively for a more extensive mode-line (add-to-list
+  ;; 'mode-line-format '(-50 "" codeium-mode-line) t)
 
-  ;; use M-x codeium-diagnose to see apis/fields that would be sent to the local language server
+  ;; use M-x codeium-diagnose to see apis/fields that would be sent to the
+  ;; local language server
   (setq codeium-api-enabled
         (lambda (api)
-          (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect AcceptCompletion))))
-  ;; you can also set a config for a single buffer like this:
-  ;; (add-hook 'python-mode-hook
-  ;;     (lambda ()
-  ;;         (setq-local codeium/editor_options/tab_size 4)))
+          (memq api '(GetCompletions Heartbeat CancelRequest GetAuthToken RegisterUser auth-redirect
+                                     AcceptCompletion))))
+  ;; you can also set a config for a single buffer like this: (add-hook
+  ;; 'python-mode-hook (lambda () (setq-local codeium/editor_options/tab_size
+  ;; 4)))
 
-  ;; You can overwrite all the codeium configs!
-  ;; for example, we recommend limiting the string sent to codeium for better performance
+  ;; You can overwrite all the codeium configs! for example, we recommend
+  ;; limiting the string sent to codeium for better performance
   (defun my-codeium/document/text ()
-    (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point) 1000) (point-max))))
-  ;; if you change the text, you should also change the cursor_offset
-  ;; warning: this is measured by UTF-8 encoded bytes
+    (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (min (+ (point)
+                                                                               1000)
+                                                                            (point-max))))
+  ;; if you change the text, you should also change the cursor_offset warning:
+  ;; this is measured by UTF-8 encoded bytes
   (defun my-codeium/document/cursor_offset ()
     (codeium-utf8-byte-length
      (buffer-substring-no-properties (max (- (point) 3000) (point-min)) (point))))
@@ -5382,8 +5447,7 @@ If region is active, apply to active region instead."
   (setq codeium/document/cursor_offset 'my-codeium/document/cursor_offset)
 
   (when-let ((codeium/metadata/api_key (auth-source-pass-get 'secret "api.codeium.com")))
-    (codeium-init))
-  )
+    (codeium-init)))
 
 ;;;_ , color-moccur
 
@@ -5399,7 +5463,7 @@ If region is active, apply to active region instead."
          ("C-c e L" . clm/open-command-log-buffer)))
 
 (use-package compile
-  :straight nil
+  :ensure nil
   :bind (("C-c c" . compile)
          ("M-O"   . show-compilation))
   :bind (:map compilation-mode-map
@@ -5483,17 +5547,9 @@ If region is active, apply to active region instead."
   (global-corfu-mode +1))
 
 (use-package popon
-  :straight (:type git
-                   :host codeberg
-                   :repo "akib/emacs-popon"
-                   :branch "master")
   :unless (display-graphic-p))
 
 (use-package corfu-terminal
-  :straight (:type git
-                   :host codeberg
-                   :repo "akib/emacs-corfu-terminal"
-                   :branch "master")
   :requires popon
   :unless (display-graphic-p)
   :config
@@ -5501,7 +5557,7 @@ If region is active, apply to active region instead."
 
 (use-package elisp-mode-cape
   :no-require t
-  :straight nil
+  :ensure nil
   :after (cape elisp-mode)
   :hook (emacs-lisp-mode . my/setup-elisp)
   :preface
@@ -5515,7 +5571,7 @@ If region is active, apply to active region instead."
 
 (use-package codeium-mode-cape
   :no-require t
-  :straight nil
+  :ensure nil
   :after (cape codeium)
   :hook (codeium-mode . my/setup-cape-codeium)
   :config
@@ -5526,8 +5582,8 @@ If region is active, apply to active region instead."
         (cape-capf-properties #'codeium-completion-at-point
                               :annotation-function
                               #'(lambda (_) (propertize
-                                        "  Codeium"
-                                        'face font-lock-comment-face)))))))
+                                             "  Codeium"
+                                             'face font-lock-comment-face)))))))
   (defun my/codeium-capf ()
     "add codeium to capf"
     (add-to-list 'completion-at-point-functions
@@ -5778,12 +5834,7 @@ If region is active, apply to active region instead."
   :config
   (consult-eglot-embark-mode +1))
 
-(use-package consult-projectile
-  :straight (consult-projectile
-             :type git
-             :host gitlab
-             :repo "OlMon/consult-projectile"
-             :branch "master"))
+(use-package consult-projectile)
 
 (use-package copy-as-format
   :bind (("C-c w m" . copy-as-format-markdown)
@@ -5800,25 +5851,19 @@ If region is active, apply to active region instead."
             (replace-regexp-in-string "-mode\\'" "" (symbol-name major-mode))
             text)))
 
-;;;_ , crosshairs
-
-(use-package crosshairs
-  :unless (or install-run noninteractive)
-  :bind ("M-o c" . crosshairs-mode))
-
 (use-package ctrlf
   :config (ctrlf-mode +1))
 
 (use-package current-word-highlight-mode
   :disabled t
-  :unless (or install-run noninteractive))
+  :unless (noninteractive))
 
 ;;;_ , css-eldoc
 
 (use-package css-eldoc)
 
 (use-package dabbrev
-  :straight nil
+  :ensure nil
   :bind ("C-M-/" . dabbrev-expand)
   :custom
   (dabbrev-case-fold-search nil)
@@ -5849,7 +5894,7 @@ If region is active, apply to active region instead."
 
 (use-package devdocs
   :disabled t
-  :straight nil
+  :ensure nil
   :autoload (devdocs--installed-docs devdocs--available-docs)
   :bind (:map prog-mode-map
               ("M-<f1>" . devdocs-dwim)
@@ -5904,7 +5949,7 @@ Install the doc if it's not installed."
   :commands (diff-hl-mode diff-hl-dired-mode))
 
 (use-package diff-hl-flydiff
-  :straight nil
+  :ensure nil
   :after diff-hl
   :commands diff-hl-flydiff-mode)
 
@@ -5936,7 +5981,7 @@ Install the doc if it's not installed."
 ;;;_ , dired
 
 (use-package dired
-  :straight nil
+  :ensure nil
   :diminish dired-omit-mode
   :bind ("C-c j" . dired-two-pane)
   :bind (:map dired-mode-map
@@ -6057,7 +6102,7 @@ Install the doc if it's not installed."
         (error "No more than 2 files should be marked")))))
 
 (use-package dired-follow
-  :straight nil
+  :ensure nil
   :no-require t
   :after dired
   :bind (:map dired-mode-map
@@ -6077,7 +6122,7 @@ Install the doc if it's not installed."
 
 (use-package dired-hist
   :after dired
-  :straight (dired-hist :type git :host github :repo "karthink/dired-hist")
+  :vc (:fetcher "github" :repo "karthink/dired-hist")
   :bind (:map  dired-mode-map
                ("M-<" . dired-hist-go-back)
                ("M->" . dired-hist-go-forward))
@@ -6128,12 +6173,13 @@ Install the doc if it's not installed."
   :config
   (global-disable-mouse-mode +1))
 
-;;;_ , display-line-numbers-
+;;; display-line-numbers
 
 (use-package display-line-numbers
+  :disabled t
   :hook (org-mode prog-mode) . #'display-line-numbers-mode)
 
-;;;_ , docker
+;;; docker
 
 (use-package docker
   :defer
@@ -6143,7 +6189,7 @@ Install the doc if it's not installed."
 (use-package docker-compose-mode
   :mode "docker-compose.*\.yml\\'")
 
-;;;_ , dockerfile
+;;; dockerfile
 
 (use-package dockerfile-mode
   ;; BULK-ENSURE :ensure t
@@ -6213,148 +6259,148 @@ Install the doc if it's not installed."
   (doom-modeline-buffer-file-name-style 'truncate-except-project)
   :config
   (doom-modeline-def-segment ati-erc-server-alive
-    "An `all-the-icons’ segment for erc-server-process-alive"
-    (if (erc-server-process-alive)
-        (all-the-icons-faicon "bolt")
-      (all-the-icons-faicon "close")))
+                             "An `all-the-icons’ segment for erc-server-process-alive"
+                             (if (erc-server-process-alive)
+                                 (all-the-icons-faicon "bolt")
+                               (all-the-icons-faicon "close")))
 
   (doom-modeline-def-segment ati-lui-track
-    "An `all-the-icons' segment for tracking-mode"
-    (when (bound-and-true-p erc-track-mode)
-      (let ((shortened (mapcar*
-                        #'cons (mapcar
-                                (lambda (x) (buffer-name (car x)))
-                                erc-modified-channels-alist)
-                        (erc-unique-substrings
-                         (mapcar
-                          (lambda (x)
-                            (let ((name (buffer-name (car x))))
-                              (cond
-                               ((string-match "#twitter_" name)
-                                (substring name 9))
-                               ((string-match "#" name)
-                                (substring name 2))
-                               (t name))))
+                             "An `all-the-icons' segment for tracking-mode"
+                             (when (bound-and-true-p erc-track-mode)
+                               (let ((shortened (mapcar*
+                                                 #'cons (mapcar
+                                                         (lambda (x) (buffer-name (car x)))
+                                                         erc-modified-channels-alist)
+                                                 (erc-unique-substrings
+                                                  (mapcar
+                                                   (lambda (x)
+                                                     (let ((name (buffer-name (car x))))
+                                                       (cond
+                                                        ((string-match "#twitter_" name)
+                                                         (substring name 9))
+                                                        ((string-match "#" name)
+                                                         (substring name 2))
+                                                        (t name))))
 
-                          erc-modified-channels-alist)))))
-        (mapcar (lambda (b)
-                  (propertize
-                   (let ((name (buffer-name (car b)))
-                         (the-count (number-to-string (cadr b))))
-                     (cond
-                      ((string-match "#mercurial" name)
-                       (concat
-                        " "
-                        (all-the-icons-faicon "mercury" :v-adjust 0.1)
-                        the-count))
+                                                   erc-modified-channels-alist)))))
+                                 (mapcar (lambda (b)
+                                           (propertize
+                                            (let ((name (buffer-name (car b)))
+                                                  (the-count (number-to-string (cadr b))))
+                                              (cond
+                                               ((string-match "#mercurial" name)
+                                                (concat
+                                                 " "
+                                                 (all-the-icons-faicon "mercury" :v-adjust 0.1)
+                                                 the-count))
 
 
-                      ((string-match "#bitbucket" name)
-                       (concat
-                        " "
-                        (all-the-icons-faicon "bitbucket" :v-adjust 0.1)
-                        the-count))
+                                               ((string-match "#bitbucket" name)
+                                                (concat
+                                                 " "
+                                                 (all-the-icons-faicon "bitbucket" :v-adjust 0.1)
+                                                 the-count))
 
-                      ((string-match "#twitter_" name)
-                       (concat " "
-                               (all-the-icons-faicon "twitter" :v-adjust 0.1)
-                               (let ((short-lookup (assoc name shortened)))
-                                 (if short-lookup (cdr short-lookup) name))
-                               ":"
-                               the-count))
+                                               ((string-match "#twitter_" name)
+                                                (concat " "
+                                                        (all-the-icons-faicon "twitter" :v-adjust 0.1)
+                                                        (let ((short-lookup (assoc name shortened)))
+                                                          (if short-lookup (cdr short-lookup) name))
+                                                        ":"
+                                                        the-count))
 
-                      (t (concat " "
-                                 (all-the-icons-material
-                                  "person" :v-adjust -0.1)
-                                 name
-                                 ":"
-                                 the-count))))
-                   'face '(:height 0.9 :inherit)
-                   'help-echo "ERC"))
-                erc-modified-channels-alist))))
+                                               (t (concat " "
+                                                          (all-the-icons-material
+                                                           "person" :v-adjust -0.1)
+                                                          name
+                                                          ":"
+                                                          the-count))))
+                                            'face '(:height 0.9 :inherit)
+                                            'help-echo "ERC"))
+                                         erc-modified-channels-alist))))
 
   (doom-modeline-def-segment ati-erc-track
-    "An `all-the-icons' segment for `erc-track’"
-    (when (bound-and-true-p erc-track-mode)
-      (let ((shortened (mapcar* #'cons
-                                (mapcar
-                                 (lambda (x) (buffer-name (car x)))
-                                 erc-modified-channels-alist)
-                                (erc-unique-substrings
-                                 (mapcar
-                                  (lambda (x)
-                                    (let ((name (buffer-name (car x))))
-                                      (cond
-                                       ((string-match "#twitter_" name)
-                                        (substring name 9))
-                                       ((string-match "#" name)
-                                        (substring name 2))
-                                       (t name))))
+                             "An `all-the-icons' segment for `erc-track’"
+                             (when (bound-and-true-p erc-track-mode)
+                               (let ((shortened (mapcar* #'cons
+                                                         (mapcar
+                                                          (lambda (x) (buffer-name (car x)))
+                                                          erc-modified-channels-alist)
+                                                         (erc-unique-substrings
+                                                          (mapcar
+                                                           (lambda (x)
+                                                             (let ((name (buffer-name (car x))))
+                                                               (cond
+                                                                ((string-match "#twitter_" name)
+                                                                 (substring name 9))
+                                                                ((string-match "#" name)
+                                                                 (substring name 2))
+                                                                (t name))))
 
-                                  erc-modified-channels-alist)))))
-        (mapcar (lambda (b)
-                  (propertize
-                   (let ((name (buffer-name (car b)))
-                         (the-count (number-to-string (cadr b))))
-                     (cond
-                      ((string-match "#mercurial" name)
-                       (concat
-                        " "
-                        (all-the-icons-faicon "mercury" :v-adjust 0.1)
-                        the-count))
+                                                           erc-modified-channels-alist)))))
+                                 (mapcar (lambda (b)
+                                           (propertize
+                                            (let ((name (buffer-name (car b)))
+                                                  (the-count (number-to-string (cadr b))))
+                                              (cond
+                                               ((string-match "#mercurial" name)
+                                                (concat
+                                                 " "
+                                                 (all-the-icons-faicon "mercury" :v-adjust 0.1)
+                                                 the-count))
 
 
-                      ((string-match "#bitbucket" name)
-                       (concat
-                        " "
-                        (all-the-icons-faicon "bitbucket" :v-adjust 0.1)
-                        the-count))
+                                               ((string-match "#bitbucket" name)
+                                                (concat
+                                                 " "
+                                                 (all-the-icons-faicon "bitbucket" :v-adjust 0.1)
+                                                 the-count))
 
-                      ((string-match "#twitter_" name)
-                       (concat " "
-                               (all-the-icons-faicon "twitter" :v-adjust 0.1)
-                               (let ((short-lookup (assoc name shortened)))
-                                 (if short-lookup (cdr short-lookup) name))
-                               ":"
-                               the-count))
+                                               ((string-match "#twitter_" name)
+                                                (concat " "
+                                                        (all-the-icons-faicon "twitter" :v-adjust 0.1)
+                                                        (let ((short-lookup (assoc name shortened)))
+                                                          (if short-lookup (cdr short-lookup) name))
+                                                        ":"
+                                                        the-count))
 
-                      (t (concat " "
-                                 (all-the-icons-material
-                                  "person" :v-adjust -0.1)
-                                 name
-                                 ":"
-                                 the-count))))
-                   'face '(:height 0.9 :inherit)
-                   'help-echo "ERC"))
-                erc-modified-channels-alist))))
+                                               (t (concat " "
+                                                          (all-the-icons-material
+                                                           "person" :v-adjust -0.1)
+                                                          name
+                                                          ":"
+                                                          the-count))))
+                                            'face '(:height 0.9 :inherit)
+                                            'help-echo "ERC"))
+                                         erc-modified-channels-alist))))
 
   (doom-modeline-def-segment keycast-key
-    (when (bound-and-true-p keycast-mode)
-      (when-let ((casting keycast-mode)
-                 (active (doom-modeline--active))
-                 (key (ignore-errors
-                        (key-description keycast--this-command-keys))))
-        (concat
-         doom-modeline-spc
-         (propertize key 'face 'doom-modeline-evil-visual-state)
-         doom-modeline-spc))))
+                             (when (bound-and-true-p keycast-mode)
+                               (when-let ((casting keycast-mode)
+                                          (active (doom-modeline--active))
+                                          (key (ignore-errors
+                                                 (key-description keycast--this-command-keys))))
+                                 (concat
+                                  doom-modeline-spc
+                                  (propertize key 'face 'doom-modeline-evil-visual-state)
+                                  doom-modeline-spc))))
 
   (doom-modeline-def-segment keycast-cmd
-    (when (bound-and-true-p keycast-mode)
-      (when-let ((casting keycast-mode)
-                 (active (doom-modeline--active))
-                 (cmd keycast--this-command)
-                 (rep keycast--command-repetitions))
-        (propertize
-         (concat
-          doom-modeline-spc
-          (format "%s" cmd)
-          (if (> rep 0)
-              (format " x%s" (1+ rep))
-            "")
-          doom-modeline-spc)
-         'face 'doom-modeline-evil-visual-state))
-      ))
+                             (when (bound-and-true-p keycast-mode)
+                               (when-let ((casting keycast-mode)
+                                          (active (doom-modeline--active))
+                                          (cmd keycast--this-command)
+                                          (rep keycast--command-repetitions))
+                                 (propertize
+                                  (concat
+                                   doom-modeline-spc
+                                   (format "%s" cmd)
+                                   (if (> rep 0)
+                                       (format " x%s" (1+ rep))
+                                     "")
+                                   doom-modeline-spc)
+                                  'face 'doom-modeline-evil-visual-state))
+                               ))
 
   (add-to-list 'global-mode-string '(:eval
                                      (doom-modeline-segment--ati-erc-track))
@@ -6363,6 +6409,7 @@ Install the doc if it's not installed."
 ;;;_ , dumb-jump
 
 (use-package dumb-jump
+  :after hydra
   :bind (("M-g o" . dumb-jump-go-other-window)
          ("M-g j" . dumb-jump-go)
          ("M-g b" . dumb-jump-back)
@@ -6495,8 +6542,9 @@ Install the doc if it's not installed."
 ;;     (add-hook 'after-init-hook 'server-start t)
 ;;     (add-hook 'after-init-hook 'edit-server-start t)))
 
-(use-package lsp-pyright
-  :ensure t)
+;;; lsp-pyright
+
+(use-package lsp-pyright)
 
 ;;; eglot
 
@@ -6558,12 +6606,12 @@ Install the doc if it's not installed."
   :hook (python-mode . eglot-ensure))
 
 (use-package eglot-booster
-  :straight (:host github :repo "jdtsmith/eglot-booster")
+  :vc (:fetcher "github" :repo "jdtsmith/eglot-booster")
   :after eglot
   :config (eglot-booster-mode +1))
 
 (use-package eglot-orderless
-  :straight nil
+  :ensure nil
   :no-require t
   :after (eglot orderless)
   :config
@@ -6700,7 +6748,7 @@ Install the doc if it's not installed."
   (elfeed-org))
 
 (use-package elfeed-tube
-  :straight (:host github :repo "karthink/elfeed-tube")
+  :vc (:fetcher "github" :repo "karthink/elfeed-tube")
   :after elfeed
   :config
   ;; (setq elfeed-tube-auto-save-p nil) ;; t is auto-save (not default)
@@ -6747,7 +6795,7 @@ Install the doc if it's not installed."
 ;;; ement
 
 (use-package ement
-  :straight (ement :host github :repo "alphapapa/ement.el"))
+  :vc (:fetcher "github" :repo "https://github.com/alphapapa/ement.el"))
 
 ;;; elsa
 
@@ -6774,7 +6822,7 @@ Install the doc if it's not installed."
 ;;; empv
 
 (use-package empv
-  :straight (:host github :repo "isamert/empv.el"))
+  :vc (:fetcher "github" :repo "isamert/empv.el"))
 
 ;;;_ , erc
 
@@ -6845,7 +6893,7 @@ Install the doc if it's not installed."
   (engine-mode t))
 
 (use-package erc
-  :straight nil
+  :ensure nil
   :preface
   (require 'erc)
   ;; (require 'erc-sound)
@@ -6998,7 +7046,7 @@ FORM => (eval FORM)."
   (bind-key "C-y" 'erc-yank erc-mode-map))
 
 ;; (use-package erc
-;;   :straight nil
+;;   :ensure nil
 ;;   :preface
 ;;   (require 'erc)
 ;;   :custom-face
@@ -7021,7 +7069,7 @@ FORM => (eval FORM)."
 ;;   (erc-connect-pre . (lambda (x) (erc-update-modules))))
 
 (use-package erc-timestamp
-  :straight nil
+  :ensure nil
   :no-require t
   :preface
   (make-variable-buffer-local
@@ -7042,7 +7090,7 @@ FORM => (eval FORM)."
   )
 
 ;; (use-package erc-fill
-;;   :straight nil
+;;   :ensure nil
 ;;   :preface
 ;;   ;; set erc-fill-column based on buffer size
 ;;   (make-variable-buffer-local 'erc-fill-column)
@@ -7063,7 +7111,7 @@ FORM => (eval FORM)."
 ;;   )
 
 ;; (use-package erc-track
-;;   :straight nil
+;;   :ensure nil
 ;;   :custom
 ;;   (erc-track-exclude-types '("JOIN" "NICK" "PART" "QUIT" "MODE"
 ;;                              "324" "329" "332" "333" "353" "477"))
@@ -7083,7 +7131,7 @@ FORM => (eval FORM)."
 ;;   (erc-track-mode +1))
 
 (use-package erc-log
-  :straight nil
+  :ensure nil
   :custom
   (erc-log-channels-directory (expand-file-name "erc/logs"
                                                 user-emacs-directory))
@@ -7103,16 +7151,16 @@ FORM => (eval FORM)."
                  . erc-view-log-mode)))
 
 (use-package erc-spelling
-  :straight nil
+  :ensure nil
   :init (erc-spelling-mode t))
 
 ;; (use-package erc-autoaway
-;;   :straight nil
+;;   :ensure nil
 ;;   :config
 ;;   (add-to-list 'erc-modules 'autoaway))
 
 (use-package erc-desktop-notifications
-  :straight nil
+  :ensure nil
   :config
   (add-to-list 'erc-modules 'notifications))
 
@@ -7131,17 +7179,17 @@ FORM => (eval FORM)."
 ;; (use-package erc-colorize
 ;;   :disabled t
 ;;   :no-require t
-;;   :straight nil
+;;   :ensure nil
 ;;   :config
 ;;   (add-to-list 'erc-modules 'colorize))
 
 ;; (use-package erc-crypt
 ;;   :disabled t
-;;   :straight nil)
+;;   :ensure nil)
 
 ;; (use-package erc-truncate
 ;;   :no-require t
-;;   :straight nil
+;;   :ensure nil
 ;;   ;; :functions erc-truncate-buffer-on-save
 ;;   :custom
 ;;   (erc-max-buffer-size 500000)
@@ -7164,7 +7212,7 @@ FORM => (eval FORM)."
 ;;   (erc-insert-post . #'erc-truncate-buffer))
 
 (use-package erc-goodies
-  :straight nil
+  :ensure nil
   :config
   (add-to-list 'erc-modules 'smiley)
   (add-to-list 'erc-modules 'move-to-prompt)
@@ -7375,7 +7423,7 @@ display, depending on the window manager)."
   :after (:any ess-r-mode inferior-ess-r-mode ess-r-transcript-mode))
 
 (use-package etags
-  :straight nil
+  :ensure nil
   :bind ("M-T" . tags-search)
   :custom
   (tags-add-tables t)
@@ -7421,13 +7469,10 @@ display, depending on the window manager)."
          ("M-o M-o" . change-outer)))
 
 (use-package ffap
-  :straight nil
+  :ensure nil
   :bind (("C-c v"     . ffap)
          ("C-c <tab>" . ff-find-other-file)))
 
-(use-package feather
-  :config
-  :hook (after-init . (lambda () (feather-mode +1))))
 
 (use-package feed-discovery)
 
@@ -7657,7 +7702,7 @@ display, depending on the window manager)."
          ("<f15>" . fold-dwim-show-all)))
 
 (use-package font-lock
-  :straight nil
+  :ensure nil
   :defer t
   :custom
   (global-font-lock-mode t)
@@ -7835,10 +7880,9 @@ display, depending on the window manager)."
   :hook (gptel-mode . visual-line-mode)
   :custom
   (gptel-default-mode 'org-mode)
-  (gptel-model "gpt-4-1106-preview")
+  (gptel-model 'claude-3-5-sonnet-20240620)
+  ;; (gptel-model "gpt-4-1106-preview")
   (gptel-api-key (auth-source-pass-get 'secret "chat.openai.com"))
-  :config
-  ;; (gptel-model "claude-3-opus-20240229")
   (gptel-directives
    '((default . "You are a large language model living in Emacs and a helpful assistant. Respond concisely.")
      (english . "I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified A0-level words and sentences with more beautiful and elegant, upper level English words and sentences. Keep the meaning same, but make them more literary. I want you to only reply the correction, the improvements and nothing else, do not write explanations.")
@@ -7849,12 +7893,26 @@ display, depending on the window manager)."
      (positive-programming . "Your goal is to help the user become an amazing computer programmer. You are positive and encouraging. You love see them learn. You do not repeat obvious things, including their query. You are as concise in responses. You always guide the user go one level deeper and help them see patterns. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")
      (travel-guide . "I want you to act as a travel guide. I will write you my location and you will suggest a place to visit near my location. In some cases, I will also give you the type of places I will visit. You will also suggest me places of similar type that are close to my first location.")
      (seminar-organizer . "You are a seminar organizer, you plan and put together meetings where people can come together and share ideas, plan, and learn about how to facilitate larger groups. You present your information in a kindly yet efficient manner,and use precise language to make details very clear for those who read your letters.")
-     (persian-translator . "You are a translator from English into the Persian language for the Bahá’í World Centre. You take great care to be accurate and meaningful in your translations, while using the commonly accepted terms found in letters from Shoghi Effendi and the Universal House of Justice. You prize clarity but also value beauty and elegant in what you write. However, the goal is to communicate meaning, and not to attempt to sound lofty or poetic. You are concise yet expressive, profound yet not heavy-handed."))))
+     (persian-translator . "You are a translator from English into the Persian language for the Bahá’í World Centre. You take great care to be accurate and meaningful in your translations, while using the commonly accepted terms found in letters from Shoghi Effendi and the Universal House of Justice. You prize clarity but also value beauty and elegant in what you write. However, the goal is to communicate meaning, and not to attempt to sound lofty or poetic. You are concise yet expressive, profound yet not heavy-handed.")))
+  
+  :config
+  (defun read-file-contents (file-path)
+    "Read the contents of FILE-PATH and return it as a string."
+    (with-temp-buffer
+      (insert-file-contents file-path)
+      (buffer-string)))
+  (defun gptel-api-key ()
+    (read-file-contents "~/secrets/claude_key"))
+  (setq
+   gptel-backend (gptel-make-anthropic "Claude"
+                   :stream t
+                   :key #'gptel-api-key)))
+
 
 ;;; gptel-openai
 
 (use-package gptel-openai
-  :straight nil
+  :ensure nil
   :after gptel
   :custom
   (gptel-api-key (auth-source-pass-get 'secret "chat.openai.com")))
@@ -7862,7 +7920,7 @@ display, depending on the window manager)."
 ;;; gptel-transient
 
 (use-package gptel-transient
-  :straight nil
+  :ensure nil
   :after gptel
   :config
   (when (ignore-errors (transient-get-suffix 'gptel-menu "RET"))
@@ -7871,7 +7929,7 @@ display, depending on the window manager)."
 ;;; gptel-curl
 
 (use-package gptel-curl
-  :straight nil
+  :ensure nil
   :after gptel
   :config
   (defconst gptel-curl--common-args
@@ -7923,7 +7981,7 @@ display, depending on the window manager)."
 
 ;;; gtags
 
-(use-package gtags
+(use-package gtags-mode
   :defer t
   :commands gtags-mode
   :diminish gtags-mode
@@ -7947,13 +8005,7 @@ display, depending on the window manager)."
     (bind-key "C-c t r" 'gtags-find-rtag)
     (bind-key "C-c t v" 'gtags-visit-rootdir)
 
-    (bind-key "<mouse-2>" 'gtags-find-tag-from-here gtags-mode-map)
-
-    (use-package helm-gtags
-      :disabled t
-      :bind ("M-T" . helm-gtags-select)
-      :config
-      (bind-key "M-," 'helm-gtags-resume gtags-mode-map))))
+    (bind-key "<mouse-2>" 'gtags-find-tag-from-here gtags-mode-map)))
 
 ;;; gud
 
@@ -7981,54 +8033,8 @@ display, depending on the window manager)."
 
 ;;; haskell-mode
 
-(use-package haskell-mode
-  :config)
+(use-package haskell-mode)
 
-;;; header2
-
-(use-package header2
-  ;; TBD no package but exists on emacsmirror
-  :disabled t)
-
-;; ;;;_ , helm
-
-;; ;; (defvar helm-alive-p nil)
-
-;; ;; (use-package helm-config
-;; ;;
-;; ;;   :init
-;; ;;   (progn
-;; ;;     (bind-key "C-c M-x" 'helm-M-x)
-;; ;;     (bind-key "C-h a" 'helm-c-apropos)
-;; ;;     (bind-key "M-s a" 'helm-do-grep)
-;; ;;     (bind-key "M-s b" 'helm-occur)
-;; ;;     (bind-key "M-s F" 'helm-for-files)
-
-;; ;;     (use-package helm-commands)
-
-;; ;;     (use-package helm-flycheck
-;; ;;       :bind ("C-c ! h" . helm-flycheck))
-
-;; ;;     (bind-key "C-h e a" 'my-helm-apropos)
-;; ;;     (bind-key "C-x M-!" 'helm-command-from-zsh)
-;; ;;     (bind-key "C-x f" 'helm-find-git-file)
-
-;; ;;     (use-package helm-descbinds
-;; ;;       :commands helm-descbinds
-;; ;;       :init
-;; ;;       (fset 'describe-bindings 'helm-descbinds))
-
-;; ;;     (bind-key "C-h b" 'helm-descbinds))
-
-;; ;;   :config
-;; ;;   (helm-match-plugin-mode t))
-
-;; ;;;_ , help-mode
-
-;; (use-package help-mode+
-;;   :defer t
-;;   :bind (:map help-mode-map
-;;               ("<tab>" . forward-button)))
 
 ;;; helpful
 
@@ -8044,7 +8050,7 @@ display, depending on the window manager)."
 ;;; hi-lock
 
 (use-package hi-lock
-  :straight nil
+  :ensure nil
   :bind (("M-o l" . highlight-lines-matching-regexp)
          ("M-o r" . highlight-regexp)
          ("M-o w" . highlight-phrase)))
@@ -8158,10 +8164,8 @@ display, depending on the window manager)."
 
 (use-package holymotion
   :disabled t
-  :straight (holymotion :type git
-                        :host github
-                        :repo "Overdr0ne/holymotion"
-                        :branch "main")
+  :vc (:fetvcher "github" :repo "Overdr0ne/holymotion"
+                 :branch "main")
   :config
   ;; define some custom motions, I'm using smartparens here
   (holymotion-make-motion
@@ -8393,7 +8397,7 @@ display, depending on the window manager)."
 (use-package ielm
   :unless noninteractive
   :no-require t
-  :straight nil
+  :ensure nil
   :commands ielm
   :bind (:map ielm-map ("<return>" . my-ielm-return))
   :config
@@ -8461,7 +8465,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; image-file
 
 (use-package image-file
-  :straight nil
+  :ensure nil
   :init
   (auto-image-file-mode 1))
 
@@ -8493,7 +8497,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; indent-bars
 
 (use-package indent-bars
-  :straight (indent-bars :type git :host github :repo "jdtsmith/indent-bars")
+  :vc (:fetcher "github" :repo "jdtsmith/indent-bars")
   :custom
   (indent-bars-treesit-support t)
   (indent-bars-no-descend-string t)
@@ -8537,7 +8541,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; isearch
 
 (use-package isearch
-  :straight nil
+  :ensure nil
   :no-require t
   :bind (("C-M-r" . isearch-backward-other-window)
          ("C-M-s" . isearch-forward-other-window))
@@ -8794,12 +8798,12 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package listen
   :disabled t
-  :straight '(:type git :host github :repo "alphapapa/listen.el"))
+  :vc (:fetvher "github" :repo "alphapapa/listen.el"))
 
 ;;; lisp-mode
 
 (use-package lisp-mode
-  :straight nil
+  :ensure nil
   :hook (emacs-lisp-mode .
                          (lambda () (add-hook 'after-save-hook 'check-parens nil t)))
   :hook (lisp-mode . (lambda () (add-hook 'after-save-hook 'check-parens nil t)))
@@ -8872,12 +8876,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :config
   (global-eldoc-overlay-mode +1))
 
-;;; cldoc
-
-(use-package cldoc
-  :commands (cldoc-mode turn-on-cldoc-mode)
-  :diminish cldoc-mode)
-
 ;;; elisp-depend
 
 (use-package elisp-depend
@@ -8938,19 +8936,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 (use-package log4j-mode
   :disabled t
   :mode ("\\.log\\'" . log4j-mode))
-
-;;; lsp-bridge
-
-(use-package lsp-bridge
-  :straight '(lsp-bridge :type git
-                         :host github
-                         :repo "manateelazycat/lsp-bridge"
-                         :files (:defaults "*.el" "*.py" "acm"
-                                           "core" "langserver"
-                                           "multiserver" "resources")
-                         :build (:not compile))
-  :init
-  (global-lsp-bridge-mode))
 
 ;;; lsp-java
 
@@ -9024,6 +9009,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   :defer t)
 
 (use-package magit-filenotify
+  :disabled t
   :after magit)
 
 ;;; magithub
@@ -9093,7 +9079,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; move-lines
 
 (use-package move-lines
-  :straight nil
+  :ensure nil
   :no-require t
   :demand t
   :bind (([(meta shift up)]   . my/move-line-up)
@@ -9112,7 +9098,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; mule
 
 (use-package mule
-  :straight nil
+  :ensure nil
   :init
   (progn
     (prefer-coding-system 'utf-8)
@@ -9297,14 +9283,14 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; mc-freeze
 
 (use-package mc-freeze
-  :straight nil
+  :ensure nil
   :after multiple-cursors
   :bind ("<C-m> f" . mc/freeze-fake-cursors-dwim))
 
 ;;; mc-rect
 
 (use-package mc-rect
-  :straight nil
+  :ensure nil
   :after multiple-cursors
   :bind ("<C-m> ]" . mc/rect-rectangle-to-multiple-cursors))
 
@@ -9324,7 +9310,6 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; nerd-icons-completion
 
 (use-package nerd-icons-completion
-  :straight (nerd-icons-completion :type git :host github :repo "rainstormstudio/nerd-icons-completion")
   :config
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
@@ -9332,15 +9317,21 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; nerd-icons-dired
 
 (use-package nerd-icons-dired
-  :straight (nerd-icons-dired :type git :host github :repo "rainstormstudio/nerd-icons-dired")
   :hook
   (dired-mode . nerd-icons-dired-mode))
 
 ;;; nerd-icons-ibuffer
 
 (use-package nerd-icons-ibuffer
-  :straight (nerd-icons-ibuffer :type git :host github :repo "seagle0128/nerd-icons-ibuffer")
   :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+
+;;; nlinum
+(use-package nlinum
+  :init
+  (setf (symbol-function 'global-linum-mode) #'global-nlinum-mode)
+  :config
+  (global-nlinum-mode +1))
+
 
 ;;; nroff-mode
 
@@ -9366,7 +9357,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; nxml-mode
 
 (use-package nxml-mode
-  :straight nil
+  :ensure nil
   :commands nxml-mode
   :init
   (defalias 'xml-mode 'nxml-mode)
@@ -9407,10 +9398,18 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   (add-to-list 'completion-styles 'substring)
   (add-to-list 'completion-styles 'orderless))
 
+;;; orglink
+
+(use-package orglink
+  :config
+  (global-orglink-mode 1)
+  :custom
+  (orglink-activate-in-modes '(lisp-mode)))
+
 ;;; outli
 
 (use-package outli
-  :straight (:host github :repo "jdtsmith/outli" )
+  :vc (:fetcher "github" :repo "jdtsmith/outli" )
   :after lispy
   :bind (:map outli-mode-map ; convenience key to get back to containing heading
               ("C-c C-p" . (lambda () (interactive) (outline-back-to-heading))))
@@ -9420,6 +9419,16 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 
 (use-package outline
   :commands outline-minor-mode)
+
+;;; outline-indent
+
+(use-package outline-indent
+  :ensure t
+  :vc (outline-indent
+       :fetcher github
+       :repo "jamescherti/outline-indent.el")
+  :custom
+  (outline-indent-ellipsis " ▼ "))
 
 ;;; outorg
 
@@ -9445,31 +9454,32 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
   ;; (paradox-github-token (cadr (auth-source-user-and-password
   ;;                              "api.github.com"
   ;;                              (concat user-login-name "^paradox"))))
-  :config/el-patch
-  (defun package-menu-refresh ()
-    "Patch package-menu-refresh to work around Malabarba/paradox#175"
-    (interactive)
-    (unless (derived-mode-p 'package-menu-mode)
-      (user-error "The current buffer is not a Package Menu"))
-    (when (el-patch-swap
-            (and package-menu-async package--downloads-in-progress)
-            (and package-menu-async package--downloads-in-progress
-                 (seq-difference package--downloads-in-progress
-                                 '(paradox--data))))
-      (user-error "Package refresh is already in progress, please wait..."))
-    (setq package-menu--old-archive-contents package-archive-contents)
-    (setq package-menu--new-package-list nil)
-    (package-refresh-contents package-menu-async))
+  ;; :config/el-patch
+  ;; (defun package-menu-refresh ()
+  ;;   "Patch package-menu-refresh to work around Malabarba/paradox#175"
+  ;;   (interactive)
+  ;;   (unless (derived-mode-p 'package-menu-mode)
+  ;;     (user-error "The current buffer is not a Package Menu"))
+  ;;   (when (el-patch-swap
+  ;;           (and package-menu-async package--downloads-in-progress)
+  ;;           (and package-menu-async package--downloads-in-progress
+  ;;                (seq-difference package--downloads-in-progress
+  ;;                                '(paradox--data))))
+  ;;     (user-error "Package refresh is already in progress, please wait..."))
+  ;;   (setq package-menu--old-archive-contents package-archive-contents)
+  ;;   (setq package-menu--new-package-list nil)
+  ;;   (package-refresh-contents package-menu-async))
   :config
   (paradox-enable))
 
 ;;; paredit
 
 (use-package paredit
+  :disabled t
   :unless noninteractive
   :bind (:map paredit-mode-map
               ("M-S" . paredit-splice-sexp)
-              ("M-s"))
+              ("M-s" . paredit-split-sexp))
   :diminish paredit-mode
   :hook ((clojure-mode
           cider-repl-mode
@@ -9479,17 +9489,17 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
           inferior-emacs-lisp-mode
           emacs-lisp-mode
           lisp-interaction-mode
-          json-mode) . #'paredit-mode))
+          json-mode) . #'paredit-mode)
 
 ;;; paredit-eldoc
 
-(use-package paredit-eldoc
-  :straight nil
-  :no-require t
-  :after (paredit eldoc)
-  :config
-  (eldoc-add-command 'paredit-backward-delete
-                     'paredit-close-round))
+  (use-package paredit-eldoc
+    :ensure nil
+    :no-require t
+    :after (paredit eldoc)
+    :config
+    (eldoc-add-command 'paredit-backward-delete
+                       'paredit-close-round)))
 
 ;;; paredit-everywhere
 
@@ -9507,7 +9517,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; paren
 
 (use-package paren
-  :straight nil
+  :ensure nil
   :init
   (show-paren-mode 1))
 
@@ -9538,7 +9548,7 @@ iflipb-next-buffer or iflipb-previous-buffer this round."
 ;;; pass
 
 (use-package pass
-  :straight nil
+  :ensure nil
   :commands (pass pass-view-mode)
   :mode ("\\.passwords/.*\\.gpg\\'" . pass-view-mode)
   :hook (pass-view-mode . #'pass-view--prepare-otp))
@@ -9639,6 +9649,7 @@ append it to ENTRY."
 ;;; pdf-tools
 
 (use-package pdf-tools
+  :disabled t                           ;can’t get epdfinfo to build
   :magic ("%PDF" . pdf-view-mode)
   :custom
   (pdf-tools-handle-upgrades nil)
@@ -9650,14 +9661,6 @@ append it to ENTRY."
                    pdf-util pdf-view pdf-virtual))
     (require pkg))
   (pdf-tools-install))
-
-;;; per-window-point
-
-(use-package per-window-point
-  :demand t
-  :commands pwp-mode
-  :config
-  (pwp-mode +1))
 
 (defvar saved-window-configuration nil)
 
@@ -9798,7 +9801,7 @@ means save all with no questions."
 ;;; project-x
 
 (use-package project-x
-  :straight (:host github :repo "karthink/project-x")
+  :vc (:fetcher "github" :repo "karthink/project-x")
   :after project
   :config
   (setq project-x-save-interval 600)    ;Save project state every 10 min
@@ -9985,13 +9988,17 @@ means save all with no questions."
 
 (use-package puni
   :defer t
+  :bind (:map puni-mode-map
+              ("C-<right>" . puni-slurp-forward)
+              ("C-<left>" . puni-slurp-backward))
   :init
   (puni-global-mode)
-  :hook (('term-mode-hook
-          'lisp-mode-hook
-          'clojure-mode-hook
-          'clojurescript-mode-hook
-          'cider-mode-hook) . #'puni-disable-puni-mode))
+  ;; :hook (('term-mode-hook
+  ;;         'lisp-mode-hook
+  ;;         'clojure-mode-hook
+  ;;         'clojurescript-mode-hook
+  ;;         'cider-mode-hook) . #'puni-disable-puni-mode)
+  )
 
 ;;;_ , puppet-mode
 
@@ -10054,6 +10061,12 @@ means save all with no questions."
 
 (use-package rainbow-mode
   :commands rainbow-mode)
+
+;;;  ready-player
+(use-package ready-player
+  :ensure t
+  :config
+  (ready-player-mode +1))
 
 ;;; recentf
 
@@ -10269,8 +10282,7 @@ means save all with no questions."
 
 (use-package serenade-mode
   :disabled t
-  :straight (serenade-mode :type git :host github
-                           :repo "justin-roche/serenade-mode"))
+  :vc (:fetcher "github" :repo "justin-roche/serenade-mode"))
 
 ;;; selected
 
@@ -10530,7 +10542,7 @@ means save all with no questions."
 ;;; treesit-jump
 
 (use-package treesit-jump
-  :straight (:host github :repo "dmille56/treesit-jump" :files ("*.el" "treesit-queries"))
+  :vc (:fetcher "github" :repo"dmille56/treesit-jump")
   :config
   ;; Optional: add some queries to filter out of results (since they can be too cluttered sometimes)
   (setq treesit-jump-queries-filter-list '("inner" "test" "param")))
@@ -10628,12 +10640,6 @@ means save all with no questions."
 (use-package sr-speedbar
   :unless noninteractive)
 
-;;; stopwatch
-
-(use-package stopwatch
-  :straight (:host github :repo "blue0513/stopwatch")
-  :bind ("<f8>" . stopwatch))
-
 ;;; string-inflection
 
 (use-package string-inflection
@@ -10714,13 +10720,6 @@ means save all with no questions."
 
 (use-package systemd
   :mode ("\\.automount\\'\\|\\.busname\\'\\|\\.mount\\'\\|\\.service\\'\\|\\.slice\\'\\|\\.socket\\'\\|\\.target\\'\\|\\.timer\\'\\|\\.link\\'\\|\\.netdev\\'\\|\\.network\\'\\|\\.override\\.conf.*\\'" . systemd-mode))
-
-;;; tagedit
-
-(use-package tagedit
-  :config
-  (tagedit-add-paredit-like-keybindings)
-  :hook ('html-mode . (lambda () (tagedit-mode +1))))
 
 ;;; tempel
 
@@ -10809,7 +10808,7 @@ means save all with no questions."
 ;;; text-mode
 
 (use-package text-mode
-  :straight nil
+  :ensure nil
   :defer t
   :preface
   (eval-when-compile
@@ -10862,7 +10861,7 @@ means save all with no questions."
 ;;; uniquify
 
 (use-package uniquify
-  :straight nil
+  :ensure nil
   :custom
   (uniquify-buffer-name-style 'forward)
   (uniquify-separator "/")
@@ -10927,8 +10926,7 @@ means save all with no questions."
 
 (use-package vertico
   :init
-  (vertico-mode)
-
+  (vertico-mode +1)
   ;; Grow and shrink the Vertico minibuffer
   ;; (setq vertico-resize t)
 
@@ -10949,7 +10947,7 @@ means save all with no questions."
 
 (use-package vertico-directory
   :after vertico
-  :straight nil
+  :ensure nil
   :preface
   (load-file (expand-file-name
               "straight/repos/vertico/extensions/vertico-directory.el"
@@ -10963,7 +10961,7 @@ means save all with no questions."
 
 ;; (use-package vertico-quick
 ;;   :after vertico
-;;   :straight nil
+;;   :ensure nil
 ;;   :preface
 ;;   (load-file (expand-file-name
 ;;               "straight/repos/vertico/extensions/vertico-quick.el"
@@ -10979,7 +10977,7 @@ means save all with no questions."
 
 ;; (use-package vertico-multiform
 ;;   :after vertico
-;;   :straight nil
+;;   :ensure nil
 ;;   :preface
 ;;   (load-file (expand-file-name
 ;;               "straight/repos/vertico/extensions/vertico-multiform.el"
@@ -11006,8 +11004,8 @@ means save all with no questions."
 ;; emacs to core dump
 
 (use-package vterm
-  :disabled t
-  :hook (vterm-mode . (lambda () (disable-mouse-mode -1))))
+:disabled t                           ; see eamcs_eat
+:hook (vterm-mode . (lambda () (disable-mouse-mode -1))))
 
 ;;; w3m
 
@@ -11030,7 +11028,7 @@ means save all with no questions."
 ;;; which-key
 
 (use-package which-func
-  :straight nil
+  :ensure nil
   :hook (prog-mode . which-function-mode))
 
 (use-package which-key
@@ -11178,7 +11176,7 @@ means save all with no questions."
 ;;; wdired
 
 (use-package wdired
-  :straight nil
+  :ensure nil
   :config (setq wdired-allow-to-change-permissions t))
 
 ;;; wgrep
@@ -11239,7 +11237,7 @@ means save all with no questions."
 ;;; yasnippet-org
 
 (use-package yasnippet-org
-  :straight nil
+  :ensure nil
   :no-require t
   :after org
   :hook (org-mode . yas-minor-mode-on))
@@ -11284,9 +11282,6 @@ means save all with no questions."
 ;;; yeetube
 
 (use-package yeetube
-  :straight '(yeetube :type git
-	              :host nil
-	              :repo "https://git.thanosapollo.org/yeetube")
   ;; (:states 'normal
   ;;          :keymaps 'yeetube-mode-map
   ;;          "RET" 'yeetube-play
