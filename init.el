@@ -3429,6 +3429,7 @@ Single Capitals as you type."
   :hook ((erc-mode
           prog-mode
           text-mode
+          comint-mode
           tabulated-list-mode) . #'dubcaps-mode))
 
 (use-package set-scroll-margin
@@ -4113,7 +4114,7 @@ tools."
 
 (global-set-key (kbd "C-x d") 'dired-here)
 
-;;; I don't use rectangles enough to justify these bindings
+;; I don't use rectangles enough to justify these bindings
 ;;
 ;; (defvar edit-rectangle-origin)
 ;; (defvar edit-rectangle-saved-window-config)
@@ -4821,12 +4822,13 @@ If region is active, apply to active region instead."
   (alert-play-volume 0.2)
   (alert-play-command "play"))
 
-;;;_ , archive-region
+;;; archive-region
 
 (use-package archive-region
   :commands kill-region-or-archive-region
   :bind ("C-w" . kill-region-or-archive-region))
 
+;;; atomic-chrome
 (use-package atomic-chrome
   :custom
   (atomic-chrome-url-major-mode-alist
@@ -4835,11 +4837,12 @@ If region is active, apply to active region instead."
      ("github\\.com" . gfm-mode)
      ("redmine" . textile-mode))
    "Major modes for URLs.")
-  (atomic-chrome-server-ghost-text-port (+ 4000 user-number))
   :config
+  (setq atomic-chrome-server-ghost-text-port (+ 4000 user-number))
   (unwind-protect
       (atomic-chrome-start-server)))
 
+;;; auth-source-pass
 (use-package auth-source-pass
   :disabled t
   :preface
@@ -4986,11 +4989,12 @@ If region is active, apply to active region instead."
          ("C-c y e" . aya-expand)
          ("C-c y o" . aya-open-line)))
 
-;;;_ , backup-each-save
+;;; backup-each-save
 
 (use-package backup-each-save
-  :unless noninteractive
   :no-require t
+  :ensure nil
+  :unless noninteractive
   :preface
   (defun my-make-backup-file-name (file)
     (make-backup-file-name-1 (expand-file-name (file-truename file))))
@@ -5005,8 +5009,18 @@ If region is active, apply to active region instead."
   (defun my-dont-backup-files-p (filename)
     (unless (string-match filename "\\(archive/sent/\\|recentf\\`\\)")
       (normal-backup-enable-predicate filename)))
-
-  :hook after-save
+  (define-minor-mode backup-each-save-mode
+    "Back up files as they are saved."
+    :lighter " B"
+    :init-value nil
+    :group 'backup
+    (if backup-each-save-mode
+        (add-hook 'after-save-hook #'backup-each-save 'local)
+      (remove-hook 'after-save-hook #'backup-each-save 'local)))
+  :hook ((erc-mode
+          prog-mode
+          text-mode
+          tabulated-list-mode) . #'backup-each-save-mode)
   :config
   (setq backup-each-save-filter-function 'backup-each-save-filter
         backup-enable-predicate 'my-dont-backup-files-p))
@@ -9646,22 +9660,6 @@ append it to ENTRY."
    (locate-user-emacs-file "my.org"))
   (persistent-scratch-setup-default))
 
-;;; pdf-tools
-
-(use-package pdf-tools
-  :disabled t                           ;can’t get epdfinfo to build
-  :magic ("%PDF" . pdf-view-mode)
-  :custom
-  (pdf-tools-handle-upgrades nil)
-  :config
-  (dolist
-      (pkg
-       '(pdf-annot pdf-cache pdf-dev pdf-history pdf-info pdf-isearch
-                   pdf-links pdf-misc pdf-occur pdf-outline pdf-sync
-                   pdf-util pdf-view pdf-virtual))
-    (require pkg))
-  (pdf-tools-install))
-
 (defvar saved-window-configuration nil)
 
 (defun push-window-configuration ()
@@ -10878,6 +10876,7 @@ means save all with no questions."
 ;;; unicode-fonts
 
 (use-package unicode-fonts
+  :disabled t
   :init (unicode-fonts-setup))
 
 ;;; all-the-icons)
