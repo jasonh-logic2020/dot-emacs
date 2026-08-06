@@ -1,0 +1,8 @@
+{
+  "_meta": {
+    "description": "$1",
+    "author": "`user-full-name`",
+    "created": "`(format-time-string \"%e %B %Y\")`"
+  },
+  $0
+}

@@ -1,0 +1,45 @@
+This is an emacs configuration project.
+
+THe goal of this project is to test and modify early-init.el and init.el for maximum correctness, speed, and efficiency within the constraints outlined here. Never modify any other file.
+
+init.el must fully load. Analyze it beforehand to learn its features and key bindings. Understand what differentiates a successful completion. 
+
+Init.el should set the location of downloaded packages to /usr/share/emacs/packages. This directory must be accessable to all users. 
+
+Package state and configuration must only be done using use-package. Always prefer use-package keywords, e;g; ":hook ..." to "(add-hook ..."
+
+Emacs must start as quickly as possible by using use-package features to manage package loading. All packages should defer loading using use-package, except the following, which must load at startup:
+      # vertico
+      # cape
+
+To test, start an emacs gui and communicate with it by sending keystrokes to it. Never use "emacsclient".
+
+Only start emacs gui using "emacs-gtk+x11". Never use "emacs". Keep track of emacs sessions and temporary files created and Make sure to clean up only your emacs sessons and temporary files when you are done with them.
+
+Learn about the emacs debugger. Learn about emacs internals.
+
+In order to make a release, these two requirements must be met:
+
+1. the emacs startup process, including loading "early-init.el" and "init.el", and triggering the "after-init-hook" with no errors or warnings.
+
+2. Make a list of all major modes either defined locally or added by packages. Test that each major mode starts with no errors or warnings by creating and loading a generated sample file. If there are errors or warnings, fix them.
+
+3. Each major mode derived from program mode should have a yasnippet template file specific to it. These files should be stored in "dot-emacs/templates". Generate the template files if they do not exist. Generated templates should be functionally equivalent to this emacs lisp sample:
+
+      ;;; `(upcase (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))` --- $1
+      ;;
+      ;; Author: `user-full-name` <`user-mail-address`>
+      ;; This file is part of the `project-current` project
+      ;; Created: `(format-time-string "%e %B %Y")`
+      ;; See LICENSE for copyright information
+      ;;
+      ;;; Commentary:
+      ;;
+      ;;  $2
+      ;;
+      ;;; Code:
+
+      $0
+
+      ;;; `(file-name-nondirectory (buffer-file-name))` ends here
+

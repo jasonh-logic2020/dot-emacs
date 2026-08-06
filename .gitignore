@@ -15,3 +15,21 @@ flycheck_init.el
 
 # emacs lock files
 *#*#
+.aider*
+
+# Package tree — packages live in the host-wide site-lisp tree, not here.
+# See site-packages.el for the manifest.
+elpa/
+
+# Native-compilation cache
+eln-cache/
+
+# Runtime state
+var/
+elfeed/
+org-supertag/
+bm-repository
+auto-save-list/
+
+# Emacs lock symlinks
+.#*
