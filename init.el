@@ -6861,7 +6861,10 @@ Install the doc if it's not installed."
 
 (use-package lsp-pyright
   :after eglot python-mode
-  :ensure-system-package (pyright . "pip install pyright")
+  ;; NOTE: pyright must be installed out of band (`pip install pyright').
+  ;; The former `:ensure-system-package' declaration is gone: the package
+  ;; providing that keyword has been withdrawn from every ELPA archive, so
+  ;; the keyword is unrecognised on any host without a stale local copy.
   :custom (lsp-pyright-langserver-command "pyright") ;; or basedpyright
   :config (add-to-list 'eglot-server-programs '(python-mode "pyright")))
 
@@ -6908,10 +6911,18 @@ that would overflow the C stack via sit-for 0 in package initialization."
 (use-package eglot-booster
     :vc (:fetcher "github" :repo "jdtsmith/eglot-booster")
     :after eglot
-    :ensure-system-package
-    (emacs-lsp-booster . "curl -s https://api.github.com/repos/blahgeek/emacs-lsp-booster/releases/latest | grep -o
-  \"https://.*x86_64-unknown-linux-musl.zip\" | head -1 | xargs curl -L -o /tmp/emacs-lsp-booster.zip && unzip -o /tmp/emacs-lsp-booster.zip -d /tmp 
-  && mkdir -p ~/.local/bin && install -m 755 /tmp/emacs-lsp-booster ~/.local/bin/ && rm /tmp/emacs-lsp-booster.zip /tmp/emacs-lsp-booster")
+    ;; NOTE: requires the `emacs-lsp-booster' binary on PATH.  Install it out
+    ;; of band; the previous `:ensure-system-package' form is removed because
+    ;; the package providing that keyword is no longer in any ELPA archive,
+    ;; and its shell command was broken anyway (embedded newlines and leading
+    ;; indentation made it a malformed one-liner):
+    ;;
+    ;;   curl -s https://api.github.com/repos/blahgeek/emacs-lsp-booster/releases/latest \
+    ;;     | grep -o "https://.*x86_64-unknown-linux-musl.zip" | head -1 \
+    ;;     | xargs curl -L -o /tmp/emacs-lsp-booster.zip \
+    ;;   && unzip -o /tmp/emacs-lsp-booster.zip -d /tmp \
+    ;;   && mkdir -p ~/.local/bin \
+    ;;   && install -m 755 /tmp/emacs-lsp-booster ~/.local/bin/
     :config (eglot-booster-mode +1))
 
 ;;; eglot-orderless
