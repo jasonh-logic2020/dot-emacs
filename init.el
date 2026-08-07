@@ -4,25 +4,24 @@
 
 ;;;; Initialization
 
-;; This assumes common-emacs-directory has been created. The steps are:
-
-;; $ sudo mkdir -p /var/shared-elpa/elpa/gnupg
-;; $ sudo groupadd sharedelpa
-
-;; $ sudo chgrp -R sharedelpa /var/shared-elpa
-;; $ sudo chmod -R 2775 /var/shared-elpa
-;; $ sudo chmod 775 /var/shared-elpa/elpa/gnupg
-
-;; and then either singly:
-;; $ sudo usermod -a -G sharedelpa $username
-
-;; or for all interactive users:
-
-;; sudo getent passwd | while IFS=: read -r name password uid gid gecos home shell; do if [ -d "$home" ] && [ "$(stat -c %u "$home")" = "$uid" ]; then if [ ! -z "$shell" ] && [ "$shell" != "/bin/false" ] && [ "$shell" != "/sbin/nologin" ] && [ $name != 'root' ]; then usermod -a -G sharedelpa $name  ; fi; fi; done
-
-;; n.b.: ALL logged-in users will have to close their sessions and log in
-;; again for the changes to take effect. In fact, reboot. It is not enough
-;; for one user to log out and back in.
+;; Packages live in two tiers, both established in early-init.el before
+;; `package-initialize' runs:
+;;
+;;   `package-directory-list' -> /usr/local/share/emacs/site-lisp/elpa
+;;       the host-wide set, admin-installed and world-readable
+;;   `package-user-dir'       -> ~/.emacs.d/elpa
+;;       a per-user overlay, which takes precedence
+;;
+;; Reading the host set needs no group membership.  *Changing* it needs
+;; membership in `emacs-admin'; see site-packages.el for the one-time
+;; root setup and for the install command.
+;;
+;; This supersedes the old /var/shared-elpa + `sharedelpa' group scheme,
+;; which predated package.el growing a native two-tier model.
+;;
+;; n.b.: a user added to `emacs-admin' must close their session and log
+;; in again before the membership takes effect -- in fact, reboot.  It is
+;; not enough for one user to log out and back in.
 
 ;;;; Code:
 
@@ -305,28 +304,17 @@ FILE-PATH MSG) when loading .el files with deprecated API usage."
     (apply 'concat (mapcar
                     (lambda (name) (file-name-as-directory name))
                     (push root dirs))))
-  ;; NOTE: this duplicates what `package-initialize' does, and additionally
-  ;; drags in `archives' and `gnupg'.  It looks removable and is not: the
-  ;; per-user tree currently holds six versions of `transient', and only some
-  ;; define `transient-define-group'.  This ordering is what lets a capable
-  ;; one win over the built-in; dropping it breaks casual-lib at load time.
-  ;; Revisit once the host-wide tree is built clean from site-packages.el and
-  ;; the duplicate versions are gone -- then package-initialize suffices.
+  ;; The hand-rolled `load-path' rebuild that used to live here is gone.
+  ;; It existed only because the per-user tree held six versions of
+  ;; `transient' and just some defined `transient-define-group'; the
+  ;; rebuild's ordering is what let a capable one beat the built-in.  The
+  ;; host-wide tree is built clean from site-packages.el and carries
+  ;; exactly one version of each package, so `package-initialize' above
+  ;; suffices.  It also crashed outright once `package-user-dir' stopped
+  ;; existing, since it called `directory-files' on it unguarded.
   (setq load-path
-        (append
-         (let ((package-list '()))
-           (dolist (lib (cl-remove-if
-                         (lambda (x) (or (equal x ".")
-                                    (equal x "..")))
-                         (directory-files package-user-dir)))
-             (push
-              (convert-standard-filename
-               (catdir package-user-dir lib))
-              package-list))
-           package-list)
-         (delete-dups load-path)
-
-         (list (ensure-user-dir "lisp"))))
+        (append (delete-dups load-path)
+                (list (ensure-user-dir "lisp"))))
 
   (defun lookup-password (host user port)
     (require 'auth-source)
@@ -5460,8 +5448,10 @@ If region is active, apply to active region instead."
   :bind (:map dired-mode-map ("C-o" . casual-dired-tmenu)))
 
 ;;;; casual-avy
+;; Unlike its siblings below, casual-avy is NOT part of the `casual'
+;; monorepo -- it is a separate archive package.  With `:ensure nil' it
+;; never installs and "M-g a" is a void function.
 (use-package casual-avy
-  :ensure nil
   :after casual
   :bind ("M-g a" . casual-avy-tmenu))
 
@@ -7687,6 +7677,7 @@ display, depending on the window manager)."
     (add-hook 'eshell-expand-input-functions 'eshell-spawn-external-command)
 
     (use-package em-unix
+      :ensure nil                       ; built-in eshell module, not on any archive
       :config
       (unintern 'eshell/su nil)
       (unintern 'eshell/sudo nil))
@@ -11586,21 +11577,6 @@ means save all with no questions."
 (use-package yaml-mode
   :mode (("\\.yml\\'" . yaml-mode)
          ("\\.yaml$" . yaml-mode)))
-
-;;; yankpad
-
-(use-package yankpad
-  :disabled t
-  :after company
-  :init
-  (setq yankpad-file "/var/sharedelpa/org/yankpad.org")
-  (when (not (file-exists-p yankpad-file))
-    (shell-command (concat "touch " yankpad-file)))
-  :config
-  (bind-key "C-c C-y" 'yankpad-map)
-  (bind-key "<f12>" 'yankpad-expand)
-  ;; If you want to complete snippets using company-mode
-  (add-to-list 'company-backends #'company-yankpad))
 
 ;;; yeetube
 
